@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Değerlendirme Ekranı</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-top: 0; border-bottom: 2px solid #673AB7; padding-bottom: 10px; }
+        
+        .soru-kutu { margin-bottom: 20px; background: #fafafa; border: 1px solid #ddd; border-radius: 8px; padding: 15px; }
+        .soru-metin { font-weight: bold; color: #1565C0; margin-bottom: 10px; display: block; font-size: 1.1em; }
+        
+        .cevap-satir { display: flex; justify-content: space-between; align-items: flex-start; background: white; padding: 10px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 5px; }
+        .cevap-icerik { flex: 1; margin-right: 15px; word-break: break-word; }
+        
+        .btn-puan { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ccc; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .dogru { background: white; color: #2e7d32; border-color: #2e7d32; }
+        .yanlis { background: white; color: #c62828; border-color: #c62828; }
+        
+        .dogru.secili { background: #2e7d32; color: white; }
+        .yanlis.secili { background: #c62828; color: white; }
+
+        .footer { text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+        .btn-bitir { background: #673AB7; color: white; border: none; padding: 12px 30px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        .btn-bitir:hover { background: #5e35b1; }
+
+        /* MEDYA GÖMME STİLLERİ */
+        .embedded-wrapper { width: 100%; margin: 5px 0; border: 1px solid #eee; border-radius: 6px; padding: 5px; background:#fff; }
+        .embedded-img { max-height: 200px; max-width: 100%; cursor: pointer; }
+        .embedded-iframe { width: 100%; height: 300px; border: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>DEĞERLENDİRME</h2>
+    <div id="bilgi" style="text-align:center; color:#666; margin-bottom:15px; font-weight:bold;">Yükleniyor...</div>
+    <div id="soru_alani"></div>
+    <div class="footer">
+        <button onclick="bitir()" class="btn-bitir">DEĞERLENDİRMEYİ BİTİR</button>
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const OGR_NO = params.get('ogrenci');
+    const SINIF = params.get('sinif');
+    const CALISMA = params.get('calisma');
+    
+    let sorular = [];
+    let anlikPuanlar = {};
+
+    function linkleriDonustur(text) {
+        if (!text) return "";
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, function(url) {
+            const cleanUrl = url.trim();
+            if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com')) {
+                let id = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if(id) return `<div class="embedded-wrapper"><iframe src="https://drive.google.com/file/d/${id[1]}/preview" class="embedded-iframe"></iframe></div>`;
+            }
+            if (cleanUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) return `<img src="${cleanUrl}" class="embedded-img">`;
+            if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+                let embedUrl = cleanUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+                return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe"></iframe></div>`;
+            }
+            return `<a href="${cleanUrl}" target="_blank">${cleanUrl}</a>`;
+        });
+    }
+
+    async function yukle() {
+        if(!OGR_NO || !SINIF || !CALISMA) { document.body.innerHTML="<h3 style='text-align:center'>Hatalı Link</h3>"; return; }
+        
+        try {
+            const rS = await fetch(`/calismaGetir?isim=qwx${CALISMA}`);
+            const dS = await rS.json();
+            sorular = dS.sorular || [];
+
+            const rC = await fetch(`/calismaGetir?isim=www_${CALISMA}`);
+            const dC = await rC.json();
+            const kayit = dC.find(x => String(x.ogrenciNo) === String(OGR_NO));
+
+            if(!kayit) { document.getElementById('soru_alani').innerHTML="Kayıt bulunamadı."; return; }
+            
+            document.getElementById('bilgi').textContent = `${kayit.sinif} - ${kayit.adSoyad}`;
+            anlikPuanlar = kayit.puanlar || {};
+            
+            render(kayit.cevaplar || []);
+        } catch(e) { alert("Veri yüklenemedi!"); }
+    }
+
+    function render(cevapListesi) {
+        const div = document.getElementById('soru_alani');
+        div.innerHTML = "";
+        
+        sorular.forEach((s, sIdx) => {
+            const cObj = cevapListesi.find(c => c.soruIndex === sIdx);
+            const cArr = cObj ? cObj.cevaplar : [];
+            const pArr = anlikPuanlar[sIdx] || [];
+
+            let html = `<div class="soru-kutu"><span class="soru-metin">${sIdx+1}. ${linkleriDonustur(typeof s === 'object' ? s.soru : s)}</span>`;
+            
+            if(cArr.length === 0) html += "<div style='color:red; font-style:italic'>Cevap yok.</div>";
+            else {
+                cArr.forEach((txt, cIdx) => {
+                    const puan = pArr[cIdx];
+                    const dCls = puan === 1 ? 'secili' : '';
+                    const yCls = puan === 0 ? 'secili' : '';
+                    
+                    html += `<div class="cevap-satir">
+                        <div class="cevap-icerik">${linkleriDonustur(txt)}</div>
+                        <div style="min-width:80px">
+                            <button class="btn-puan dogru ${dCls}" onclick="puanla(${sIdx},${cIdx},1,this)">D</button>
+                            <button class="btn-puan yanlis ${yCls}" onclick="puanla(${sIdx},${cIdx},0,this)">Y</button>
+                        </div>
+                    </div>`;
+                });
+            }
+            html += "</div>";
+            div.innerHTML += html;
+        });
+    }
+
+    function puanla(sIdx, cIdx, p, btn) {
+        btn.parentElement.querySelectorAll('.btn-puan').forEach(b => b.classList.remove('secili'));
+        btn.classList.add('secili');
+        if(!anlikPuanlar[sIdx]) anlikPuanlar[sIdx] = [];
+        anlikPuanlar[sIdx][cIdx] = p;
+    }
+
+    async function bitir() {
+        if(!confirm("Bitirmek istiyor musunuz?")) return;
+        const btn = document.querySelector('.btn-bitir');
+        btn.disabled = true; btn.textContent = "Kaydediliyor...";
+        
+        const ps = [];
+        Object.keys(anlikPuanlar).forEach(sIx => {
+            anlikPuanlar[sIx].forEach((p, cIx) => {
+                if(p !== null && p !== undefined) {
+                    ps.push(fetch("/puanKaydet", {
+                        method:"POST", headers:{"Content-Type":"application/json"},
+                        body:JSON.stringify({dosyaAdi:`www_${CALISMA}`, ogrenciNo:OGR_NO, sinif:SINIF, soruIndex:parseInt(sIx), cevapIndex:cIx, puan:p})
+                    }));
+                }
+            });
+        });
+        
+        await Promise.all(ps);
+        const r = await fetch("/degerlendirmeBitir", {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({dosyaAdi:`www_${CALISMA}`, ogrenciNo:OGR_NO, sinif:SINIF})
+        });
+        
+        const res = await r.json();
+        if(res.status === "ok") {
+            alert(`Bitti! Toplam Puan: ${res.toplam}`);
+            window.location.href = "giris";
+        } else {
+            alert("Hata!");
+            btn.disabled = false;
+        }
+    }
+
+    yukle();
+</script>
+</body>
+</html>
