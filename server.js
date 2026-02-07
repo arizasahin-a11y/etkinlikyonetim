@@ -93,6 +93,9 @@ app.post("/calismaSil", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("Sunucu", PORT, "portunda.");
+// DOĞRU
+const PORT = process.env.PORT || 3000; // Render'ın verdiği portu kullan, yoksa 3000'i kullan
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
