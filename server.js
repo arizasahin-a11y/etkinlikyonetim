@@ -15,7 +15,7 @@ console.log(fs.readdirSync(__dirname));
 // HTML bloklayan satırı SİL ❌
 
 // statik dosyalar
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, { index: false }));(express.static(__dirname));
 
 // --- SAYFA YÖNLENDİRMELERİ ---
 app.get("/21012012", (req, res) => { res.sendFile(path.join(__dirname, "index.html")); });
@@ -182,6 +182,9 @@ app.get("/arsivListesi", (req, res) => { try { if (!fs.existsSync("archive")) fs
 app.get(/\/.+\.html$/, (req, res) => { res.status(403).send("Yasak."); });
 app.use(express.static(__dirname, { index: false })); // CSS, JS, JSON erişimi için
 app.get("/", (req, res) => { res.status(403).send("Giriş Yasak."); });
+app.get("/", (req, res) => {
+  res.send("Sunucu çalışıyor");
+});
 
 // --- YARDIMCI ---
 function dosyaIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ_\- ]/g, "").trim() : ""; }
