@@ -6,7 +6,7 @@ const cors = require("cors");
 const app = express();
 app.use(express.json());
 app.use(cors());
-const fs = require("fs");
+
 console.log("ÇALIŞMA KLASÖRÜ:", __dirname);
 console.log("İÇERİK:", fs.readdirSync(__dirname));
 console.log("=== KLASÖR ===", __dirname);
