@@ -141,7 +141,7 @@ app.post("/puanKaydet", async (req, res) => {
     } else {
       // Should exist if logged in, but just in case
       await query(
-        "INSERT INTO student_evaluations (study_id, student_school_no, class_name, scores) VALUES ($1, $2, $3, $4)",
+        "INSERT INTO student_evaluations (study_id, student_school_no, class_name, scores) VALUES ($1, $2, $3, $4::jsonb)",
         [studyId, String(ogrenciNo), sinif, '{}']
       );
     }
@@ -149,9 +149,12 @@ app.post("/puanKaydet", async (req, res) => {
     if (!scores[soruIndex]) scores[soruIndex] = [];
     scores[soruIndex][cevapIndex] = parseInt(puan);
 
+    // JSON.stringify for PostgreSQL JSONB
+    const scoresJson = JSON.stringify(scores);
+
     await query(
-      "UPDATE student_evaluations SET scores = $1 WHERE study_id = $2 AND student_school_no = $3",
-      [scores, studyId, String(ogrenciNo)]
+      "UPDATE student_evaluations SET scores = $1::jsonb WHERE study_id = $2 AND student_school_no = $3",
+      [scoresJson, studyId, String(ogrenciNo)]
     );
 
     res.json({ status: "ok" });
@@ -184,9 +187,13 @@ app.post("/degerlendirmeBitir", async (req, res) => {
     });
 
     const evaluation = { toplam: toplam, bitti: true };
+
+    // JSON.stringify for PostgreSQL JSONB
+    const evaluationJson = JSON.stringify(evaluation);
+
     await query(
-      "UPDATE student_evaluations SET evaluation = $1 WHERE study_id = $2 AND student_school_no = $3",
-      [evaluation, studyId, String(ogrenciNo)]
+      "UPDATE student_evaluations SET evaluation = $1::jsonb WHERE study_id = $2 AND student_school_no = $3",
+      [evaluationJson, studyId, String(ogrenciNo)]
     );
 
     res.json({ status: "ok", toplam });
@@ -218,12 +225,17 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
         bitis: assignment.bitis
       };
 
+      // JSON.stringify for PostgreSQL JSONB
+      const settingsJson = JSON.stringify(settings);
+
       await query(`
             INSERT INTO study_assignments (study_id, class_name, method, settings)
-            VALUES ($1, $2, $3, $4)
+            VALUES ($1, $2, $3, $4::jsonb)
             ON CONFLICT (study_id, class_name) 
-            DO UPDATE SET method = $3, settings = $4
-        `, [studyId, assignment.sinif, assignment.yontem, settings]);
+            DO UPDATE SET method = $3, settings = $4::jsonb
+        `, [studyId, assignment.sinif, assignment.yontem, settingsJson]);
+
+      console.log(`✅ [qqq Kaydet] Assignment kaydedildi: ${calismaIsmi}`);
 
     } else {
       // It's a study definition (qwx prefixed in legacy, just name here)
@@ -231,12 +243,17 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
       const name = calismaIsmi.replace(/^qwx/, "").replace(".json", "");
       const content = sorular; // { aciklama, sorular }
 
+      // JSON.stringify for PostgreSQL JSONB
+      const contentJson = JSON.stringify(content);
+
       await query(`
             INSERT INTO studies (name, content)
-            VALUES ($1, $2)
+            VALUES ($1, $2::jsonb)
             ON CONFLICT (name) 
-            DO UPDATE SET content = $2
-        `, [name, content]);
+            DO UPDATE SET content = $2::jsonb
+        `, [name, contentJson]);
+
+      console.log(`✅ [qwx Kaydet] Study kaydedildi: ${name}`);
     }
 
     res.json({ status: "ok" });
