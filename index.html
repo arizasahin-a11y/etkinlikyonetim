@@ -326,28 +326,31 @@
                 const res = await fetch('/veritabani.json');
                 const hamVeri = await res.json();
                 
-                // DÜZELTME: Veritabanını '9' başlığından kurtarıp sınıflara ayırma işlemi
-                // { "9": [...] } yapısını -> { "9A": [...], "9B": [...] } yapısına çeviriyoruz.
+                // DÜZELTME: Veriyi sınıflara ayırıyoruz
                 const duzenliVeri = {};
                 
-                // Ham verideki tüm anahtarları (örn: "9") dolaş
+                // Gelen verideki (örn: "9") listeyi tarayıp gerçek sınıflarına (9A, 9B...) bölüyoruz
                 Object.values(hamVeri).forEach(ogrenciListesi => {
-                    ogrenciListesi.forEach(ogr => {
-                        const sinifAdi = ogr["Sınıfınız"]; // Öğrencinin içindeki gerçek sınıf bilgisi
-                        if(sinifAdi) {
-                            if(!duzenliVeri[sinifAdi]) {
-                                duzenliVeri[sinifAdi] = [];
+                    if(Array.isArray(ogrenciListesi)){
+                        ogrenciListesi.forEach(ogr => {
+                            const sinifAdi = ogr["Sınıfınız"]; 
+                            if(sinifAdi) {
+                                if(!duzenliVeri[sinifAdi]) {
+                                    duzenliVeri[sinifAdi] = [];
+                                }
+                                duzenliVeri[sinifAdi].push(ogr);
                             }
-                            duzenliVeri[sinifAdi].push(ogr);
-                        }
-                    });
+                        });
+                    }
                 });
 
                 veritabani = duzenliVeri;
                 siniflariDoldur();
+                
             } catch (e) {
                 console.error("Veritabanı yüklenemedi:", e);
-                alert("Öğrenci veritabanı yüklenemedi!");
+                // Hata olsa bile boş tabloyla devam etmesini sağla
+                siniflariDoldur(); 
             }
         }
 
@@ -388,7 +391,7 @@
 
             let ogrenciler = [...veritabani[sinif]];
 
-            // Okul Numarasına göre sıralama
+            // Okul Numarasına göre küçükten büyüğe sıralama
             ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
 
             const grupSayisi = prompt(`${sinif} sınıfında ${ogrenciler.length} öğrenci var.\nKaç grup oluşturulsun?`, "6");
@@ -397,6 +400,7 @@
             const n = parseInt(grupSayisi);
             mevcutGruplar = [];
 
+            // Listenin başından sonuna sıralı bölme
             const perGroup = Math.ceil(ogrenciler.length / n);
             
             for (let i = 0; i < n; i++) {
@@ -489,19 +493,21 @@
         let calismalar = [];
 
         async function calismaListesiGetir() {
-            const res = await fetch('/listeCalismalar');
-            const dosyalar = await res.json();
-            calismalar = dosyalar.filter(d => d.startsWith("qwx")).map(d => d.replace("qwx","").replace(".json",""));
-            
-            const ul = document.getElementById('calismaListesi');
-            const sel3 = document.getElementById('s3CalismaSec');
-            ul.innerHTML = "";
-            sel3.innerHTML = '<option value="">-- Seçin --</option>';
+            try {
+                const res = await fetch('/listeCalismalar');
+                const dosyalar = await res.json();
+                calismalar = dosyalar.filter(d => d.startsWith("qwx")).map(d => d.replace("qwx","").replace(".json",""));
+                
+                const ul = document.getElementById('calismaListesi');
+                const sel3 = document.getElementById('s3CalismaSec');
+                ul.innerHTML = "";
+                sel3.innerHTML = '<option value="">-- Seçin --</option>';
 
-            calismalar.forEach(c => {
-                ul.innerHTML += `<li onclick="calismaSec('${c}', this)">${c}</li>`;
-                sel3.innerHTML += `<option value="${c}">${c}</option>`;
-            });
+                calismalar.forEach(c => {
+                    ul.innerHTML += `<li onclick="calismaSec('${c}', this)">${c}</li>`;
+                    sel3.innerHTML += `<option value="${c}">${c}</option>`;
+                });
+            } catch(e) { console.error("Çalışma listesi hatası:", e); }
         }
 
         function calismaSec(isim, el) {
@@ -524,20 +530,22 @@
         async function calismaDuzenle() {
             if(!seciliCalisma) return alert("Lütfen listeden bir çalışma seçin.");
             
-            const res = await fetch(`/calismaGetir?isim=qwx${seciliCalisma}.json`);
-            if(!res.ok) return alert("Çalışma içeriği alınamadı.");
-            const icerik = await res.json(); 
+            try {
+                const res = await fetch(`/calismaGetir?isim=qwx${seciliCalisma}.json`);
+                if(!res.ok) throw new Error("Çalışma alınamadı");
+                const icerik = await res.json(); 
 
-            document.getElementById('listeEkrani').style.display = "none";
-            document.getElementById('editorEkrani').style.display = "block";
-            document.getElementById('editorBaslik').innerText = "Çalışmayı Düzenle";
-            document.getElementById('calismaAdiInput').value = seciliCalisma;
-            document.getElementById('calismaAciklama').value = icerik.aciklama || "";
-            document.getElementById('soruAlani').innerHTML = "";
-            
-            if(icerik.sorular) {
-                icerik.sorular.forEach(s => soruEkleUI(s));
-            }
+                document.getElementById('listeEkrani').style.display = "none";
+                document.getElementById('editorEkrani').style.display = "block";
+                document.getElementById('editorBaslik').innerText = "Çalışmayı Düzenle";
+                document.getElementById('calismaAdiInput').value = seciliCalisma;
+                document.getElementById('calismaAciklama').value = icerik.aciklama || "";
+                document.getElementById('soruAlani').innerHTML = "";
+                
+                if(icerik.sorular) {
+                    icerik.sorular.forEach(s => soruEkleUI(s));
+                }
+            } catch(e) { alert("Hata: " + e.message); }
         }
 
         function editorKapat() {
