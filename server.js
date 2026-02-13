@@ -197,17 +197,22 @@ app.post("/calismaSil", async (req, res) => {
     const cleanIsim = calismaIsmi.replace(".json", "");
 
     if (cleanIsim.startsWith("qwx")) {
-      // Delete Study
+      // 1. DELETE STUDY (and all related data)
       const name = cleanIsim.replace("qwx", "");
-      await query("DELETE FROM studies WHERE name = $1", [name]);
-      // Also cascade delete? FK usually handles it, but let's be sure logic is sound.
-      // Postgres FKs with ON DELETE CASCADE will handle assignments and evaluations.
+
+      const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
+      if (studyRes.rows.length > 0) {
+        const studyId = studyRes.rows[0].id;
+        // Manual Cascade
+        await query("DELETE FROM student_evaluations WHERE study_id = $1", [studyId]);
+        await query("DELETE FROM study_assignments WHERE study_id = $1", [studyId]);
+        await query("DELETE FROM studies WHERE id = $1", [studyId]);
+      }
 
     } else if (cleanIsim.startsWith("qqq")) {
-      // Delete Assignment
-      // List all and match constructed ID (safest for legacy ID format)
+      // 2. DELETE ASSIGNMENT (for specific class)
       const allAssignments = await query(`
-            SELECT a.id, s.name as study_name, a.class_name 
+            SELECT a.id, s.name as study_name, a.class_name, a.study_id 
             FROM study_assignments a 
             JOIN studies s ON a.study_id = s.id
         `);
@@ -218,23 +223,21 @@ app.post("/calismaSil", async (req, res) => {
       });
 
       if (target) {
+        // Delete evaluations for this specific class and study
+        await query("DELETE FROM student_evaluations WHERE study_id = $1 AND class_name = $2", [target.study_id, target.class_name]);
+        // Delete the assignment itself
         await query("DELETE FROM study_assignments WHERE id = $1", [target.id]);
-      } else {
-        // Fallback: Try to delete by raw ID if frontend sent an ID? 
-        // But admin.html sends filename.
       }
 
     } else if (cleanIsim.startsWith("www_")) {
-      // Delete Evaluations (Reset for that study)
+      // 3. DELETE/RESET EVALUATIONS (only data)
       const name = cleanIsim.replace("www_", "");
       const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
       if (studyRes.rows.length > 0) {
         const studyId = studyRes.rows[0].id;
-        // Delete all evaluations for this study
         await query("DELETE FROM student_evaluations WHERE study_id = $1", [studyId]);
       }
     } else {
-      // Try deleting as study name if no prefix?
       await query("DELETE FROM studies WHERE name = $1", [cleanIsim]);
     }
 
