@@ -514,15 +514,32 @@ app.get("/grupListesiGetir", async (req, res) => {
 app.get("/yonetimDosyaListesi", async (req, res) => {
   try {
     const result = [];
+    // 1. Studies (qwx)
     const studies = await query("SELECT name, is_archived FROM studies");
     studies.rows.forEach(s => {
       result.push({
         dosya_adi: `qwx${s.name}.json`,
         arsivde: s.is_archived
       });
-      // Also pushing www files? Legacy had them separate. 
-      // Admin panel expects "veritabani.json" too? `veritabani.json` is not in files table?
-      // Actually legacy listed everything in dir.
+      // Legacy also had www_ files for each study if answers existed
+      // We can assume if study exists, www might exist in virtual list for admin to "manage" (delete/archive)?
+      // Actually admin usually manages Studies (qwx).
+      // But if user wants to see "all files", we should add them.
+      result.push({ dosya_adi: `www_${s.name}.json`, arsivde: false });
+    });
+
+    // 2. Assignments (qqq)
+    const assigns = await query(`
+        SELECT a.class_name, s.name as study_name 
+        FROM study_assignments a 
+        JOIN studies s ON a.study_id = s.id
+    `);
+    assigns.rows.forEach(a => {
+      // qqqClassNameStudyName.json
+      result.push({
+        dosya_adi: `qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`,
+        arsivde: false
+      });
     });
 
     // Add veritabani dummy

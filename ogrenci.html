@@ -781,7 +781,7 @@
             document.getElementById('ozet_don_btn').style.display = canEdit ? "block" : "none";
         }
 
-        function degerlendirmeyeGec() { window.location.href = `degerlendirme.html?sinif=${sess.sinif}&ogrenci=${sess.no}&calisma=${atan.calisma}`; }
+        function degerlendirmeyeGec() { window.location.href = `degerlendirme?sinif=${sess.sinif}&ogrenci=${sess.no}&calisma=${atan.calisma}`; }
         async function cevapTemizle(idx) { if (confirm("Sil?")) { const i = cevaplar.findIndex(c => c.soruIndex === idx); if (i > -1) cevaplar[i].cevaplar = []; await kaydet(); ozetCiz(); } }
         function cikisYap() { if (confirm("Çıkış?")) { localStorage.clear(); location.reload(); } }
     </script>
