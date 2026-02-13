@@ -40,6 +40,32 @@ app.get("/", (req, res) => {
   res.status(403).send("<h1>Giriş Yetkisi Yok. Lütfen özel linki kullanın.</h1>");
 });
 
+// Dynamic `veritabani.json` for Student Login
+app.get("/veritabani.json", async (req, res) => {
+  try {
+    const result = await query("SELECT * FROM students");
+    // Legacy Format: Array of objects
+    const students = result.rows.map(row => ({
+      "Okul Numaranız": row.school_no,
+      "Adınız Soyadınız": row.name,
+      "Sınıfınız": row.class_name,
+      "Telefon numaranız": row.phone,
+      "Velinizin telefon numarası": row.parent_phone,
+      "E-Posta Adresiniz": row.email,
+      "Drive Klasörünüzün linki": row.drive_link,
+      ...row.extra_info // Spread any other columns stored in jsonb
+    }));
+    res.json(students);
+  } catch (e) {
+    console.error("Dynamic DB Error:", e);
+    // Fallback to static file if DB fails
+    const fs = require('fs');
+    const p = path.join(__dirname, "veritabani.json");
+    if (fs.existsSync(p)) res.sendFile(p);
+    else res.json([]);
+  }
+});
+
 // --- 4. YARDIMCI FONKSİYONLAR ---
 // Not needed for DB connection but kept for compatibility logic if any
 function dosyaIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ_\- ]/g, "").trim() : ""; }
