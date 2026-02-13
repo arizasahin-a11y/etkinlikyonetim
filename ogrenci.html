@@ -599,6 +599,8 @@
                                     const sessNoStr = String(sess.no).trim();
 
                                     // 1. Exact String Match
+                                    // DEBUG LOG
+                                    console.log("Kontrol:", dbNoStr, "vs", sessNoStr);
                                     if (dbNoStr === sessNoStr) return true;
 
                                     // 2. Loose Integer Match (e.g. "05" vs "5")
@@ -608,6 +610,15 @@
 
                                     return false;
                                 }));
+
+                                // DEBUG: Alert if not found
+                                if (!g) {
+                                    alert(`HATA: Grupta bulunamadınız!
+Aranan No: '${sess.no}' (Tip: ${typeof sess.no})
+Aranan Sınıf: '${sess.sinif}'
+İndirilen Grup Sayısı: ${gs.length}
+(Lütfen verileri kontrol edin veya öğretmene bildirin)`);
+                                }
 
                                 if (g) {
                                     grupUyeleri = g;
