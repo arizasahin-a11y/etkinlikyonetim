@@ -774,11 +774,13 @@ app.get("/adminMigration", async (req, res) => {
       const className = file.replace("Grupları.json", "");
       const content = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf-8'));
 
+      // JSON.stringify for PostgreSQL JSONB
+      const jsonData = JSON.stringify(content);
       await query(`
             INSERT INTO class_groups (class_name, groups_data)
-            VALUES ($1, $2)
-            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
-        `, [className, content]);
+            VALUES ($1, $2::jsonb)
+            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
+        `, [className, jsonData]);
     }
     res.json({ status: "ok", migrated: counting });
   } catch (e) {
@@ -816,11 +818,13 @@ async function autoMigrate() {
         continue;
       }
 
+      // JSON.stringify for PostgreSQL JSONB
+      const jsonData = JSON.stringify(content);
       await query(`
             INSERT INTO class_groups (class_name, groups_data)
-            VALUES ($1, $2)
-            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
-        `, [className, content]);
+            VALUES ($1, $2::jsonb)
+            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
+        `, [className, jsonData]);
       console.log(`Migrated group: ${file} (Class: ${className})`);
     }
   } catch (e) {
