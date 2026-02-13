@@ -355,11 +355,19 @@ app.post("/kaydet", async (req, res) => {
     try {
       console.log(`[Grup Kaydet] Sınıf: ${sinif}, Grup sayısı: ${gruplar.length}`);
 
+      // Ensure gruplar is valid array
+      if (!Array.isArray(gruplar)) {
+        throw new Error("gruplar bir array değil!");
+      }
+
+      // PostgreSQL JSONB için JSON string'e çevir
+      const jsonData = JSON.stringify(gruplar);
+
       await query(`
             INSERT INTO class_groups (class_name, groups_data)
-            VALUES ($1, $2)
-            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
-        `, [sinif, gruplar]);
+            VALUES ($1, $2::jsonb)
+            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
+        `, [sinif, jsonData]);
 
       console.log(`✅ [Grup Kaydet] Başarılı: ${sinif}`);
       return res.json({ status: "ok", saved: true });
