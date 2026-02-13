@@ -827,7 +827,27 @@
             ogrenciler.forEach((og, i) => gruplar[i % n].push(og));
             gruplar.forEach(grup => { grup.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"])); });
             gruplariGoster(gruplar);
-            fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sinif: secilenSinif, gruplar }) });
+
+            // SQL'e kaydet ve response bekle
+            fetch("/kaydet", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sinif: secilenSinif, gruplar })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "ok" && data.saved) {
+                        console.log("✅ Gruplar SQL'e kaydedildi:", secilenSinif);
+                        alert(`✅ ${secilenSinif} için ${gruplar.length} grup başarıyla kaydedildi!`);
+                    } else {
+                        console.error("⚠️ Kayıt yanıtı:", data);
+                        alert("⚠️ Gruplar oluşturuldu ama kayıt durumu belirsiz.");
+                    }
+                })
+                .catch(error => {
+                    console.error("❌ Grup kaydetme hatası:", error);
+                    alert("❌ HATA: Gruplar SQL'e kaydedilemedi!\n" + error.message);
+                });
         };
 
         document.getElementById("btnSil").onclick = () => { if (secilenSinif && confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: secilenSinif + "Grupları.json" }) }).then(() => { document.getElementById("tablo").innerHTML = ""; alert("Silindi."); }); };

@@ -353,13 +353,21 @@ app.post("/kaydet", async (req, res) => {
   // 1. Group Saving
   if (sinif && gruplar) {
     try {
+      console.log(`[Grup Kaydet] Sınıf: ${sinif}, Grup sayısı: ${gruplar.length}`);
+
       await query(`
             INSERT INTO class_groups (class_name, groups_data)
             VALUES ($1, $2)
             ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
         `, [sinif, gruplar]);
-      return res.json({ status: "ok" });
-    } catch (e) { console.error(e); return res.status(500).json({ status: "error" }); }
+
+      console.log(`✅ [Grup Kaydet] Başarılı: ${sinif}`);
+      return res.json({ status: "ok", saved: true });
+    } catch (e) {
+      console.error(`❌ [Grup Kaydet] Hata:`, e.message);
+      console.error(`Stack:`, e.stack);
+      return res.status(500).json({ status: "error", message: e.message });
+    }
   }
 
   // 2. Student Answers / Settings
