@@ -561,6 +561,9 @@ app.get("/grupListesiGetir", async (req, res) => {
     const rawSinif = req.query.sinif; // e.g. "9-A"
     const normalizedSinif = rawSinif.replace(/[^a-zA-Z0-9]/g, ""); // e.g. "9A"
 
+    // DEBUG LOG
+    console.log(`[grupListesiGetir] Request: raw=${rawSinif}, norm=${normalizedSinif}`);
+
     // 1. Try EXACT match from DB
     let resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [rawSinif]);
 
@@ -569,25 +572,34 @@ app.get("/grupListesiGetir", async (req, res) => {
       resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [normalizedSinif]);
     }
 
-    if (resDb.rows.length > 0) {
-      res.json(resDb.rows[0].groups_data);
+    // Check if we actually have data
+    let dbData = [];
+    if (resDb.rows.length > 0 && resDb.rows[0].groups_data && resDb.rows[0].groups_data.length > 0) {
+      dbData = resDb.rows[0].groups_data;
+    }
+
+    if (dbData.length > 0) {
+      console.log(`[grupListesiGetir] Found in DB (${dbData.length} groups)`);
+      res.json(dbData);
     } else {
-      // Fallback: Check File System (User Request: "take from files")
+      // Fallback: Check File System if DB is empty or missing
+      console.log(`[grupListesiGetir] DB empty/missing. Checking File System...`);
       const fs = require('fs');
       const path = require('path');
 
       // Try normalized filename first (e.g. 9AGrupları.json)
       let filePath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
       if (!fs.existsSync(filePath)) {
+        console.log(`[grupListesiGetir] Not found: ${filePath}`);
         // Try raw filename (e.g. 9-AGrupları.json)
         filePath = path.join(__dirname, `${rawSinif}Grupları.json`);
       }
 
       if (fs.existsSync(filePath)) {
+        console.log(`[grupListesiGetir] Found FILE: ${filePath}`);
         try {
           const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-          // Optional: Lazy Migration (Save to DB for next time)
-          // Save with RAW class name so exact match works next time
+          // Lazy Migration (Save to DB) - ALWAYS save back to RAW class name
           await query(`
              INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2)
              ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
@@ -595,10 +607,11 @@ app.get("/grupListesiGetir", async (req, res) => {
           res.json(content);
         } catch (err) { console.error("FS Read Error:", err); res.json([]); }
       } else {
+        console.log(`[grupListesiGetir] Not found anywhere.`);
         res.json([]);
       }
     }
-  } catch (e) { res.json([]); }
+  } catch (e) { console.error(e); res.json([]); }
 });
 
 // Admin File List Helper
