@@ -561,10 +561,23 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
       });
     });
 
-    // 3. Class Groups
+    // 3. Class Groups (Combine DB and File System for robustness)
     const groups = await query("SELECT class_name FROM class_groups");
-    groups.rows.forEach(g => {
-      result.push({ dosya_adi: `${g.class_name}Grupları.json`, arsivde: false });
+    const dbGroupNames = groups.rows.map(g => `${g.class_name}Grupları.json`);
+
+    // Also check file system for immediate visibility
+    let fsGroupFiles = [];
+    try {
+      const fs = require('fs');
+      const files = fs.readdirSync(__dirname);
+      fsGroupFiles = files.filter(f => f.endsWith("Grupları.json"));
+    } catch (e) { console.error("FS Read Error:", e); }
+
+    // Merge unique files
+    const allGroups = [...new Set([...dbGroupNames, ...fsGroupFiles])];
+
+    allGroups.forEach(f => {
+      result.push({ dosya_adi: f, arsivde: false });
     });
 
     // Add veritabani dummy
@@ -638,17 +651,26 @@ async function autoMigrate() {
         );
     `);
 
-    // 1. Class Groups
-    const groupFiles = files.filter(f => f.match(/^[0-9A-Za-z]+Grupları\.json$/));
+    // 1. Class Groups (More robust check)
+    console.log("Files in directory:", files); // Debugging
+    const groupFiles = files.filter(f => f.endsWith("Grupları.json"));
+
     for (const file of groupFiles) {
       const className = file.replace("Grupları.json", "");
-      const content = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf-8'));
+      let content;
+      try {
+        content = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf-8'));
+      } catch (err) {
+        console.error(`Error reading ${file}:`, err);
+        continue;
+      }
+
       await query(`
             INSERT INTO class_groups (class_name, groups_data)
             VALUES ($1, $2)
             ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
         `, [className, content]);
-      console.log(`Migrated group: ${file}`);
+      console.log(`Migrated group: ${file} (Class: ${className})`);
     }
   } catch (e) {
     console.warn("Auto-migration failed (likely due to no DB connection locally):", e.message);
