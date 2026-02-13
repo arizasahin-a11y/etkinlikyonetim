@@ -460,7 +460,13 @@ app.get("/calismaGetir", async (req, res) => {
       if (studyRes.rows.length === 0) return res.json([]);
       const studyId = studyRes.rows[0].id;
 
-      const evals = await query("SELECT * FROM student_evaluations WHERE study_id = $1", [studyId]);
+      // JOIN with students to get name
+      const evals = await query(`
+          SELECT se.*, s.name as student_name 
+          FROM student_evaluations se
+          LEFT JOIN students s ON se.student_school_no = s.school_no
+          WHERE se.study_id = $1
+      `, [studyId]);
 
       // Map back to legacy format
       const mapped = evals.rows.map(row => {
@@ -469,6 +475,7 @@ app.get("/calismaGetir", async (req, res) => {
         }
         return {
           ogrenciNo: row.student_school_no,
+          adSoyad: row.student_name, // Added for compatibility
           sinif: row.class_name,
           cevaplar: row.answers.cevaplar || [], // Unwrap
           puanlar: row.scores,
