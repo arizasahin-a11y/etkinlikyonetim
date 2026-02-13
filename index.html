@@ -182,7 +182,6 @@
 <script>
     let globalData, secilenSinif, seciliDosyaAdi = "", aktifAtamalar = [];
 
-    // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
     function linkleriDonustur(text) {
         if (!text) return "";
         const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -247,7 +246,6 @@
     async function veritabaniniYukle() {
         const res = await fetch("veritabani.json");
         const data = await res.json();
-        // Veritabanını düzleştir ve 1. Sekmede doğru çalışması için hazırla
         globalData = Object.values(data)[0].map(ogrenci => {
             if(ogrenci["Adınız Soyadınız"]) ogrenci["Adınız Soyadınız"] = ogrenci["Adınız Soyadınız"].toLocaleUpperCase("tr-TR");
             return ogrenci;
@@ -344,24 +342,29 @@
         if (!secilenSinif) return alert("Sınıf seçin!");
         const n = prompt("Grup sayısı?"); if (!n) return;
         
-        // 1. SEKME İÇİN ÖNEMLİ DÜZELTME: RANDOM KARIŞTIRMA YERİNE SIRALI DAĞITIM
+        // --- DEĞİŞİKLİK 1: SIRALAMA DÜZELTİLDİ (Random yerine Okul No) ---
         const ogrenciler = globalData.filter(k => k["Sınıfınız"] === secilenSinif);
-        // Okul numarasına göre küçükten büyüğe sırala
         ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
 
-        const gruplar = Array.from({ length: n }, () => []);
-        
-        // Sıralı Dağıtım (Liste sırasını bozmadan böl)
+        const gruplar = [];
         const perGroup = Math.ceil(ogrenciler.length / n);
-        for (let i = 0; i < n; i++) {
-            const start = i * perGroup;
-            const end = start + perGroup;
-            const grupUyeleri = ogrenciler.slice(start, end);
-            if(grupUyeleri.length) gruplar[i] = grupUyeleri;
+        
+        // --- DEĞİŞİKLİK 2: SIRALI DAĞITIM (Slice ile) ---
+        for(let i=0; i<n; i++) {
+             const start = i * perGroup;
+             const end = start + perGroup;
+             const dilim = ogrenciler.slice(start, end);
+             if(dilim.length) gruplar.push(dilim);
         }
-
+        
         gruplariGoster(gruplar);
-        fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sinif: secilenSinif, gruplar }) });
+        
+        // --- DEĞİŞİKLİK 3: OTOMATİK KAYIT ---
+        fetch("/kaydet", { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify({ sinif: secilenSinif, gruplar }) 
+        }).then(() => alert("Gruplar oluşturuldu ve otomatik kaydedildi!"));
     };
 
     document.getElementById("btnSil").onclick = () => { if(secilenSinif && confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: secilenSinif + "Grupları" }) }).then(() => document.getElementById("tablo").innerHTML = ""); };
