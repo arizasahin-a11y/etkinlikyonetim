@@ -247,6 +247,14 @@ app.post("/calismaSil", async (req, res) => {
       const className = cleanIsim.replace("Grupları", "");
       await query("DELETE FROM class_groups WHERE class_name = $1", [className]);
 
+      // FIX: Also delete the file so fallback logic doesn't resurrect it
+      const fs = require('fs');
+      const path = require('path');
+      const filePath = path.join(__dirname, cleanIsim + ".json");
+      if (fs.existsSync(filePath)) {
+        try { fs.unlinkSync(filePath); } catch (e) { console.error("FS Delete Error:", e); }
+      }
+
     } else {
       await query("DELETE FROM studies WHERE name = $1", [cleanIsim]);
     }
@@ -524,23 +532,40 @@ app.get("/arsivListesi", async (req, res) => {
 
 app.get("/grupListesiGetir", async (req, res) => {
   try {
-    const sinif = req.query.sinif;
-    const resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [sinif]);
+    const rawSinif = req.query.sinif; // e.g. "9-A"
+    const normalizedSinif = rawSinif.replace(/[^a-zA-Z0-9]/g, ""); // e.g. "9A"
+
+    // 1. Try EXACT match from DB
+    let resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [rawSinif]);
+
+    // 2. Try NORMALIZED match from DB if exact failed
+    if (resDb.rows.length === 0) {
+      resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [normalizedSinif]);
+    }
+
     if (resDb.rows.length > 0) {
       res.json(resDb.rows[0].groups_data);
     } else {
       // Fallback: Check File System (User Request: "take from files")
       const fs = require('fs');
       const path = require('path');
-      const filePath = path.join(__dirname, `${sinif}Grupları.json`);
+
+      // Try normalized filename first (e.g. 9AGrupları.json)
+      let filePath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
+      if (!fs.existsSync(filePath)) {
+        // Try raw filename (e.g. 9-AGrupları.json)
+        filePath = path.join(__dirname, `${rawSinif}Grupları.json`);
+      }
+
       if (fs.existsSync(filePath)) {
         try {
           const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
           // Optional: Lazy Migration (Save to DB for next time)
+          // Save with RAW class name so exact match works next time
           await query(`
              INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2)
              ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
-          `, [sinif, content]);
+          `, [rawSinif, content]);
           res.json(content);
         } catch (err) { console.error("FS Read Error:", err); res.json([]); }
       } else {
