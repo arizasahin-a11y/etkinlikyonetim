@@ -237,6 +237,12 @@ app.post("/calismaSil", async (req, res) => {
         const studyId = studyRes.rows[0].id;
         await query("DELETE FROM student_evaluations WHERE study_id = $1", [studyId]);
       }
+
+    } else if (cleanIsim.startsWith("groups_")) {
+      // 4. DELETE CLASS GROUPS
+      const className = cleanIsim.replace("groups_", "");
+      await query("DELETE FROM class_groups WHERE class_name = $1", [className]);
+
     } else {
       await query("DELETE FROM studies WHERE name = $1", [cleanIsim]);
     }
