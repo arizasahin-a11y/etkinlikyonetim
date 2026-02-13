@@ -427,26 +427,49 @@ app.post("/kaydet", async (req, res) => {
 
           } else {
             // Regular student answer - JSONB alanları için JSON.stringify
-            const answersJson = JSON.stringify({ cevaplar: item.cevaplar });
+
+            // Eğer cevaplar gönderilmişse kullan, yoksa mevcut cevapları koru
+            let answersJson = null;
+            if (item.cevaplar !== undefined) {
+              answersJson = JSON.stringify({ cevaplar: item.cevaplar });
+            }
+
             const scoresJson = JSON.stringify(item.puanlar || {});
             const evaluationJson = JSON.stringify(item.degerlendirme || {});
 
-            await query(`
-                    INSERT INTO student_evaluations (study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
-                    VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, NOW())
-                    ON CONFLICT (study_id, student_school_no) 
-                    DO UPDATE SET answers = $4::jsonb, scores = $5::jsonb, entry_count = $6, evaluation = $7::jsonb, last_updated = NOW()
-                 `, [
-              studyId,
-              String(item.ogrenciNo),
-              item.sinif,
-              answersJson,
-              scoresJson,
-              item.girisSayisi || 0,
-              evaluationJson
-            ]);
+            // Önce mevcut kaydı kontrol et
+            const existingRes = await query(
+              "SELECT answers FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
+              [studyId, String(item.ogrenciNo)]
+            );
 
-            console.log(`✅ [www_ Kaydet] Öğrenci kaydedildi: ${item.ogrenciNo}`);
+            if (existingRes.rows.length > 0) {
+              // UPDATE - Mevcut kayıt var
+              if (answersJson !== null) {
+                // Cevaplar da güncellenecek
+                await query(`
+                  UPDATE student_evaluations 
+                  SET answers = $1::jsonb, scores = $2::jsonb, entry_count = $3, evaluation = $4::jsonb, class_name = $5, last_updated = NOW()
+                  WHERE study_id = $6 AND student_school_no = $7
+                `, [answersJson, scoresJson, item.girisSayisi || 0, evaluationJson, item.sinif, studyId, String(item.ogrenciNo)]);
+              } else {
+                // Sadece puanlar ve değerlendirme güncellenecek, cevaplar korunacak
+                await query(`
+                  UPDATE student_evaluations 
+                  SET scores = $1::jsonb, evaluation = $2::jsonb, class_name = $3, last_updated = NOW()
+                  WHERE study_id = $4 AND student_school_no = $5
+                `, [scoresJson, evaluationJson, item.sinif, studyId, String(item.ogrenciNo)]);
+              }
+            } else {
+              // INSERT - Yeni kayıt
+              const finalAnswersJson = answersJson || JSON.stringify({ cevaplar: [] });
+              await query(`
+                INSERT INTO student_evaluations (study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
+                VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, NOW())
+              `, [studyId, String(item.ogrenciNo), item.sinif, finalAnswersJson, scoresJson, item.girisSayisi || 0, evaluationJson]);
+            }
+
+            console.log(`✅ [www_ Kaydet] Öğrenci kaydedildi: ${item.ogrenciNo}${answersJson === null ? ' (sadece puanlar/değerlendirme)' : ''}`);
           }
         }
 
