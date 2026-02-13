@@ -178,6 +178,8 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
 
     } else {
       // It's a study definition (qwx prefixed in legacy, just name here)
+      // FIX: Ensure we strip 'qwx' if sent by frontend
+      const name = calismaIsmi.replace(/^qwx/, "").replace(".json", "");
       const content = sorular; // { aciklama, sorular }
 
       await query(`
@@ -185,7 +187,7 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
             VALUES ($1, $2)
             ON CONFLICT (name) 
             DO UPDATE SET content = $2
-        `, [calismaIsmi, content]);
+        `, [name, content]);
     }
 
     res.json({ status: "ok" });
@@ -255,8 +257,8 @@ app.post("/calismaSil", async (req, res) => {
 
 app.post("/arsivle", async (req, res) => {
   try {
-    // req.body.dosyaIsmi (e.g., "Sıvı Basıncı")
-    const name = req.body.dosyaIsmi;
+    // req.body.dosyaIsmi (e.g., "Sıvı Basıncı" or "qwxSıvı Basıncı.json")
+    const name = req.body.dosyaIsmi.replace(/^qwx/, "").replace(".json", "");
     await query("UPDATE studies SET is_archived = TRUE WHERE name = $1", [name]);
     res.json({ status: "ok" });
   } catch (e) { console.error(e); res.status(500).json({ status: "error" }); }
@@ -264,7 +266,7 @@ app.post("/arsivle", async (req, res) => {
 
 app.post("/arsivdenGeriYukle", async (req, res) => {
   try {
-    const name = req.body.dosyaIsmi;
+    const name = req.body.dosyaIsmi.replace(/^qwx/, "").replace(".json", "");
     await query("UPDATE studies SET is_archived = FALSE WHERE name = $1", [name]);
     res.json({ status: "ok" });
   } catch (e) { console.error(e); res.status(500).json({ status: "error" }); }
