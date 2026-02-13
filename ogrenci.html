@@ -514,14 +514,28 @@
             if (!no || !tel) return alert("Eksik bilgi!");
             try {
                 const res = await fetch("veritabani.json");
+                if (!res.ok) throw new Error(`Sunucu Hatası: ${res.status}`);
+
                 const db = await res.json();
-                const list = Array.isArray(db) ? db : Object.values(db).flat(); // Handle both array and object formats
+                const list = Array.isArray(db) ? db : Object.values(db).flat();
+
+                // Debugging Logic
                 const user = list.find(x => String(x["Okul Numaranız"]).trim() === no && String(x["Velinizin telefon numarası"]).replace(/\D/g, '').endsWith(tel));
-                if (!user) throw new Error();
+
+                if (!user) {
+                    const foundNo = list.find(x => String(x["Okul Numaranız"]).trim() === no);
+                    if (foundNo) {
+                        alert(`Okul numarası (${no}) bulundu ama telefon eşleşmedi.\nSistemdeki Telefonun sonu: ${String(foundNo["Velinizin telefon numarası"]).replace(/\D/g, '').slice(-4)}`);
+                    } else {
+                        alert(`Okul numarası (${no}) listede bulunamadı.\n(Listede toplam ${list.length} öğrenci var)`);
+                    }
+                    return;
+                }
+
                 sess = { no: no, ad: user["Adınız Soyadınız"], sinif: user["Sınıfınız"] };
                 localStorage.setItem('ogrenciSession', JSON.stringify(sess));
                 panelHazirla();
-            } catch (e) { alert("Giriş bilgileri hatalı!"); }
+            } catch (e) { alert(`Giriş İşlemi Hatası:\n${e.message}`); }
         }
 
         function panelHazirla() {
