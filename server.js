@@ -412,20 +412,22 @@ app.get("/listeCalismalar", async (req, res) => {
 
 app.get("/calismaGetir", async (req, res) => {
   try {
-    const isim = req.query.isim;
-    // Decode what we are fetching
+    let isim = req.query.isim;
+    // Fix: Strip .json if present, as DB stores names without extension (usually)
+    // But wait, files.push adds .json in list.
+    // And logic below for qqq constructs ID without .json.
+    // So let's handle it.
 
     if (isim.startsWith("qwx")) {
       // Fetch Study Content
-      const name = isim.replace("qwx", "");
+      const name = isim.replace("qwx", "").replace(".json", "");
       const resDb = await query("SELECT content FROM studies WHERE name = $1", [name]);
       if (resDb.rows.length > 0) res.json(resDb.rows[0].content);
       else res.status(404).send();
 
     } else if (isim.startsWith("qqq")) {
       // Fetch Assignment Config
-      // We need to reverse engineer the name -> class + study?
-      // Or just match constructed IDs from DB
+      const cleanIsim = isim.replace(".json", "");
 
       const allAssignments = await query(`
             SELECT a.*, s.name as study_name 
@@ -435,7 +437,9 @@ app.get("/calismaGetir", async (req, res) => {
 
       const found = allAssignments.rows.find(row => {
         const constructedId = "qqq" + row.class_name.replace(/\s/g, '') + row.study_name;
-        return constructedId === isim;
+        // Check both with and without .json to be safe? 
+        // We cleaned isim above, so match against clean ID.
+        return constructedId === cleanIsim;
       });
 
       if (found) {

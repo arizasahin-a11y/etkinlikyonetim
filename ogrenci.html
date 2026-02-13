@@ -538,7 +538,10 @@
                 const r1 = await fetch("/listeCalismalar");
                 const list = await r1.json();
 
-                const adaylar = list.filter(f => f.startsWith(`qqq${sess.sinif}`));
+                // FIX: Server strips spaces from class name in filenames (e.g. qqq9A...)
+                // So we must strip spaces from sess.sinif to match
+                const temizSinif = sess.sinif.replace(/\s/g, '');
+                const adaylar = list.filter(f => f.startsWith(`qqq${temizSinif}`));
 
                 atan = null;
                 for (const dosya of adaylar) {
