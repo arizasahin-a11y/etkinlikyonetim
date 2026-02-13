@@ -560,9 +560,69 @@ app.get("/calismaGetir", async (req, res) => {
     } else if (isim.endsWith("Grupları.json")) {
       // Fetch Class Groups (e.g. 9AGrupları.json)
       const className = isim.replace("Grupları.json", "");
+
+      // Try DB first
       const resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [className]);
-      if (resDb.rows.length > 0) res.json(resDb.rows[0].groups_data);
-      else res.status(404).send();
+      if (resDb.rows.length > 0) {
+        res.json(resDb.rows[0].groups_data);
+      } else {
+        // Fallback to file system
+        const filePath = path.join(__dirname, isim);
+        if (fs.existsSync(filePath)) {
+          try {
+            const fileData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            res.json(fileData);
+          } catch (e) {
+            console.error("File parse error:", e);
+            res.status(404).send();
+          }
+        } else {
+          res.status(404).send();
+        }
+      }
+
+    } else if (isim === "veritabani.json") {
+      // Fetch student database
+      try {
+        const students = await query("SELECT * FROM students");
+
+        // If no data in DB, try file
+        if (!students || !students.rows || students.rows.length === 0) {
+          const filePath = path.join(__dirname, "veritabani.json");
+          if (fs.existsSync(filePath)) {
+            const fileData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            return res.json(fileData);
+          }
+          return res.json({});
+        }
+
+        // Group by class_name (Legacy format)
+        const result = {};
+        students.rows.forEach(s => {
+          if (!result[s.class_name]) result[s.class_name] = [];
+          result[s.class_name].push({
+            "Okul Numaranız": s.school_no,
+            "Adınız Soyadınız": s.name,
+            "Sınıfınız": s.class_name,
+            "Telefon numaranız": s.phone,
+            "Velinizin telefon numarası": s.parent_phone,
+            "E-Posta Adresiniz": s.email,
+            "Drive Klasörünüzün linki": s.drive_link,
+            ...s.extra_info
+          });
+        });
+        res.json(result);
+      } catch (e) {
+        console.error("DB error in veritabani.json download:", e);
+        // Fallback to file
+        const filePath = path.join(__dirname, "veritabani.json");
+        if (fs.existsSync(filePath)) {
+          const fileData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          res.json(fileData);
+        } else {
+          res.status(404).send();
+        }
+      }
 
     } else {
       res.status(404).send();
