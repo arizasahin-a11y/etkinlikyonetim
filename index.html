@@ -116,7 +116,8 @@
             padding: 10px;
             border-radius: 8px;
             background: white;
-            width: 300px;
+            width: 320px; /* Genişletildi */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
         .grup h3 {
@@ -124,25 +125,30 @@
             color: #673AB7;
             border-bottom: 2px solid #eee;
             padding-bottom: 10px;
+            text-align: center;
         }
 
         table {
             border-collapse: collapse;
             width: 100%;
+            font-size: 13px;
         }
 
         th,
         td {
             border: 1px solid #eee;
-            padding: 10px;
-            text-align: center;
+            padding: 8px; /* Padding azaltıldı */
+            text-align: left; /* Sola hizalı okuması daha kolay */
         }
 
         th {
             background-color: #f5f5f5;
             color: #333;
+            text-align: center;
+            font-weight: bold;
         }
 
+        /* Liste ve Diğer Stiller */
         #calismaListesi {
             list-style-type: none;
             padding: 0;
@@ -171,16 +177,6 @@
             font-weight: bold;
         }
 
-        .btn-archive-small {
-            background: #FF9800;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 11px;
-            cursor: pointer;
-        }
-
         .atama-panel {
             background: white;
             padding: 15px;
@@ -193,294 +189,26 @@
             align-items: flex-end;
             justify-content: center;
         }
-
-        .timer-text {
-            font-family: monospace;
-            font-weight: bold;
-            color: #d32f2f;
-            font-size: 1.1em;
-        }
-
-        .yonetim-cerceve {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #d1c4e9;
-            margin-bottom: 15px;
-        }
-
-        .yonetim-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .chk-container {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            color: #333;
-            margin: 0;
-        }
-
-        .kucuk-select {
-            padding: 6px;
-            font-size: 12px;
-            min-width: 140px;
-        }
-
-        #degerlendirmeContainer {
-            display: none;
-            margin-top: 15px;
-            border-top: 2px solid #673AB7;
-            padding-top: 15px;
-        }
-
-        .deg-card {
-            background: white;
-            width: 100%;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: row;
-            height: 450px;
-            border: 1px solid #bbb;
-            overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .deg-soru-bolumu {
-            background: #e8f5e9;
-            padding: 20px;
-            border-right: 1px solid #c8e6c9;
-            color: #1b5e20;
-            overflow-y: auto;
-            flex: 0 0 40%;
-            display: flex;
-            flex-direction: column;
-            font-size: 0.95rem;
-        }
-
-        .deg-cevap-bolumu {
-            padding: 15px;
-            flex: 1;
-            overflow-y: auto;
-            background: #fff;
-            font-size: 0.95rem;
-        }
-
-        .deg-cevap-item {
-            position: relative;
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 10px;
-            padding: 12px;
-            background: #fafafa;
-            border: 1px solid #eee;
-            border-radius: 6px;
-            min-height: 60px;
-            cursor: pointer;
-        }
-
-        .deg-cevap-metin {
-            flex: 1;
-            min-height: 40px;
-            padding-right: 70px;
-            word-wrap: break-word;
-        }
-
-        .deg-buton-grubu {
-            position: absolute;
-            bottom: 8px;
-            right: 8px;
-            display: flex;
-            gap: 4px;
-            z-index: 5;
-        }
-
-        .deg-btn-puan {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 1px solid #ccc;
-            background: white;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.8rem;
-            color: #666;
-        }
-
-        .deg-dogru.aktif {
-            background: #2e7d32 !important;
-            color: white !important;
-        }
-
-        .deg-yanlis.aktif {
-            background: #d32f2f !important;
-            color: white !important;
-        }
-
-        .deg-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #eee;
-            padding: 12px 20px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            position: relative;
-            min-height: 40px;
-        }
-
-        .deg-header-left {
-            text-align: left;
-            font-weight: bold;
-            color: #d32f2f;
-            font-size: 1.1rem;
-            text-transform: uppercase;
-            z-index: 2;
-            flex: 1;
-        }
-
-        .deg-header-center {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            font-weight: bold;
-            color: #000;
-            font-size: 1.1rem;
-            z-index: 1;
-            white-space: nowrap;
-        }
-
-        .deg-header-right {
-            text-align: right;
-            font-weight: bold;
-            color: #673AB7;
-            font-size: 1.1rem;
-            z-index: 2;
-            flex: 1;
-        }
-
-        .deg-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 15px;
-        }
-
+        
+        /* Modal Stilleri */
         .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
             left: 0;
             top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.5); 
         }
-
         .modal-content {
             background-color: #fefefe;
-            margin: 10% auto;
+            margin: 10% auto; 
             padding: 20px;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .soru-item {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            align-items: center;
-            background: #fdfdfd;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #eee;
-        }
-
-        .soru-no {
-            font-weight: bold;
-            color: #673AB7;
-            min-width: 70px;
-        }
-
-        /* MEDYA GÖMME STİLLERİ */
-        .embedded-wrapper {
-            width: 100%;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #eee;
-            border-radius: 6px;
-            padding: 5px;
-            background: #fff;
-        }
-
-        .embedded-img {
-            max-height: 200px;
-            max-width: 100%;
-            cursor: pointer;
-            transition: transform 0.2s;
-            display: block;
-            margin: 0 auto;
-        }
-
-        .embedded-img:hover {
-            transform: scale(1.02);
-        }
-
-        .embedded-img.fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            max-height: 100vh;
-            object-fit: contain;
-            z-index: 9999;
-            background: rgba(0, 0, 0, 0.9);
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .embedded-video {
-            max-width: 100%;
-            height: auto;
-            max-height: 300px;
-            display: block;
-            margin: 0 auto;
-        }
-
-        .embedded-audio {
-            width: 100%;
-        }
-
-        .embedded-iframe {
-            width: 100%;
-            height: 400px;
-            border: none;
-        }
-
-        .embed-fallback {
-            text-align: center;
-            font-size: 12px;
-            margin-top: 5px;
-            background: #f1f1f1;
-            padding: 5px;
-            border-radius: 4px;
-        }
-
-        .embed-fallback a {
-            color: #1976D2;
-            text-decoration: none;
-            font-weight: bold;
+            border: 1px solid #888;
+            width: 50%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -489,20 +217,21 @@
     <h1>Etkinlik Yönetim Paneli</h1>
     <div class="tab-container">
         <div class="tab-buttons">
-            <button onclick="openTab(event,'sekme1')">Çalışma Şekli</button>
+            <button class="active" onclick="openTab(event,'sekme1')">Çalışma Şekli (Gruplar)</button>
             <button onclick="openTab(event,'sekme2')">Çalışma İçeriği</button>
-            <button class="active" onclick="openTab(event,'sekme3')">Çalışma Süreci</button>
+            <button onclick="openTab(event,'sekme3')">Çalışma Süreci</button>
             <button onclick="openTab(event,'sekme4')">Değerlendirme</button>
         </div>
 
-        <div id="sekme1" class="tab-content">
+        <div id="sekme1" class="tab-content active">
             <div style="text-align: center;">
                 <select id="sinifSec" style="width: 250px;">
                     <option value="">-- Sınıf Seçin --</option>
                 </select>
                 <div class="button-group">
-                    <button id="btnGrupla" class="action">Sınıfı Gruplara Böl</button>
-                    <button id="btnSil" class="action red">Mevcut Grupları Sil</button>
+                    <button id="btnGrupla" class="action" onclick="sinifiGrupla()">Sınıfı Gruplara Böl</button>
+                    <button id="btnSil" class="action red" onclick="gruplariSil()">Mevcut Grupları Sil</button>
+                    <button id="btnKaydetGruplar" class="action blue" onclick="gruplariKaydet()">Grupları Kaydet</button>
                 </div>
             </div>
             <div id="tablo" class="grup-container"></div>
@@ -512,603 +241,430 @@
             <div id="listeEkrani">
                 <div class="button-group">
                     <button onclick="arsivModalAc()" class="action orange">📂 Arşivden Çalışma Ekle</button>
-                    <button id="btnYeni" class="action">Yeni Çalışma Ekle</button>
-                    <button id="btnDuzenle" class="action blue">Seçileni Düzenle</button>
-                    <button id="btnSilDosya" class="action red">Seçileni Sil</button>
+                    <button id="btnYeni" class="action" onclick="yeniCalisma()">Yeni Çalışma Ekle</button>
+                    <button id="btnDuzenle" class="action blue" onclick="calismaDuzenle()">Seçileni Düzenle</button>
+                    <button id="btnSilDosya" class="action red" onclick="calismaSil()">Seçileni Sil</button>
                 </div>
                 <ul id="calismaListesi"></ul>
             </div>
-            <div id="editorEkrani"
-                style="display:none; border: 1px solid #d1c4e9; padding: 20px; border-radius: 10px; background: white; max-width: 800px; margin: 0 auto;">
+            <div id="editorEkrani" style="display:none; border: 1px solid #d1c4e9; padding: 20px; border-radius: 10px; background: white; max-width: 800px; margin: 0 auto;">
                 <h3 id="editorBaslik" style="color: #673AB7; text-align: center; margin-top:0;"></h3>
-                <textarea id="calismaAciklama"
-                    style="width: 95%; height: 80px; padding: 12px; border: 1px solid #d1c4e9; border-radius: 8px; display: block; margin: 10px auto;"
-                    placeholder="Yönergeleri buraya yazın..."></textarea>
+                <label>Çalışma Adı:</label>
+                <input type="text" id="calismaAdiInput" style="width: 100%; margin-bottom: 10px;">
+                <textarea id="calismaAciklama" style="width: 95%; height: 60px; padding: 12px; border: 1px solid #d1c4e9; border-radius: 8px; display: block; margin: 10px auto;" placeholder="Yönergeleri buraya yazın..."></textarea>
                 <div id="soruAlani"></div>
                 <div class="button-group">
-                    <button id="btnSoruEkle" class="action blue">+ Yeni Soru</button>
-                    <button id="btnKaydet" class="action">💾 Kaydet</button>
-                    <button onclick="location.reload()" class="action red">İptal</button>
+                    <button id="btnSoruEkle" class="action blue" onclick="soruEkleUI()">+ Yeni Soru</button>
+                    <button id="btnKaydet" class="action" onclick="calismaKaydet()">💾 Kaydet</button>
+                    <button onclick="editorKapat()" class="action red">İptal</button>
                 </div>
             </div>
         </div>
 
-        <div id="sekme3" class="tab-content active">
+        <div id="sekme3" class="tab-content">
             <div class="atama-panel">
-                <div>Sınıf:<br><select id="s3SinifSec" style="width:140px;">
-                        <option value="">-- Seçin --</option>
-                    </select></div>
-                <div>Çalışma:<br><select id="s3CalismaSec" style="width:140px;">
-                        <option value="">-- Seçin --</option>
-                    </select></div>
+                <div>Sınıf:<br><select id="s3SinifSec" style="width:140px;"><option value="">-- Seçin --</option></select></div>
+                <div>Çalışma:<br><select id="s3CalismaSec" style="width:140px;"><option value="">-- Seçin --</option></select></div>
                 <div>Yöntem:<br><select id="s3YontemSec" style="width:110px;">
-                        <option value="">-- Seçin --</option>
                         <option value="Grup">Grup</option>
                         <option value="Tek">Tek</option>
                     </select></div>
-                <button id="btnS3Olustur" class="action blue" style="min-width:100px;">Oluştur</button>
+                <button id="btnS3Olustur" class="action blue" onclick="atamaYap()">Oluştur</button>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Sınıf</th>
-                        <th>Çalışma Adı</th>
-                        <th>Yöntem</th>
-                        <th>Görme</th>
-                        <th>Yapma</th>
-                        <th>Değerl.</th>
-                        <th>Süre</th>
-                        <th>Kalan</th>
-                        <th>İşlem</th>
-                    </tr>
-                </thead>
-                <tbody id="atamaBody"></tbody>
-            </table>
+            <div style="text-align: center; color: #666; font-style: italic;">Atanan çalışmalar burada listelenir (Admin Paneli üzerinden yönetilebilir).</div>
+            <ul id="atananListesi" style="list-style: none; padding: 0; max-width: 600px; margin: 20px auto;"></ul>
         </div>
 
         <div id="sekme4" class="tab-content">
-            <div class="yonetim-cerceve" id="degSecimPaneli">
-                <div class="yonetim-toolbar">
-                    <label class="chk-container"><input type="checkbox" id="chkDegerlendirmeIzin" disabled> Öğrenci
-                        İzni</label>
-                    <label class="chk-container"><input type="checkbox" id="chkIzin" disabled> Öğretmen İzni</label>
-                    <div><strong>Çalışma:</strong> <select id="s4DosyaSec" class="kucuk-select"></select></div>
-                    <div><strong>Sınıf:</strong> <select id="s4SinifSec" class="kucuk-select"></select></div>
-                    <button id="btnDegerlendirmeBaslat" class="action blue"
-                        style="font-size:12px; padding:6px 15px;">BAŞLAT</button>
-                    <button id="btnDegerlendirmeSifirla" class="action red"
-                        style="font-size:12px; padding:6px 15px; display:none;">Değerlendirmeyi Sıfırla</button>
-                </div>
-            </div>
-            <div id="degerlendirmeContainer">
-                <div class="deg-header">
-                    <div class="deg-header-left" id="degOgrenciBaslik">--</div>
-                    <div class="deg-header-center" id="degBilgiUst">--</div>
-                    <div class="deg-header-right">PUAN: <span id="degPuanGosterge">0</span></div>
-                </div>
-                <div class="deg-card">
-                    <div id="degNormalPanel" style="display:flex; width:100%; height:100%;">
-                        <div class="deg-soru-bolumu"><span id="degSoruNo" style="font-weight:bold;">1</span>. Soru<div
-                                id="degSoruMetin" style="font-weight:600;"></div>
-                        </div>
-                        <div class="deg-cevap-bolumu">
-                            <div id="degCevapListesi"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="deg-controls">
-                    <button class="action red" onclick="DegerlendirmeApp.nav(-1)" style="background:#9e9e9e">❮
-                        Geri</button>
-                    <button class="action blue" id="btnDegIleri" onclick="DegerlendirmeApp.nav(1)">İleri ❯</button>
-                    <button class="action red" id="btnDegBitir" style="display:none;"
-                        onclick="DegerlendirmeApp.sonrakiKisi()">💾 Kaydet / Sonraki</button>
-                </div>
-                <div style="text-align:right; margin-top:10px;"><button onclick="location.reload()" class="action red"
-                        style="background:#9e9e9e">Kapat</button></div>
+            <div style="text-align:center;">
+                 <h3>Sonuçları Görüntüle</h3>
+                 <p>Detaylı sonuçlar için "Admin" paneline veya ilgili sınıfın sayfasına bakınız.</p>
             </div>
         </div>
     </div>
 
     <div id="arsivModal" class="modal">
         <div class="modal-content">
-            <div
-                style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding-bottom:10px;">
-                <h3 style="margin:0; color:#673AB7;">Arşiv</h3><span
-                    onclick="document.getElementById('arsivModal').style.display='none'"
-                    style="cursor:pointer; font-size:24px;">&times;</span>
-            </div>
-            <ul id="arsivDosyaListesi" style="list-style:none; padding:0; max-height:300px; overflow-y:auto;"></ul>
+            <span onclick="document.getElementById('arsivModal').style.display='none'" style="float:right; cursor:pointer; font-size:20px;">&times;</span>
+            <h3>Arşivdeki Çalışmalar</h3>
+            <ul id="arsivListesiUl" style="list-style:none; padding:0;"></ul>
         </div>
     </div>
 
     <script>
-        let globalData, secilenSinif, seciliDosyaAdi = "", aktifAtamalar = [];
+        // GLOBAL DEĞİŞKENLER
+        let veritabani = {};
+        let mevcutGruplar = [];
+        let seciliCalisma = null;
 
-        // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
-        function linkleriDonustur(text) {
-            if (!text) return "";
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            return text.replace(urlRegex, function (url) {
-                const cleanUrl = url.trim();
-                // Uzantı kontrolü için URL parametrelerini at
-                const urlNoParams = cleanUrl.split('?')[0];
-                const ext = urlNoParams.split('.').pop().toLowerCase();
-
-                // 1. Google Drive & Docs (Akıllı ID Yakalama)
-                if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com')) {
-                    let id = null;
-                    // /d/ID/ yapısı
-                    const parts = cleanUrl.split(/\/d\//);
-                    if (parts.length > 1) {
-                        id = parts[1].split('/')[0];
-                    } else {
-                        // id=ID yapısı
-                        const match = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                        if (match) id = match[1];
-                    }
-
-                    if (id) {
-                        // Türüne göre doğru embed linkini üret
-                        let embedUrl = `https://drive.google.com/file/d/${id}/preview`; // Varsayılan
-                        if (cleanUrl.includes('/document/')) embedUrl = `https://docs.google.com/document/d/${id}/preview`;
-                        else if (cleanUrl.includes('/spreadsheets/')) embedUrl = `https://docs.google.com/spreadsheets/d/${id}/preview`;
-                        else if (cleanUrl.includes('/presentation/')) embedUrl = `https://docs.google.com/presentation/d/${id}/preview`;
-
-                        return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allow="autoplay"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank">📄 Dosyayı Yeni Sekmede Aç</a></div></div>`;
-                    }
-                }
-
-                // 2. Resimler
-                if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
-                    return `<img src="${cleanUrl}" class="embedded-img" onclick="this.classList.toggle('fullscreen')" title="Büyütmek için tıkla">`;
-                }
-
-                // 3. Ses
-                if (['mp3', 'wav', 'ogg'].includes(ext)) {
-                    return `<div class="embedded-wrapper"><audio controls src="${cleanUrl}" class="embedded-audio"></audio></div>`;
-                }
-
-                // 4. Video (Dosya)
-                if (['mp4', 'webm', 'mov'].includes(ext)) {
-                    return `<div class="embedded-wrapper"><video controls src="${cleanUrl}" class="embedded-video"></video></div>`;
-                }
-
-                // 5. YouTube
-                if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
-                    let embedUrl = cleanUrl;
-                    if (cleanUrl.includes('watch?v=')) embedUrl = cleanUrl.replace('watch?v=', 'embed/');
-                    else if (cleanUrl.includes('youtu.be/')) embedUrl = cleanUrl.replace('youtu.be/', 'youtube.com/embed/');
-                    // Fazlalık parametreleri temizle
-                    if (embedUrl.includes('&')) embedUrl = embedUrl.split('&')[0];
-                    return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allowfullscreen></iframe></div>`;
-                }
-
-                // 6. HER ŞEY İÇİN FALLBACK (GENEL WEB SİTESİ)
-                // iframe içinde açmayı dener, olmazsa link verir.
-                return `<div class="embedded-wrapper">
-                        <iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy"></iframe>
-                        <div class="embed-fallback">
-                            <a href="${cleanUrl}" target="_blank">🌐 Bağlantıyı Yeni Sekmede Aç (Görüntülenemiyorsa Tıkla)</a>
-                        </div>
-                    </div>`;
-            });
-        }
-
-        window.onload = () => {
-            veritabaniniYukle().then(() => {
-                s3DropdownYukle();
-                s3AtamalariCek();
-                s4DosyaListesiYukle();
-                const sonSekme = sessionStorage.getItem('aktifSekme');
-                if (sonSekme) { openTab(null, sonSekme); }
-            });
+        // BAŞLANGIÇ
+        window.onload = async function() {
+            await veritabaniYukle();
+            await calismaListesiGetir();
         };
 
-        function openTab(evt, tabId) {
-            document.querySelectorAll('.tab-content').forEach(d => d.classList.remove('active'));
-            document.querySelectorAll('.tab-buttons button').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            if (evt) { evt.currentTarget.classList.add('active'); }
-            else {
-                const buttons = document.querySelectorAll('.tab-buttons button');
-                buttons.forEach(btn => { if (btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active'); });
+        function openTab(evt, tabName) {
+            var i, tabcontent, tabbuttons;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
             }
-            sessionStorage.setItem('aktifSekme', tabId);
-            if (tabId === 'sekme3') { s3DropdownYukle(); s3AtamalariCek(); }
-            if (tabId === 'sekme2') listeyiYukle();
-            if (tabId === 'sekme4') s4DosyaListesiYukle();
-        }
-
-        async function veritabaniniYukle() {
-            const res = await fetch("veritabani.json");
-            const data = await res.json();
-            globalData = Object.values(data)[0].map(ogrenci => {
-                if (ogrenci["Adınız Soyadınız"]) ogrenci["Adınız Soyadınız"] = ogrenci["Adınız Soyadınız"].toLocaleUpperCase("tr-TR");
-                return ogrenci;
-            });
-            const siniflar = [...new Set(globalData.map(k => k["Sınıfınız"]))];
-            siniflar.forEach(s => {
-                document.getElementById("sinifSec").appendChild(new Option(s, s));
-                document.getElementById("s3SinifSec").appendChild(new Option(s, s));
-            });
-        }
-
-        function listeyiYukle() {
-            fetch("/listeCalismalar").then(res => res.json()).then(dosyalar => {
-                const liste = document.getElementById("calismaListesi"); liste.innerHTML = "";
-                dosyalar.filter(d => d.startsWith("qwx")).forEach(d => {
-                    const li = document.createElement("li");
-                    li.innerHTML = `<span>${d.replace("qwx", "").replace(".json", "")}</span><button onclick="calismaArsivle('${d}')" class="btn-archive-small">Arşivle</button>`;
-                    li.onclick = () => { document.querySelectorAll("#calismaListesi li").forEach(x => x.classList.remove("selected")); li.classList.add("selected"); seciliDosyaAdi = d; };
-                    liste.appendChild(li);
-                });
-            });
-        }
-        function calismaArsivle(tamDosyaAdi) {
-            if (!confirm("Arşivlenecek?")) return;
-            fetch("/arsivle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaIsmi: tamDosyaAdi.replace(".json", "") }) })
-                .then(res => res.json()).then(data => { if (data.status === "ok") listeyiYukle(); });
-        }
-        function arsivModalAc() {
-            document.getElementById("arsivModal").style.display = "block";
-            const liste = document.getElementById("arsivDosyaListesi");
-            fetch("/arsivListesi").then(res => res.json()).then(dosyalar => {
-                liste.innerHTML = "";
-                dosyalar.forEach(d => {
-                    const li = document.createElement("li"); li.style.padding = "10px"; li.style.borderBottom = "1px solid #eee"; li.style.display = "flex"; li.style.justifyContent = "space-between";
-                    li.innerHTML = `<span>${d.replace(".json", "").replace("qwx", "")}</span> <button class="action blue" onclick="arsivdenGeriYukle('${d}')">Geri Yükle</button>`;
-                    liste.appendChild(li);
-                });
-            });
-        }
-        function arsivdenGeriYukle(dosyaAdi) {
-            if (!confirm("Geri yüklensin mi?")) return;
-            fetch("/arsivdenGeriYukle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaIsmi: dosyaAdi }) })
-                .then(res => res.json()).then(data => { if (data.status === "ok") { document.getElementById("arsivModal").style.display = "none"; listeyiYukle(); } });
-        }
-
-        function soruEkle(val = "") {
-            const div = document.createElement("div"); div.className = "soru-item";
-            div.innerHTML = `<span class="soru-no"></span><input type="text" style="flex:1; padding:10px;" value="${val}"><button onclick="this.parentElement.remove(); yenileSoruNumaralari();" class="action red" style="min-width:40px; padding:5px;">X</button>`;
-            document.getElementById("soruAlani").appendChild(div); yenileSoruNumaralari();
-        }
-        function yenileSoruNumaralari() {
-            document.querySelectorAll("#soruAlani .soru-item").forEach((item, index) => { item.querySelector(".soru-no").textContent = (index + 1) + ". Soru:"; });
-        }
-
-        document.getElementById("btnSoruEkle").onclick = () => soruEkle();
-
-        document.getElementById("btnYeni").onclick = () => {
-            let isim = prompt("Ad?"); if (isim) { seciliDosyaAdi = "qwx" + isim; document.getElementById("listeEkrani").style.display = "none"; document.getElementById("editorEkrani").style.display = "block"; document.getElementById("editorBaslik").textContent = isim.toUpperCase(); document.getElementById("calismaAciklama").value = ""; document.getElementById("soruAlani").innerHTML = ""; soruEkle(); }
-        };
-        document.getElementById("btnDuzenle").onclick = () => {
-            if (!seciliDosyaAdi) return alert("Seçin!");
-            fetch(`/calismaGetir?isim=${encodeURIComponent(seciliDosyaAdi.replace(".json", ""))}`).then(r => r.json()).then(data => {
-                document.getElementById("listeEkrani").style.display = "none"; document.getElementById("editorEkrani").style.display = "block";
-                document.getElementById("editorBaslik").textContent = seciliDosyaAdi.replace("qwx", "").replace(".json", "").toUpperCase();
-                document.getElementById("soruAlani").innerHTML = "";
-                let sorular = Array.isArray(data) ? data : (data.sorular || []);
-                document.getElementById("calismaAciklama").value = data.aciklama || "";
-                sorular.forEach(s => soruEkle(s));
-            });
-        };
-        document.getElementById("btnKaydet").onclick = () => {
-            const v = { aciklama: document.getElementById("calismaAciklama").value, sorular: Array.from(document.querySelectorAll("#soruAlani input")).map(i => i.value).filter(x => x.trim()) };
-            fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: seciliDosyaAdi.replace(".json", ""), sorular: v }) }).then(() => location.reload());
-        };
-        document.getElementById("btnSilDosya").onclick = () => { if (seciliDosyaAdi && confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: seciliDosyaAdi.replace(".json", "") }) }).then(() => listeyiYukle()); };
-
-        document.getElementById("sinifSec").onchange = function () {
-            secilenSinif = this.value;
-            if (secilenSinif) {
-                fetch(`/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}`)
-                    .then(r => r.json())
-                    .then(g => gruplariGoster(g))
-                    .catch(() => document.getElementById("tablo").innerHTML = "");
+            tabbuttons = document.getElementsByClassName("tab-buttons")[0].getElementsByTagName("button");
+            for (i = 0; i < tabbuttons.length; i++) {
+                tabbuttons[i].className = tabbuttons[i].className.replace(" active", "");
             }
-        };
-        function gruplariGoster(gruplar) {
-            const container = document.getElementById("tablo"); container.innerHTML = "";
-            gruplar.forEach((grup, idx) => {
-                const div = document.createElement("div"); div.className = "grup";
-                div.innerHTML = `<h3>Grup ${idx + 1}</h3>`;
-                const table = document.createElement("table");
-                const keys = Object.keys(grup[0]).slice(2, 4);
-                table.innerHTML = `<thead><tr>${keys.map(k => `<th>${k}</th>`).join("")}</tr></thead><tbody>${grup.map(r => `<tr>${keys.map(k => `<td>${r[k] || ""}</td>`).join("")}</tr>`).join("")}</tbody>`;
-                div.appendChild(table); container.appendChild(div);
-            });
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.className += " active";
         }
 
-        document.getElementById("btnGrupla").onclick = () => {
-            if (!secilenSinif) return alert("Sınıf seçin!");
-            const n = prompt("Grup sayısı?"); if (!n) return;
-            const ogrenciler = globalData.filter(k => k["Sınıfınız"] === secilenSinif).sort(() => Math.random() - 0.5);
-            const gruplar = Array.from({ length: n }, () => []);
-            ogrenciler.forEach((og, i) => gruplar[i % n].push(og));
-            gruplar.forEach(grup => { grup.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"])); });
-            gruplariGoster(gruplar);
+        // --- VERİTABANI VE GRUPLAMA İŞLEMLERİ ---
 
-            // SQL'e kaydet ve response bekle
-            fetch("/kaydet", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sinif: secilenSinif, gruplar })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "ok" && data.saved) {
-                        console.log("✅ Gruplar SQL'e kaydedildi:", secilenSinif);
-                        alert(`✅ ${secilenSinif} için ${gruplar.length} grup başarıyla kaydedildi!`);
-                    } else {
-                        console.error("⚠️ Kayıt yanıtı:", data);
-                        alert("⚠️ Gruplar oluşturuldu ama kayıt durumu belirsiz.");
-                    }
-                })
-                .catch(error => {
-                    console.error("❌ Grup kaydetme hatası:", error);
-                    alert("❌ HATA: Gruplar SQL'e kaydedilemedi!\n" + error.message);
-                });
-        };
-
-        document.getElementById("btnSil").onclick = () => { if (secilenSinif && confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: secilenSinif + "Grupları.json" }) }).then(() => { document.getElementById("tablo").innerHTML = ""; alert("Silindi."); }); };
-
-        function s3DropdownYukle() {
-            const cS = document.getElementById("s3CalismaSec");
-            fetch("/listeCalismalar").then(r => r.json()).then(dosyalar => {
-                cS.innerHTML = '<option value="">-- Seçin --</option>';
-                dosyalar.filter(d => d.startsWith("qwx")).forEach(d => { const n = d.replace("qwx", "").replace(".json", ""); cS.appendChild(new Option(n.replace("qwx", ""), n)); });
-            });
-        }
-        function s3AtamalariCek() {
-            fetch("/listeCalismalar").then(res => res.json()).then(dosyalar => {
-                const qFiles = dosyalar.filter(d => d.startsWith("qqq"));
-                aktifAtamalar = []; let count = 0; if (qFiles.length === 0) return s3TabloCiz();
-                qFiles.forEach(f => {
-                    fetch(`/calismaGetir?isim=${encodeURIComponent(f.replace(".json", ""))}`).then(r => r.json()).then(data => { aktifAtamalar.push(data); count++; if (count === qFiles.length) s3TabloCiz(); })
-                        .catch(() => { count++; if (count === qFiles.length) s3TabloCiz(); });
-                });
-            });
-        }
-        document.getElementById("btnS3Olustur").onclick = () => {
-            const sn = document.getElementById("s3SinifSec").value, cl = document.getElementById("s3CalismaSec").value, yn = document.getElementById("s3YontemSec").value;
-            if (!sn || !cl || !yn) return alert("Eksik seçim!");
-            const dId = "qqq" + sn.replace(/\s/g, '') + cl.replace("qwx", "");
-            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, yapma: false, degerl: false, sure: 0, bitis: null };
-            fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: dId, sorular: obj }) }).then(() => setTimeout(s3AtamalariCek, 300));
-        };
-        function s3TabloCiz() {
-            const b = document.getElementById("atamaBody"); b.innerHTML = "";
-            aktifAtamalar.sort((a, b) => a.id.localeCompare(b.id)).forEach(a => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${a.sinif}</td><td>${a.calisma}</td><td><b>${a.yontem}</b></td>
-                <td><input type="checkbox" ${a.gorme ? 'checked' : ''} onchange="s3Upd('${a.id}','gorme',this.checked)"></td>
-                <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
-                <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>
-                <td><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px;">OK</button></td>
-                <td><span class="timer-text" id="t_${a.id}">--:--</span></td>
-                <td><button onclick="s3Del('${a.id}')" class="action red" style="min-width:auto; padding:5px;">Sil</button></td>`;
-                b.appendChild(tr);
-            });
-        }
-        function s3Upd(id, k, v) { const a = aktifAtamalar.find(x => x.id === id); if (a) { a[k] = v; fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: id, sorular: a }) }); } }
-        function s3Start(id) {
-            const a = aktifAtamalar.find(x => x.id === id); const s = parseInt(document.getElementById("inp_" + id).value) || 0;
-            if (a && s > 0) { a.sure = s; a.yapma = true; a.bitis = Date.now() + (s * 60 * 1000); s3Upd(id, 'bitis', a.bitis); s3Upd(id, 'yapma', true); s3TabloCiz(); }
-        }
-        function s3Del(id) { if (confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: id }) }).then(() => s3AtamalariCek()); }
-
-        setInterval(() => {
-            aktifAtamalar.forEach(a => {
-                const el = document.getElementById("t_" + a.id); if (!el || !a.bitis) return;
-                const diff = a.bitis - Date.now();
-                if (diff > 0) { el.textContent = `${Math.floor(diff / 60000).toString().padStart(2, '0')}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')}`; }
-                else { el.textContent = "BİTTİ"; if (a.yapma) { a.yapma = false; s3Upd(a.id, 'yapma', false); } }
-            });
-        }, 1000);
-
-        function s4DosyaListesiYukle() {
-            fetch("/listeCalismalar").then(r => r.json()).then(dosyalar => {
-                const sel = document.getElementById("s4DosyaSec"); sel.innerHTML = '<option value="">-- Seç --</option>';
-                dosyalar.filter(d => d.startsWith("qwx")).forEach(d => { const n = d.replace("qwx", "").replace(".json", ""); sel.appendChild(new Option(n, n)); });
-            });
-        }
-
-        // --- GÜNCELLENEN KISIM: Sadece wwwData'daki kayıtlara bak ---
-        document.getElementById("s4DosyaSec").onchange = async function () {
-            const calisma = this.value; const sinifSel = document.getElementById("s4SinifSec");
-            document.getElementById("btnDegerlendirmeSifirla").style.display = "none";
-            const chkOgr = document.getElementById("chkDegerlendirmeIzin"); const chkOgrt = document.getElementById("chkIzin");
-            sinifSel.innerHTML = '<option value="">...</option>';
-            if (!calisma) { chkOgr.disabled = true; chkOgrt.disabled = true; return; }
-            chkOgr.disabled = false; chkOgrt.disabled = false;
+        async function veritabaniYukle() {
             try {
-                const [dosyalar, rW] = await Promise.all([
-                    (await fetch("/listeCalismalar")).json(),
-                    fetch(`/calismaGetir?isim=www_${calisma}`).catch(() => null)
-                ]);
-                let wwwData = []; if (rW && rW.ok) wwwData = await rW.json();
-                const ayar = wwwData.find(x => x.ogrenciNo === "AYARLAR");
-                chkOgr.checked = ayar ? ayar.degerlendirmeIzni : false; chkOgrt.checked = ayar ? ayar.izin : false;
-                const atananlar = dosyalar.filter(f => f.startsWith("qqq") && f.replace(".json", "").endsWith(calisma));
-                sinifSel.innerHTML = '<option value="">-- Seç --</option>';
-                for (let f of atananlar) {
-                    const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json", "")}`)).json();
-                    if (data.sinif) {
-                        const buSinifinCevaplari = wwwData.filter(r => r.sinif === data.sinif);
-                        let hepsiBittiMi = false;
-
-                        if (buSinifinCevaplari.length > 0) {
-                            hepsiBittiMi = buSinifinCevaplari.every(r => r.degerlendirme && r.degerlendirme.bitti);
-                        }
-
-                        sinifSel.appendChild(new Option(data.sinif + (hepsiBittiMi ? " (Bitti)" : ""), data.sinif));
-                    }
-                }
-            } catch (e) { console.error("Hata:", e); }
-        };
-
-        document.getElementById("s4SinifSec").onchange = function () {
-            const btn = document.getElementById("btnDegerlendirmeSifirla");
-            if (this.selectedIndex >= 0) {
-                const seciliText = this.options[this.selectedIndex].text;
-                if (seciliText.includes("(Bitti)")) { btn.style.display = "inline-block"; } else { btn.style.display = "none"; }
-            } else { btn.style.display = "none"; }
-        };
-
-        document.getElementById("btnDegerlendirmeSifirla").onclick = function () {
-            const calisma = document.getElementById("s4DosyaSec").value;
-            const sinifSel = document.getElementById("s4SinifSec");
-            const sinif = sinifSel.value.replace(" (Bitti)", "");
-            if (!calisma || !sinif) return;
-            const ogrenciNoListesi = globalData.filter(u => u["Sınıfınız"] === sinif).map(u => String(u["Okul Numaranız"]).trim());
-            if (ogrenciNoListesi.length === 0) { alert("HATA: Sınıf listesi bulunamadı."); return; }
-            if (!confirm(`DİKKAT! ${sinif} sınıfının "${calisma}" çalışmasındaki "BİTTİ" durumu kaldırılacak.`)) return;
-            fetch("/degerlendirmeSifirla", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: "www_" + calisma, ogrenciNoListesi: ogrenciNoListesi, sinif: sinif }) })
-                .then(r => r.json()).then(res => { if (res.status === "ok") { alert("Sıfırlandı!"); location.reload(); } else { alert("Hata!"); } });
-        };
-
-        document.getElementById("chkDegerlendirmeIzin").onchange = function () {
-            if (this.checked) document.getElementById("chkIzin").checked = false;
-            izinKaydet();
-        };
-        document.getElementById("chkIzin").onchange = function () {
-            if (this.checked) document.getElementById("chkDegerlendirmeIzin").checked = false;
-            izinKaydet();
-        };
-
-        function izinKaydet() {
-            const val = document.getElementById("s4DosyaSec").value; if (!val) return;
-            const ayar = { ogrenciNo: "AYARLAR", sinif: "SISTEM", degerlendirmeIzni: document.getElementById("chkDegerlendirmeIzin").checked, izin: document.getElementById("chkIzin").checked, tarih: new Date().toLocaleString() };
-            fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: "www_" + val, veri: ayar }) });
+                const res = await fetch('/veritabani.json');
+                veritabani = await res.json();
+                siniflariDoldur();
+            } catch (e) {
+                console.error("Veritabanı yüklenemedi:", e);
+                alert("Öğrenci veritabanı yüklenemedi!");
+            }
         }
 
-        document.getElementById("btnDegerlendirmeBaslat").onclick = () => {
-            const sinifSel = document.getElementById("s4SinifSec");
-            if (sinifSel.selectedIndex >= 0 && sinifSel.options[sinifSel.selectedIndex].text.includes("(Bitti)")) {
-                alert("Bu sınıfın değerlendirmesi tamamlanmış! Önce 'Değerlendirmeyi Sıfırla' butonunu kullanmalısınız.");
-                return;
+        function siniflariDoldur() {
+            const siniflar = Object.keys(veritabani).sort();
+            const sel1 = document.getElementById('sinifSec');
+            const sel3 = document.getElementById('s3SinifSec');
+            
+            sel1.innerHTML = '<option value="">-- Sınıf Seçin --</option>';
+            sel3.innerHTML = '<option value="">-- Seçin --</option>';
+
+            siniflar.forEach(s => {
+                sel1.innerHTML += `<option value="${s}">${s}</option>`;
+                sel3.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+            
+            // Sınıf değişince mevcut grupları getir
+            sel1.onchange = async function() {
+                const sinif = this.value;
+                if(sinif) {
+                     const res = await fetch(`/grupListesiGetir?sinif=${sinif}`);
+                     const kayitliGruplar = await res.json();
+                     if(kayitliGruplar && kayitliGruplar.length > 0) {
+                         mevcutGruplar = kayitliGruplar;
+                         gruplariCiz();
+                     } else {
+                         document.getElementById('tablo').innerHTML = "";
+                         mevcutGruplar = [];
+                     }
+                }
+            };
+        }
+
+        function sinifiGrupla() {
+            const sinif = document.getElementById('sinifSec').value;
+            if (!sinif) return alert("Lütfen bir sınıf seçin!");
+            if (!veritabani[sinif]) return alert("Bu sınıfa ait veri bulunamadı.");
+
+            let ogrenciler = [...veritabani[sinif]];
+
+            // 1. ÖNEMLİ: LİSTE SIRASINI BOZMAMAK İÇİN OKUL NUMARASINA GÖRE SIRALA
+            // (Veritabanı json karışık gelebileceği için garantiye alıyoruz)
+            ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
+
+            const grupSayisi = prompt(`${sinif} sınıfında ${ogrenciler.length} öğrenci var.\nKaç grup oluşturulsun?`, "6");
+            if (!grupSayisi || isNaN(grupSayisi)) return;
+
+            const n = parseInt(grupSayisi);
+            mevcutGruplar = [];
+
+            // Sıralı Dağıtım (Chunking) - Listenin başından sonuna sırayla böler
+            const perGroup = Math.ceil(ogrenciler.length / n);
+            
+            for (let i = 0; i < n; i++) {
+                // Her grup için sıradaki dilimi al
+                const start = i * perGroup;
+                const end = start + perGroup;
+                const grupUyeleri = ogrenciler.slice(start, end);
+                
+                if (grupUyeleri.length > 0) {
+                    mevcutGruplar.push({
+                        ad: `Grup ${i + 1}`,
+                        uyeler: grupUyeleri
+                    });
+                }
             }
-            DegerlendirmeApp.baslat();
-        };
+            
+            gruplariCiz();
+        }
 
-        const DegerlendirmeApp = {
-            kuyruk: [], kuyrukIndex: 0, activeVeri: null, sorular: [], sIdx: 0, anlikPuanlar: {}, seciliSinif: "", seciliCalisma: "",
-            baslat: async function () {
-                this.seciliCalisma = document.getElementById("s4DosyaSec").value;
-                this.seciliSinif = document.getElementById("s4SinifSec").value.replace(" (Bitti)", "");
-                if (!this.seciliCalisma || !this.seciliSinif) return alert("Seçim yapın.");
-                try {
-                    const rW = await fetch(`/calismaGetir?isim=www_${this.seciliCalisma}`);
-                    if (!rW.ok) throw new Error("Dosya Yok");
-                    const tumCevaplar = await rW.json();
-                    const sinifKaydiVarMi = tumCevaplar.some(x => x.sinif === this.seciliSinif);
-                    if (!sinifKaydiVarMi) throw new Error("Sınıf Kaydı Yok");
-                } catch (e) { alert("Şu an bu Çalışmayı Değerlendiremezsiniz (Kayıt yok)."); return; }
+        function gruplariCiz() {
+            const div = document.getElementById('tablo');
+            div.innerHTML = "";
+            
+            mevcutGruplar.forEach(g => {
+                let html = `
+                <div class="grup">
+                    <h3>${g.ad}</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 30%;">Okul No</th>
+                                <th>Adı Soyadı</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                g.uyeler.forEach(u => {
+                    // Türkçe büyük harf çevirimi
+                    let adSoyad = u["Adınız Soyadınız"] || "";
+                    adSoyad = adSoyad.toLocaleUpperCase('tr-TR');
 
-                const qName = "qqq" + this.seciliSinif.replace(/\s/g, '') + this.seciliCalisma;
-                const dQ = await (await fetch(`/calismaGetir?isim=${qName}`)).json();
-                document.getElementById("degSecimPaneli").style.display = "none"; document.getElementById("degerlendirmeContainer").style.display = "block";
-                document.getElementById("degBilgiUst").textContent = this.seciliCalisma;
-                this.sorular = (await (await fetch(`/calismaGetir?isim=qwx${this.seciliCalisma}`)).json()).sorular || [];
-                const cevaplarVerisi = await (await fetch(`/calismaGetir?isim=www_${this.seciliCalisma}`)).json();
-                this.kuyruk = [];
-
-                if (dQ.yontem === "Grup") {
-                    const gruplar = await (await fetch(`/grupListesiGetir?sinif=${this.seciliSinif}`)).json();
-                    gruplar.forEach((grp, idx) => {
-                        const kayit = cevaplarVerisi.find(tv => grp.some(u => String(tv.ogrenciNo) === String(u["Okul Numaranız"])));
-                        if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
-                        this.kuyruk.push({ baslik: `${this.seciliSinif} - ${idx + 1}. GRUP`, kayit: kayit, katilmadi: !kayit || !kayit.cevaplar.length, members: grp.map(u => String(u["Okul Numaranız"])) });
-                    });
-                } else {
-                    globalData.filter(u => u["Sınıfınız"] === this.seciliSinif).forEach(ogr => {
-                        const no = String(ogr["Okul Numaranız"]); const kayit = cevaplarVerisi.find(x => String(x.ogrenciNo) === no);
-                        if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
-                        this.kuyruk.push({ baslik: `${no} - ${ogr["Adınız Soyadınız"]}`, kayit: kayit, katilmadi: !kayit || !kayit.cevaplar.length, members: [no] });
-                    });
-                }
-                this.kuyrukIndex = 0; this.yukle();
-            },
-            yukle: function () {
-                if (this.kuyrukIndex >= this.kuyruk.length) { alert("Bitti!"); location.reload(); return; }
-                const item = this.kuyruk[this.kuyrukIndex]; document.getElementById("degOgrenciBaslik").textContent = item.baslik;
-                this.anlikPuanlar = (item.kayit && item.kayit.puanlar) ? item.kayit.puanlar : {};
-                if (item.katilmadi) { this.kuyrukIndex++; this.yukle(); }
-                else if (item.kayit && item.kayit.degerlendirme && item.kayit.degerlendirme.bitti) {
-                    document.getElementById("degNormalPanel").style.display = "flex"; this.activeVeri = item.kayit; this.sIdx = 0; this.renderSoru();
-                }
-                else { document.getElementById("degNormalPanel").style.display = "flex"; this.activeVeri = item.kayit; this.sIdx = 0; this.soruKontrolEtVeRender(1); }
-            },
-            soruKontrolEtVeRender: function (direction) {
-                if (this.sIdx >= this.sorular.length) { this.sonrakiKisi(); return; }
-                if (this.sIdx < 0) { this.sIdx = 0; }
-                const cevapObj = (this.activeVeri.cevaplar || []).find(c => c.soruIndex === this.sIdx);
-                const cevaplar = (cevapObj && cevapObj.cevaplar) ? cevapObj.cevaplar : [];
-                const gercekCevapVarMi = cevaplar.some(txt => txt && txt.trim() !== "");
-                if (!gercekCevapVarMi) {
-                    this.sIdx += direction;
-                    if (this.sIdx < 0) { this.sIdx = 0; this.renderSoru(); return; }
-                    if (this.sIdx >= this.sorular.length) { this.sonrakiKisi(); return; }
-                    this.soruKontrolEtVeRender(direction);
-                } else { this.renderSoru(); }
-            },
-            renderSoru: function () {
-                document.getElementById("degSoruNo").textContent = this.sIdx + 1;
-                // LİNK DÖNÜŞTÜRME UYGULANDI
-                document.getElementById("degSoruMetin").innerHTML = linkleriDonustur(this.sorular[this.sIdx]);
-
-                const cevapObj = (this.activeVeri.cevaplar || []).find(c => c.soruIndex === this.sIdx);
-                const cevaplar = (cevapObj && cevapObj.cevaplar) ? cevapObj.cevaplar : [];
-                const puanlar = this.anlikPuanlar[this.sIdx] || [];
-                let h = "";
-                cevaplar.forEach((txt, i) => {
-                    if (txt && txt.trim() !== "") {
-                        const convertedTxt = linkleriDonustur(txt);
-                        h += `<div class="deg-cevap-item" ondblclick="DegerlendirmeApp.hizliGecBos(event, '${txt || ''}')">
-                            <div class="deg-cevap-metin">${convertedTxt}</div>
-                            <div class="deg-buton-grubu">
-                                <button class="deg-btn-puan deg-dogru ${puanlar[i] === 1 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},1)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},1)">D</button>
-                                <button class="deg-btn-puan deg-yanlis ${puanlar[i] === 0 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},0)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},0)">Y</button>
-                            </div></div>`;
-                    }
+                    html += `
+                        <tr>
+                            <td style="text-align: center;"><b>${u["Okul Numaranız"]}</b></td>
+                            <td>${adSoyad}</td>
+                        </tr>`;
                 });
-                document.getElementById("degCevapListesi").innerHTML = h || "Boş.";
-                const son = (this.sIdx === this.sorular.length - 1);
-                document.getElementById("btnDegIleri").style.display = son ? "none" : "block"; document.getElementById("btnDegBitir").style.display = son ? "block" : "none";
-                this.guncellePuan();
-            },
-            puanla: function (cIdx, p) { if (!this.anlikPuanlar[this.sIdx]) this.anlikPuanlar[this.sIdx] = []; this.anlikPuanlar[this.sIdx][cIdx] = p; this.renderSoru(); },
-            hizliGec: function (cIdx, p) { this.puanla(cIdx, p); if (this.sIdx < this.sorular.length - 1) this.nav(1); },
-            hizliGecBos: function (e, metin) { if (!metin || metin.trim() === "" || e.offsetX > (e.currentTarget.offsetWidth * 0.6)) { if (this.sIdx < this.sorular.length - 1) this.nav(1); } },
-            guncellePuan: function () { let t = 0; Object.values(this.anlikPuanlar).forEach(arr => { if (Array.isArray(arr)) t += arr.reduce((a, b) => a + (b || 0), 0) }); document.getElementById("degPuanGosterge").textContent = t; },
-            nav: function (n) { let nextIdx = this.sIdx + n; if (nextIdx < 0) return; this.sIdx = nextIdx; this.soruKontrolEtVeRender(n); },
-            sonrakiKisi: async function () {
-                const item = this.kuyruk[this.kuyrukIndex];
-                if (!item.katilmadi) {
-                    const puanPromises = [];
-                    for (const ogrNo of item.members) {
-                        Object.keys(this.anlikPuanlar).forEach(sIx => {
-                            const cevaplar = this.anlikPuanlar[sIx];
-                            if (cevaplar) {
-                                cevaplar.forEach((p, cIx) => {
-                                    if (p !== undefined && p !== null) {
-                                        puanPromises.push(fetch("/puanKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif, soruIndex: parseInt(sIx), cevapIndex: cIx, puan: p }) }));
-                                    }
-                                });
-                            }
-                        });
-                    }
-                    await Promise.all(puanPromises);
-                    const bitirPromises = [];
-                    for (const ogrNo of item.members) {
-                        bitirPromises.push(fetch("/degerlendirmeBitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif }) }));
-                    }
-                    await Promise.all(bitirPromises);
-                }
-                this.kuyrukIndex++; this.yukle();
+
+                html += `</tbody></table></div>`;
+                div.innerHTML += html;
+            });
+        }
+
+        async function gruplariKaydet() {
+            const sinif = document.getElementById('sinifSec').value;
+            if (!sinif || mevcutGruplar.length === 0) return alert("Kaydedilecek grup yok!");
+
+            try {
+                const res = await fetch('/kaydet', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        sinif: sinif,
+                        gruplar: mevcutGruplar
+                    })
+                });
+                const result = await res.json();
+                if(result.status === "ok") alert("Gruplar başarıyla kaydedildi!");
+                else alert("Hata oluştu.");
+            } catch(e) { console.error(e); alert("Sunucu hatası."); }
+        }
+        
+        async function gruplariSil() {
+             const sinif = document.getElementById('sinifSec').value;
+             if(!sinif) return;
+             if(!confirm("Bu sınıfa ait kayıtlı grupları silmek istediğinize emin misiniz?")) return;
+             
+             try {
+                await fetch('/calismaSil', {
+                     method: 'POST',
+                     headers: {'Content-Type': 'application/json'},
+                     body: JSON.stringify({ calismaIsmi: sinif + "Grupları" })
+                });
+                document.getElementById('tablo').innerHTML = "";
+                mevcutGruplar = [];
+                alert("Silindi.");
+             } catch(e) { alert("Hata"); }
+        }
+
+        // --- ÇALIŞMA İÇERİĞİ (SEKME 2) ---
+        
+        let calismalar = [];
+
+        async function calismaListesiGetir() {
+            const res = await fetch('/listeCalismalar');
+            const dosyalar = await res.json();
+            // Sadece qwx (Çalışma İçerikleri) filtrele
+            calismalar = dosyalar.filter(d => d.startsWith("qwx")).map(d => d.replace("qwx","").replace(".json",""));
+            
+            const ul = document.getElementById('calismaListesi');
+            const sel3 = document.getElementById('s3CalismaSec');
+            ul.innerHTML = "";
+            sel3.innerHTML = '<option value="">-- Seçin --</option>';
+
+            calismalar.forEach(c => {
+                ul.innerHTML += `<li onclick="calismaSec('${c}', this)">${c}</li>`;
+                sel3.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+        }
+
+        function calismaSec(isim, el) {
+            seciliCalisma = isim;
+            const items = document.querySelectorAll('#calismaListesi li');
+            items.forEach(i => i.classList.remove('selected'));
+            if(el) el.classList.add('selected');
+        }
+
+        function yeniCalisma() {
+            seciliCalisma = null;
+            document.getElementById('listeEkrani').style.display = "none";
+            document.getElementById('editorEkrani').style.display = "block";
+            document.getElementById('editorBaslik').innerText = "Yeni Çalışma Oluştur";
+            document.getElementById('calismaAdiInput').value = "";
+            document.getElementById('calismaAciklama').value = "";
+            document.getElementById('soruAlani').innerHTML = "";
+        }
+
+        async function calismaDuzenle() {
+            if(!seciliCalisma) return alert("Lütfen listeden bir çalışma seçin.");
+            
+            const res = await fetch(`/calismaGetir?isim=qwx${seciliCalisma}.json`);
+            if(!res.ok) return alert("Çalışma içeriği alınamadı.");
+            const icerik = await res.json(); // { aciklama: "...", sorular: [...] }
+
+            document.getElementById('listeEkrani').style.display = "none";
+            document.getElementById('editorEkrani').style.display = "block";
+            document.getElementById('editorBaslik').innerText = "Çalışmayı Düzenle";
+            document.getElementById('calismaAdiInput').value = seciliCalisma;
+            document.getElementById('calismaAciklama').value = icerik.aciklama || "";
+            document.getElementById('soruAlani').innerHTML = "";
+            
+            if(icerik.sorular) {
+                icerik.sorular.forEach(s => soruEkleUI(s));
             }
-        };
+        }
+
+        function editorKapat() {
+            document.getElementById('editorEkrani').style.display = "none";
+            document.getElementById('listeEkrani').style.display = "block";
+            calismaListesiGetir();
+        }
+        
+        function soruEkleUI(veri = null) {
+            const div = document.createElement('div');
+            div.className = "soru-item";
+            div.style.marginBottom = "15px";
+            div.style.padding = "10px";
+            div.style.border = "1px solid #eee";
+            div.style.background = "#f9f9f9";
+            
+            const valSoru = veri ? veri.soru : "";
+            const valCevaplar = veri ? (veri.cevaplar || []).join("\n") : "";
+            const valDogru = veri ? veri.dogru : "";
+            const valMedya = veri ? (veri.medya || "") : "";
+
+            div.innerHTML = `
+                <div><b>Soru Metni:</b> <input type="text" class="inp-soru" value="${valSoru}" style="width:100%"></div>
+                <div style="margin-top:5px;"><b>Medya Link (Resim/Video opsiyonel):</b> <input type="text" class="inp-medya" value="${valMedya}" style="width:100%"></div>
+                <div style="margin-top:5px;"><b>Cevap Şıkları (Her satıra bir şık):</b><br>
+                <textarea class="inp-cevaplar" style="width:100%; height:60px;">${valCevaplar}</textarea></div>
+                <div style="margin-top:5px;"><b>Doğru Cevap (Şıkkın aynısı):</b> <input type="text" class="inp-dogru" value="${valDogru}" style="width:100%"></div>
+                <button onclick="this.parentElement.remove()" style="margin-top:5px;" class="btn-archive-small red">Soruyu Sil</button>
+            `;
+            document.getElementById('soruAlani').appendChild(div);
+        }
+
+        async function calismaKaydet() {
+            const ad = document.getElementById('calismaAdiInput').value.trim();
+            if(!ad) return alert("Çalışma adı giriniz.");
+            
+            const aciklama = document.getElementById('calismaAciklama').value;
+            const soruDivs = document.querySelectorAll('.soru-item');
+            const sorular = [];
+            
+            soruDivs.forEach(div => {
+                const s = div.querySelector('.inp-soru').value;
+                const m = div.querySelector('.inp-medya').value;
+                const cText = div.querySelector('.inp-cevaplar').value;
+                const d = div.querySelector('.inp-dogru').value;
+                
+                if(s) {
+                    sorular.push({
+                        soru: s,
+                        medya: m,
+                        cevaplar: cText.split('\n').filter(x=>x.trim()!==""),
+                        dogru: d
+                    });
+                }
+            });
+
+            const payload = {
+                calismaIsmi: "qwx" + ad, // qwx öneki
+                sorular: { // İçerik objesi
+                    aciklama: aciklama,
+                    sorular: sorular
+                }
+            };
+
+            await fetch('/calismaKaydet', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            
+            alert("Kaydedildi!");
+            editorKapat();
+        }
+
+        async function calismaSil() {
+            if(!seciliCalisma) return;
+            if(!confirm("Silmek istediğinize emin misiniz?")) return;
+            await fetch('/calismaSil', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ calismaIsmi: "qwx" + seciliCalisma })
+            });
+            calismaListesiGetir();
+        }
+        
+        async function arsivModalAc() {
+             const res = await fetch('/arsivListesi');
+             const list = await res.json();
+             const ul = document.getElementById('arsivListesiUl');
+             ul.innerHTML = "";
+             list.forEach(isim => {
+                 const temiz = isim.replace("qwx","").replace(".json","");
+                 ul.innerHTML += `<li>${temiz} <button onclick="arsivdenCikar('${isim}')" class="btn-archive-small">Geri Yükle</button></li>`;
+             });
+             document.getElementById('arsivModal').style.display = "block";
+        }
+        
+        async function arsivdenCikar(isim) {
+            await fetch('/arsivdenGeriYukle', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ dosyaIsmi: isim })
+            });
+            document.getElementById('arsivModal').style.display = "none";
+            calismaListesiGetir();
+        }
+
+        // --- ATAMA (SEKME 3) ---
+        async function atamaYap() {
+            const sinif = document.getElementById('s3SinifSec').value;
+            const calisma = document.getElementById('s3CalismaSec').value;
+            const yontem = document.getElementById('s3YontemSec').value;
+            
+            if(!sinif || !calisma) return alert("Seçim yapınız.");
+            
+            const payload = {
+                calismaIsmi: "qqq" + sinif.replace(/\s/g,'') + calisma,
+                sorular: { // Assignment settings
+                    sinif: sinif,
+                    calisma: calisma, // qwx'siz isim
+                    yontem: yontem,
+                    gorme: true,
+                    yapma: true,
+                    degerl: true,
+                    sure: 0,
+                    bitis: ""
+                }
+            };
+            
+            await fetch('/calismaKaydet', {
+                 method: 'POST',
+                 headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify(payload)
+            });
+            alert("Atama yapıldı!");
+            
+            // Listeyi yenile (Basitçe ekrana bas)
+            const ul = document.getElementById('atananListesi');
+            ul.innerHTML += `<li>${sinif} - ${calisma} (${yontem})</li>`;
+        }
+
     </script>
 </body>
-
 </html>
