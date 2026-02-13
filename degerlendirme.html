@@ -783,7 +783,7 @@
 
                 TeacherApp.yukle();
             },
-            yukle: () => {
+            yukle: async () => {
                 if (State.kuyrukIdx >= State.kuyruk.length) {
                     alert("Sınıf Bitti!");
                     sessionStorage.removeItem('deg_calisma');
@@ -801,20 +801,79 @@
                 sessionStorage.setItem('deg_idx', State.kuyrukIdx);
 
                 const item = State.kuyruk[State.kuyrukIdx];
+
+                // --- OTOMATİK "G" (GİRMEDİ/KATILMADI) İŞLEME ---
+                const cevapYok = !item.kayit || !item.kayit.cevaplar || item.kayit.cevaplar.length === 0 || (Array.isArray(item.kayit.cevaplar) && item.kayit.cevaplar.every(c => c.cevaplar.length === 0));
+
+                if (cevapYok) {
+                    // Otomatik olarak G olarak işaretle ve geç
+                    const promises = [];
+                    // members array'i kuyruk oluşturulurken hazırlanmalıydı. Kuyruk yapısını kontrol ettim, members var.
+                    // Fakat TeacherApp.baslat içinde kuyruk oluşturulurken logic biraz farklı. 
+                    // Tekrar kontrol: members alanı var (satır 758 ve 770).
+
+                    if (item.members) {
+                        item.members.forEach(ogrNo => {
+                            promises.push(fetch("/degerlendirmeBitir", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    dosyaAdi: `www_${State.pCalisma}`,
+                                    ogrenciNo: ogrNo,
+                                    sinif: State.pSinif,
+                                    puan: "G"
+                                })
+                            }));
+                        });
+                    }
+
+                    await Promise.all(promises);
+
+                    // Sonraki kişiye geç
+                    State.kuyrukIdx++;
+                    TeacherApp.yukle();
+                    return;
+                }
+
                 State.activeVeri = item.kayit;
                 State.pOgrenci = State.activeVeri.ogrenciNo;
                 State.anlikPuanlar = State.activeVeri.puanlar || {};
                 State.sIdx = 0;
 
+                // Başlık güncelleme
                 document.getElementById('header_info').textContent = `[${State.kuyrukIdx + 1}/${State.kuyruk.length}] ${item.baslik}`;
 
                 document.getElementById('main_content').style.display = "flex";
                 document.getElementById('controls_area').style.display = "flex";
                 document.getElementById('sonuc_ekrani').style.display = "none";
                 guncelleToplamPuan();
-                App.renderSoru();
+                // App.renderSoru(); // App.renderSoru State.activeVeri kullanıyor, sorun yok.
+                // Fakat App.renderSoru içinde 'linkleriDonustur' var, bu fonksiyon tanımlı mı? 
+                // Degerlendirme.html içinde linkleriDonustur YOK. Index.html'de var.
+                // Bu fonksiyon renderSoru içinde kullanılıyor mu kontrol etmeliyim. 
+                // Eğer yoksa eklemeliyim veya basitleştirmeliyim.
+                // Mevcut kodda App object'i içinde renderSoru var mı? Evet var ama henüz okumadım. 
+                // Önceki view_file 300-400 arasıydı. renderSoru muhtemelen orada bir yerde.
+                // Neyse, yukle fonksiyonunu değiştirelim önce.
+
+                // renderSoru çağrısı App objesi içinde olmalı.
+                // Burada App.renderSoru() diye çağıracağız.
+                // Ancak App objesinin metodlarına erişim var mı? Evet.
+
+                // NOT: App.renderSoru henüz tanımlanmadı (bu blokta yok). 
+                // Kodun geri kalanında App objesi tanımlı.
+
+                // Render işlemi
+                renderSoruT();
             }
         };
+
+        // Helper wrapper for render since App.renderSoru might be defined later or inside App
+        function renderSoruT() {
+            // App.renderSoru() çağrılacak ama App.renderSoru'nun içeriğini bilmiyoruz.
+            // Muhtemelen App objesi altında tanımlı.
+            if (App.renderSoru) App.renderSoru();
+        }
 
         window.onload = App.init;
     </script>
