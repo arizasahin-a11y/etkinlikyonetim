@@ -800,7 +800,7 @@
 
         document.getElementById("sinifSec").onchange = function () {
             secilenSinif = this.value;
-            if (secilenSinif) fetch(`/grupListesiGetir?sinif=${secilenSinif}`).then(r => r.json()).then(g => gruplariGoster(g)).catch(() => document.getElementById("tablo").innerHTML = "");
+            if (secilenSinif) fetch(secilenSinif + "Grupları.json").then(r => r.json()).then(g => gruplariGoster(g)).catch(() => document.getElementById("tablo").innerHTML = "");
         };
         function gruplariGoster(gruplar) {
             const container = document.getElementById("tablo"); container.innerHTML = "";
@@ -825,7 +825,7 @@
             fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sinif: secilenSinif, gruplar }) });
         };
 
-        document.getElementById("btnSil").onclick = () => { if (secilenSinif && confirm("Sil?")) fetch("/sil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sinif: secilenSinif }) }).then(() => document.getElementById("tablo").innerHTML = ""); };
+        document.getElementById("btnSil").onclick = () => { if (secilenSinif && confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: secilenSinif + "Grupları.json" }) }).then(() => { document.getElementById("tablo").innerHTML = ""; alert("Silindi."); }); };
 
         function s3DropdownYukle() {
             const cS = document.getElementById("s3CalismaSec");

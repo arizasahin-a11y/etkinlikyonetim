@@ -586,22 +586,44 @@
 
                     if (grupUyeleri.length === 0 && !grupSorgusuYapildi) {
                         grupSorgusuYapildi = true;
-
+                        // server.js expects "sinif" param for group list
                         fetch(`/grupListesiGetir?sinif=${sess.sinif}`)
                             .then(r => r.json())
                             .then(gs => {
-                                if (!Array.isArray(gs)) {
-                                    console.error("Grup verisi dizi değil:", gs);
-                                    throw new Error("Veri hatası");
+                                // DEBUG TRAP FOR SERVER ERROR
+                                if (gs && gs.debugError) {
+                                    alert(`DEBUG ERROR:\n\nTried to find: ${gs.triedPath}\n\nBut server says file missing.\n\nServer Folder: ${gs.dirName}\n\nFiles in Folder: ${gs.availableFiles.join(", ")}\n\nNormalized Class: ${gs.normalizedClass}`);
+                                    return;
                                 }
 
-                                // Robust Group Finding: Check by Number ONLY
-                                const g = gs.find(x => Array.isArray(x) && x.some(o => o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim()));
+                                if (!Array.isArray(gs)) {
+                                    alert("Veri hatası: Grup listesi dizi değil.");
+                                    return;
+                                }
+
+                                // Robust Group Finding: Check by Number ONLY (User Request)
+                                // Matching User's Logic: 
+                                const g = gs.find(x => Array.isArray(x) && x.some(o => {
+                                    return o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim();
+                                }));
+
+                                // DEBUG: Alert if not found
+                                if (!g) {
+                                    alert(`HATA: Grupta bulunamadınız!
+Aranan No: '${sess.no}' (Tip: ${typeof sess.no})
+Aranan Sınıf: '${sess.sinif}'
+İndirilen Grup Sayısı: ${gs.length}
+(Lütfen verileri kontrol edin veya öğretmene bildirin)`);
+                                }
 
                                 if (g) {
                                     grupUyeleri = g;
                                     const grupNo = gs.indexOf(g) + 1;
-                                    document.getElementById('h_ad').textContent = `${sess.sinif} - Grup ${grupNo}`;
+
+                                    // Store and Set Title
+                                    window.cachedGrupBaslik = `${sess.sinif} - Grup ${grupNo}`;
+                                    document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
+
                                     document.getElementById('grup_baslik_metni').textContent = `${sess.sinif} - ${grupNo}. GRUP ÜYELERİ:`;
 
                                     const ul = document.getElementById('g_liste');
@@ -620,7 +642,7 @@
                             })
                             .catch(e => {
                                 console.error(e);
-                                document.getElementById('grup_baslik_metni').textContent = "GRUP BULUNAMADI";
+                                document.getElementById('grup_baslik_metni').textContent = "GRUP BİLGİSİ BULUNAMADI";
                             });
                     }
                 } else {

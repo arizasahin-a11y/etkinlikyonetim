@@ -8,149 +8,174 @@ require("dotenv").config();
 const app = express();
 
 app.use(express.json({ limit: '50mb' })); // Increased limit just in case
-app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
 // --- 1. PORT AYARI ---
 const PORT = process.env.PORT || 3000;
 
 // --- 2. GÜVENLİK ---
+// Exception for degerlendirme.html to prevent "Yasak" if accessed directly
+// Exception for degerlendirme.html: Serve directly instead of redirecting
+app.get("/degerlendirme.html", (req, res) => res.sendFile(path.join(__dirname, "degerlendirme.html")));
+
 app.get(/\.html$/, (req, res) => { res.status(403).send("Yasak."); });
 app.use(express.static(__dirname, { index: false }));
 
 // --- 3. SAYFA YÖNLENDİRMELERİ ---
 app.get("/21012012", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/giris", (req, res) => res.sendFile(path.join(__dirname, "ogrenci.html")));
+app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "admin.html")));
 
+// Değerlendirme Sayfası
 app.get("/degerlendirme", (req, res) => {
-  if (fs.existsSync(path.join(__dirname, "degerlendirme.html"))) {
+  if (require("fs").existsSync(path.join(__dirname, "degerlendirme.html"))) {
     res.sendFile(path.join(__dirname, "degerlendirme.html"));
   } else {
     res.sendFile(path.join(__dirname, "index.html"));
   }
 });
 
+// Ana Sayfa
 app.get("/", (req, res) => {
   res.status(403).send("<h1>Giriş Yetkisi Yok. Lütfen özel linki kullanın.</h1>");
 });
 
+// Dynamic `veritabani.json` for Student Login
+app.get("/veritabani.json", async (req, res) => {
+  try {
+    const result = await query("SELECT * FROM students");
+    // Legacy Format: Array of objects
+    const students = result.rows.map(row => ({
+      "Okul Numaranız": row.school_no,
+      "Adınız Soyadınız": row.name,
+      "Sınıfınız": row.class_name,
+      "Telefon numaranız": row.phone,
+      "Velinizin telefon numarası": row.parent_phone,
+      "E-Posta Adresiniz": row.email,
+      "Drive Klasörünüzün linki": row.drive_link,
+      ...row.extra_info // Spread any other columns stored in jsonb
+    }));
+    res.json(students);
+  } catch (e) {
+    console.error("Dynamic DB Error:", e);
+    // Fallback to static file if DB fails
+    const fs = require('fs');
+    const p = path.join(__dirname, "veritabani.json");
+    if (fs.existsSync(p)) res.sendFile(p);
+    else res.json([]);
+  }
+});
+
 // --- 4. YARDIMCI FONKSİYONLAR ---
 function dosyaIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ_\- ]/g, "").trim() : ""; }
-// Strict Turkish character normalization
 function sinifIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]/g, "") : ""; }
 
-function jsonOku(dosyaYolu) {
-  if (!fs.existsSync(dosyaYolu)) return [];
-  try { return JSON.parse(fs.readFileSync(dosyaYolu, "utf-8")); } catch (e) { return []; }
-}
+// --- 5. API İŞLEMLERİ (SQL UYARLAMASI) ---
 
-// --- 5. API İŞLEMLERİ (SQL + LAZY MIGRATION) ---
+// ... (Other endpoints) ...
 
-// 5.1 Grup Listesi (Lazy Migration: DB -> File -> DB)
 app.get("/grupListesiGetir", async (req, res) => {
   try {
     const rawSinif = req.query.sinif; // e.g. "9-A"
-    const normalizedSinif = sinifIsmiTemizle(rawSinif); // e.g. "9A"
+    const normalizedSinif = sinifIsmiTemizle(rawSinif); // e.g. "9A" using User's Regex
 
-    // 1. Try DB
+    // DEBUG LOG
+    console.log(`[grupListesiGetir] Request: raw=${rawSinif}, norm=${normalizedSinif}`);
+
+    // 1. Try EXACT match from DB
     let resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [rawSinif]);
+
+    // 2. Try NORMALIZED match from DB if exact failed
     if (resDb.rows.length === 0) {
-      // Try normalized if raw failed
       resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [normalizedSinif]);
     }
 
-    if (resDb.rows.length > 0 && resDb.rows[0].groups_data) {
-      res.json(resDb.rows[0].groups_data);
+    // Check if we actually have data
+    let dbData = [];
+    if (resDb.rows.length > 0 && resDb.rows[0].groups_data && resDb.rows[0].groups_data.length > 0) {
+      dbData = resDb.rows[0].groups_data;
+    }
+
+    if (dbData.length > 0) {
+      console.log(`[grupListesiGetir] Found in DB (${dbData.length} groups)`);
+      res.json(dbData);
     } else {
-      // 2. Fallback: Check File System (Strict Name)
+      // Fallback: Check File System if DB is empty or missing
+      console.log(`[grupListesiGetir] DB empty/missing. Checking File System...`);
+      const fs = require('fs');
+      const path = require('path');
+
+      // Strict File Check: NormalizedClass + Grupları.json (e.g. 9CGrupları.json)
+      // Uses user's exact normalization logic
       const strictPath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
+      console.log(`[grupListesiGetir] Checking file (Strict): ${strictPath}`);
+
       if (fs.existsSync(strictPath)) {
-        const content = jsonOku(strictPath);
-        if (content.length > 0) {
-          // Import to DB for next time
+        console.log(`[grupListesiGetir] Found FILE: ${strictPath}`);
+        try {
+          const content = JSON.parse(fs.readFileSync(strictPath, 'utf-8'));
+
+          // Lazy Migration (Save to DB) - ALWAYS save back to RAW class name for consistency
           await query(`
-                    INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2)
-                    ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
-                `, [rawSinif, content]);
-        }
-        res.json(content);
+             INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2)
+             ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
+          `, [rawSinif, content]);
+
+          res.json(content);
+        } catch (err) { console.error("FS Read Error:", err); res.json([]); }
       } else {
+        console.log(`[grupListesiGetir] Not found anywhere: ${strictPath}`);
         res.json([]);
       }
     }
   } catch (e) { console.error(e); res.json([]); }
 });
 
-// 5.2 Çalışma Listesi (DB)
-app.get("/listeCalismalar", async (req, res) => {
+// Değerlendirmeyi Sıfırla
+app.post("/degerlendirmeSifirla", async (req, res) => {
   try {
-    const files = [];
-    // Studies
-    const studies = await query("SELECT name FROM studies WHERE is_archived = FALSE");
-    studies.rows.forEach(s => files.push(`qwx${s.name}.json`));
-    // Assignments
-    const assigns = await query(`
-        SELECT a.class_name, s.name as study_name 
-        FROM study_assignments a 
-        JOIN studies s ON a.study_id = s.id
-        WHERE s.is_archived = FALSE
-    `);
-    assigns.rows.forEach(a => files.push(`qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`));
+    const { dosyaAdi, sinif } = req.body;
+    // dosyaAdi = "www_StudyName", we need StudyName
+    const studyName = dosyaAdi.replace("www_", "");
 
-    res.json(files);
-  } catch (e) { console.error(e); res.json([]); }
+    // Find study ID
+    const studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
+    if (studyRes.rows.length === 0) return res.status(404).json({ status: "dosya_yok" });
+    const studyId = studyRes.rows[0].id;
+
+    // Reset evaluation for all students in this class for this study
+    await query(`
+        UPDATE student_evaluations 
+        SET scores = '{}', evaluation = '{"toplam": 0, "bitti": false}'::jsonb 
+        WHERE study_id = $1 AND class_name = $2
+    `, [studyId, sinif]);
+
+    res.json({ status: "ok" });
+  } catch (e) { console.error(e); res.status(500).json({ status: "error" }); }
 });
 
-// 5.3 Çalışma Getir (DB -> File Fallback removed, mostly DB now)
-app.get("/calismaGetir", async (req, res) => {
+// Puan Kaydet
+app.post("/puanKaydet", async (req, res) => {
+  const { dosyaAdi, ogrenciNo, sinif, soruIndex, cevapIndex, puan } = req.body;
+  const studyName = dosyaAdi.replace("www_", "");
+
   try {
-    let isim = req.query.isim;
-    if (!isim) return res.json([]);
+    // Get study ID
+    const studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
+    if (studyRes.rows.length === 0) return res.status(404).send();
+    const studyId = studyRes.rows[0].id;
 
-    if (isim.startsWith("qwx")) {
-      const name = isim.replace("qwx", "").replace(".json", "");
-      const resDb = await query("SELECT content FROM studies WHERE name = $1", [name]);
-      if (resDb.rows.length > 0) res.json(resDb.rows[0].content);
-      else res.json([]); // Empty if (file-based) not in DB yet. Could add lazy migration here too if needed.
+    // Fetch existing scores
+    const evalRes = await query(
+      "SELECT scores FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
+      [studyId, String(ogrenciNo)]
+    );
 
-    } else if (isim.startsWith("qqq")) {
-      // Assignment
-      const cleanIsim = isim.replace(".json", "");
-      const all = await query(`SELECT a.*, s.name as study_name FROM study_assignments a JOIN studies s ON a.study_id = s.id`);
-      const found = all.rows.find(row => `qqq${row.class_name.replace(/\s/g, '')}${row.study_name}` === cleanIsim);
-
-      if (found) {
-        res.json({
-          id: isim,
-          sinif: found.class_name,
-          calisma: found.study_name,
-          yontem: found.method,
-          ...found.settings
-        });
-      } else res.json([]);
-
-    } else if (isim.startsWith("www_")) {
-      // Evaluations
-      const name = isim.replace("www_", "");
-      const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
-      if (studyRes.rows.length === 0) return res.json([]);
-
-      const evals = await query("SELECT * FROM student_evaluations WHERE study_id = $1", [studyRes.rows[0].id]);
-      // Map to legacy format
-      const mapped = evals.rows.map(row => {
-        if (row.student_school_no === 'AYARLAR') return row.answers;
-        return {
-          ogrenciNo: row.student_school_no,
-          sinif: row.class_name,
-          cevaplar: row.answers.cevaplar || [],
-          puanlar: row.scores,
-          girisSayisi: row.entry_count,
-          degerlendirme: row.evaluation
-        };
-      });
-      res.json(mapped);
+    let scores = {};
+    if (evalRes.rows.length > 0) {
+      scores = evalRes.rows[0].scores || {};
     } else {
-      res.json([]);
+      // Should exist if logged in, but just in case
       await query(
         "INSERT INTO student_evaluations (study_id, student_school_no, class_name, scores) VALUES ($1, $2, $3, $4)",
         [studyId, String(ogrenciNo), sinif, '{}']
