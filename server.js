@@ -13,7 +13,8 @@ const PORT = process.env.PORT || 3000;
 
 // --- 2. GÜVENLİK ---
 // Exception for degerlendirme.html to prevent "Yasak" if accessed directly
-app.get("/degerlendirme.html", (req, res) => res.redirect("/degerlendirme" + (req._parsedUrl.search || "")));
+// Exception for degerlendirme.html: Serve directly instead of redirecting
+app.get("/degerlendirme.html", (req, res) => res.sendFile(path.join(__dirname, "degerlendirme.html")));
 
 app.get(/\.html$/, (req, res) => { res.status(403).send("Yasak."); });
 app.use(express.static(__dirname, { index: false }));
