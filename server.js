@@ -238,9 +238,9 @@ app.post("/calismaSil", async (req, res) => {
         await query("DELETE FROM student_evaluations WHERE study_id = $1", [studyId]);
       }
 
-    } else if (cleanIsim.startsWith("groups_")) {
+    } else if (cleanIsim.endsWith("Grupları")) {
       // 4. DELETE CLASS GROUPS
-      const className = cleanIsim.replace("groups_", "");
+      const className = cleanIsim.replace("Grupları", "");
       await query("DELETE FROM class_groups WHERE class_name = $1", [className]);
 
     } else {
@@ -496,9 +496,11 @@ app.get("/calismaGetir", async (req, res) => {
       });
       res.json(mapped);
 
-    } else if (isim.startsWith("groups_")) {
-      // Fetch Class Groups
-      const className = isim.replace("groups_", "").replace(".json", "");
+      res.json(mapped);
+
+    } else if (isim.endsWith("Grupları.json")) {
+      // Fetch Class Groups (e.g. 9AGrupları.json)
+      const className = isim.replace("Grupları.json", "");
       const resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [className]);
       if (resDb.rows.length > 0) res.json(resDb.rows[0].groups_data);
       else res.status(404).send();
@@ -560,7 +562,7 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
     // 3. Class Groups
     const groups = await query("SELECT class_name FROM class_groups");
     groups.rows.forEach(g => {
-      result.push({ dosya_adi: `groups_${g.class_name}.json`, arsivde: false });
+      result.push({ dosya_adi: `${g.class_name}Grupları.json`, arsivde: false });
     });
 
     // Add veritabani dummy
