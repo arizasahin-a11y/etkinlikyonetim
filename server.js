@@ -431,7 +431,10 @@ app.post("/kaydet", async (req, res) => {
             // Eğer cevaplar gönderilmişse kullan, yoksa mevcut cevapları koru
             let answersJson = null;
             if (item.cevaplar !== undefined) {
+              console.log(`[www_ Kaydet] Gelen cevaplar (${item.ogrenciNo}):`, item.cevaplar); // DEBUG LOG
               answersJson = JSON.stringify({ cevaplar: item.cevaplar });
+            } else {
+              console.log(`[www_ Kaydet] Cevap yok, sadece puan/degerlendirme (${item.ogrenciNo})`); // DEBUG LOG
             }
 
             const scoresJson = JSON.stringify(item.puanlar || {});
@@ -615,11 +618,24 @@ app.get("/calismaGetir", async (req, res) => {
         if (row.student_school_no === 'AYARLAR') {
           return row.answers; // Already legacy object
         }
+
+        // Robust handling for answers
+        let cevaplarListesi = [];
+        if (row.answers) {
+          if (Array.isArray(row.answers)) {
+            cevaplarListesi = row.answers;
+          } else if (row.answers.cevaplar && Array.isArray(row.answers.cevaplar)) {
+            cevaplarListesi = row.answers.cevaplar;
+          } else {
+            console.warn(`[www_ Getir] Beklenmeyen answers formatı (Öğrenci: ${row.student_school_no}):`, typeof row.answers);
+          }
+        }
+
         return {
           ogrenciNo: row.student_school_no,
           adSoyad: row.student_name, // Added for compatibility
           sinif: row.class_name,
-          cevaplar: row.answers.cevaplar || [], // Unwrap
+          cevaplar: cevaplarListesi, // Unwrap safely
           puanlar: row.scores,
           girisSayisi: row.entry_count,
           degerlendirme: row.evaluation
