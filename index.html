@@ -572,6 +572,8 @@
                 <div class="yonetim-toolbar">
                     <label class="chk-container"><input type="checkbox" id="chkDegerlendirmeIzin" disabled> Öğrenci
                         İzni</label>
+                    <button id="btnPuanTablosu" class="action orange"
+                        style="font-size:12px; padding:6px 15px; display:none;">📊 PUAN TABLOSU</button>
                     <label class="chk-container"><input type="checkbox" id="chkIzin" disabled> Öğretmen İzni</label>
                     <div><strong>Çalışma:</strong> <select id="s4DosyaSec" class="kucuk-select"></select></div>
                     <div><strong>Sınıf:</strong> <select id="s4SinifSec" class="kucuk-select"></select></div>
@@ -580,6 +582,74 @@
                     <button id="btnDegerlendirmeSifirla" class="action red"
                         style="font-size:12px; padding:6px 15px; display:none;">Sınıfı Sıfırla (Bitti Kaldır)</button>
                 </div>
+                <script>
+                    document.getElementById('btnPuanTablosu').onclick = async function () {
+                        const calisma = document.getElementById("s4DosyaSec").value;
+                        if (!calisma) return alert("Lütfen çalışma seçin.");
+
+                        try {
+                            const [qwx, www] = await Promise.all([
+                                fetch(`/calismaGetir?isim=qwx${calisma}`).then(r => r.json()),
+                                fetch(`/calismaGetir?isim=www_${calisma}`).then(r => r.json())
+                            ]);
+
+                            const sorular = qwx.sorular || [];
+                            const cevaplar = www.filter(x => x.ogrenciNo !== "AYARLAR");
+
+                            // CSV İçeriği Hazırla (Excel için BOM ekle)
+                            let csvContent = "\uFEFF"; // UTF-8 BOM
+
+                            // Başlık Satırı
+                            csvContent += "Sınıf;Öğrenci No;Ad Soyad;Toplam Puan";
+                            sorular.forEach((s, i) => csvContent += `;Soru ${i + 1}`);
+                            csvContent += "\n";
+
+                            // Veri Satırları
+                            // Sınıfa göre sırala
+                            cevaplar.sort((a, b) => (a.sinif || "").localeCompare(b.sinif || ""));
+
+                            cevaplar.forEach(row => {
+                                let toplamPuan = 0;
+                                let soruPuanlari = [];
+
+                                // Puan Hesapla
+                                const puanObj = row.puanlar || {};
+
+                                sorular.forEach((_, sIdx) => {
+                                    const pArr = puanObj[sIdx];
+                                    let sPuan = 0;
+                                    if (Array.isArray(pArr)) {
+                                        sPuan = pArr.reduce((a, b) => a + (Number(b) || 0), 0);
+                                    }
+                                    soruPuanlari.push(sPuan);
+                                    toplamPuan += sPuan;
+                                });
+
+                                // Özel durum: Eğer değerlendirme "G" ise toplam puan "G" olsun
+                                if (row.degerlendirme && row.degerlendirme.toplam === "G") toplamPuan = "G";
+
+                                csvContent += `${row.sinif || ""};${row.ogrenciNo};${row.adSoyad || ""};${toplamPuan}`;
+                                soruPuanlari.forEach(p => csvContent += `;${p}`);
+                                csvContent += "\n";
+                            });
+
+                            // İndirme
+                            const bloom = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const link = document.createElement("a");
+                            const url = URL.createObjectURL(bloom);
+                            link.setAttribute("href", url);
+                            link.setAttribute("download", `Puan_Tablosu_${calisma}.csv`);
+                            link.style.visibility = 'hidden';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+
+                        } catch (e) {
+                            console.error(e);
+                            alert("Puan tablosu oluşturulurken hata: " + e);
+                        }
+                    };
+                </script>
             </div>
             <div id="degerlendirmeContainer">
                 <div class="deg-header">
@@ -890,7 +960,15 @@
             const chkOgrt = document.getElementById("chkIzin");
 
             sinifSel.innerHTML = '<option value="">...</option>';
-            if (!calisma) { chkOgr.disabled = true; chkOgrt.disabled = true; return; }
+            const btnPuan = document.getElementById('btnPuanTablosu');
+
+            if (!calisma) {
+                chkOgr.disabled = true; chkOgrt.disabled = true;
+                btnPuan.style.display = 'none';
+                return;
+            }
+
+            btnPuan.style.display = 'inline-block';
 
             chkOgr.disabled = false; chkOgrt.disabled = false;
 
