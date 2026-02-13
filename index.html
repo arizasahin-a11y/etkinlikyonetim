@@ -570,10 +570,10 @@
         <div id="sekme4" class="tab-content">
             <div class="yonetim-cerceve" id="degSecimPaneli">
                 <div class="yonetim-toolbar">
-                    <label class="chk-container"><input type="checkbox" id="chkDegerlendirmeIzin" disabled> Öğrenci
-                        İzni</label>
                     <button id="btnPuanTablosu" class="action orange"
                         style="font-size:12px; padding:6px 15px; display:none;">📊 PUAN TABLOSU</button>
+                    <label class="chk-container"><input type="checkbox" id="chkDegerlendirmeIzin" disabled> Öğrenci
+                        İzni</label>
                     <label class="chk-container"><input type="checkbox" id="chkIzin" disabled> Öğretmen İzni</label>
                     <div><strong>Çalışma:</strong> <select id="s4DosyaSec" class="kucuk-select"></select></div>
                     <div><strong>Sınıf:</strong> <select id="s4SinifSec" class="kucuk-select"></select></div>
@@ -1252,6 +1252,12 @@
             sonrakiKisi: async function () {
                 const item = this.kuyruk[this.kuyrukIndex];
                 if (!item.katilmadi) {
+                    // Toplam Puanı Hesapla
+                    let toplamPuan = 0;
+                    Object.values(this.anlikPuanlar).forEach(arr => {
+                        if (Array.isArray(arr)) toplamPuan += arr.reduce((a, b) => a + (b || 0), 0)
+                    });
+
                     const puanPromises = [];
                     for (const ogrNo of item.members) {
                         Object.keys(this.anlikPuanlar).forEach(sIx => {
@@ -1266,9 +1272,11 @@
                         });
                     }
                     await Promise.all(puanPromises);
+
                     const bitirPromises = [];
                     for (const ogrNo of item.members) {
-                        bitirPromises.push(fetch("/degerlendirmeBitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif }) }));
+                        // Toplam puanı gönder
+                        bitirPromises.push(fetch("/degerlendirmeBitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif, toplam: toplamPuan }) }));
                     }
                     await Promise.all(bitirPromises);
                 }

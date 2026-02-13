@@ -459,37 +459,52 @@
                 if (yeni >= 0 && yeni < State.sorular.length) { State.sIdx = yeni; App.renderSoru(); }
             },
             bitir: async () => {
-                if (isTeacher) {
-                    let targetMembers = [];
+                const toplamPuan = parseInt(document.getElementById('h_puan').textContent) || 0;
+
+                let targetMembers = [];
+                // Eğer öğretmen modundaysa ve kuyruk varsa
+                if (isTeacher && State.kuyruk.length > 0) {
                     const currentItem = State.kuyruk[State.kuyrukIdx];
                     if (currentItem.members && currentItem.members.length > 0) {
                         targetMembers = currentItem.members;
                     } else {
                         targetMembers = [State.activeVeri.ogrenciNo];
                     }
+                } else {
+                    // Öğrenci modu veya tekil mod
+                    if (State.grupCalismasi && State.grupUyeleri) {
+                        targetMembers = State.grupUyeleri.map(u => String(u["Okul Numaranız"]));
+                    } else {
+                        targetMembers = [State.activeVeri.ogrenciNo];
+                    }
+                }
 
-                    const toplamPuan = parseInt(document.getElementById('h_puan').textContent) || 0;
+                const promises = [];
+                // Her üye için puanları ve bitişi kaydet
+                targetMembers.forEach(no => {
+                    // 1. Puanları Kaydet (Opsiyonel: Zaten anlık kaydediliyor ama garanti olsun)
+                    // Mevcut backend yapısında puanlar anlık kaydediliyor, burada sadece bitişi versek yeterli.
+                    // Ancak garanti olsun diye son durumu da basabiliriz. 
+                    // Şimdilik sadece bitir diyelim, çünkü anlık puanlama çalışıyor.
 
-                    const topluVeri = targetMembers.map(no => ({
-                        ogrenciNo: no,
-                        sinif: State.pSinif,
-                        puanlar: State.anlikPuanlar,
-                        degerlendirme: { toplam: toplamPuan, bitti: true }
-                    }));
-
-                    await fetch("/kaydet", {
+                    // 2. Değerlendirmeyi Bitir
+                    promises.push(fetch("/degerlendirmeBitir", {
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ dosyaAdi: `www_${State.pCalisma}`, veri: topluVeri })
-                    });
+                        body: JSON.stringify({
+                            dosyaAdi: `www_${State.pCalisma}`,
+                            ogrenciNo: no,
+                            sinif: State.pSinif,
+                            toplam: toplamPuan
+                        })
+                    }));
+                });
 
+                await Promise.all(promises);
+
+                if (isTeacher) {
                     State.kuyrukIdx++;
                     TeacherApp.yukle();
-
                 } else {
-                    await fetch("/degerlendirmeBitir", {
-                        method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ dosyaAdi: `www_${State.pCalisma}`, ogrenciNo: State.activeVeri.ogrenciNo, sinif: State.pSinif })
-                    });
                     location.reload();
                 }
             },
