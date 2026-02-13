@@ -630,6 +630,14 @@ async function autoMigrate() {
     const fs = require('fs'); // Ensure fs is available if not global
     const files = fs.readdirSync(__dirname);
 
+    // 0. Ensure Table Exists (Robustness)
+    await query(`
+        CREATE TABLE IF NOT EXISTS class_groups (
+            class_name VARCHAR(255) PRIMARY KEY,
+            groups_data JSONB
+        );
+    `);
+
     // 1. Class Groups
     const groupFiles = files.filter(f => f.match(/^[0-9A-Za-z]+Grupları\.json$/));
     for (const file of groupFiles) {
