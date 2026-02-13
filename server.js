@@ -1,10 +1,12 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const cors = require("cors");
 const { query } = require("./db");
 require("dotenv").config();
 
 const app = express();
+
 app.use(express.json({ limit: '50mb' })); // Increased limit just in case
 app.use(cors());
 
@@ -621,7 +623,32 @@ app.get("/adminMigration", async (req, res) => {
   }
 });
 
+// Auto-Migration Function
+async function autoMigrate() {
+  try {
+    console.log("Checking for necessary data migration...");
+    const fs = require('fs'); // Ensure fs is available if not global
+    const files = fs.readdirSync(__dirname);
+
+    // 1. Class Groups
+    const groupFiles = files.filter(f => f.match(/^[0-9A-Za-z]+Grupları\.json$/));
+    for (const file of groupFiles) {
+      const className = file.replace("Grupları.json", "");
+      const content = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf-8'));
+      await query(`
+            INSERT INTO class_groups (class_name, groups_data)
+            VALUES ($1, $2)
+            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
+        `, [className, content]);
+      console.log(`Migrated group: ${file}`);
+    }
+  } catch (e) {
+    console.warn("Auto-migration failed (likely due to no DB connection locally):", e.message);
+  }
+}
+
 // --- SUNUCUYU BAŞLAT ---
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, "0.0.0.0", async () => {
   console.log(`Sunucu ${PORT} portunda hazır! (SQL Modu)`);
+  await autoMigrate();
 });
