@@ -67,10 +67,69 @@ app.get("/veritabani.json", async (req, res) => {
 });
 
 // --- 4. YARDIMCI FONKSİYONLAR ---
-// Not needed for DB connection but kept for compatibility logic if any
 function dosyaIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ_\- ]/g, "").trim() : ""; }
+function sinifIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]/g, "") : ""; }
 
 // --- 5. API İŞLEMLERİ (SQL UYARLAMASI) ---
+
+// ... (Other endpoints) ...
+
+app.get("/grupListesiGetir", async (req, res) => {
+  try {
+    const rawSinif = req.query.sinif; // e.g. "9-A"
+    const normalizedSinif = sinifIsmiTemizle(rawSinif); // e.g. "9A" using User's Regex
+
+    // DEBUG LOG
+    console.log(`[grupListesiGetir] Request: raw=${rawSinif}, norm=${normalizedSinif}`);
+
+    // 1. Try EXACT match from DB
+    let resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [rawSinif]);
+
+    // 2. Try NORMALIZED match from DB if exact failed
+    if (resDb.rows.length === 0) {
+      resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [normalizedSinif]);
+    }
+
+    // Check if we actually have data
+    let dbData = [];
+    if (resDb.rows.length > 0 && resDb.rows[0].groups_data && resDb.rows[0].groups_data.length > 0) {
+      dbData = resDb.rows[0].groups_data;
+    }
+
+    if (dbData.length > 0) {
+      console.log(`[grupListesiGetir] Found in DB (${dbData.length} groups)`);
+      res.json(dbData);
+    } else {
+      // Fallback: Check File System if DB is empty or missing
+      console.log(`[grupListesiGetir] DB empty/missing. Checking File System...`);
+      const fs = require('fs');
+      const path = require('path');
+
+      // Strict File Check: NormalizedClass + Grupları.json (e.g. 9CGrupları.json)
+      // Uses user's exact normalization logic
+      const strictPath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
+      console.log(`[grupListesiGetir] Checking file (Strict): ${strictPath}`);
+
+      if (fs.existsSync(strictPath)) {
+        console.log(`[grupListesiGetir] Found FILE: ${strictPath}`);
+        try {
+          const content = JSON.parse(fs.readFileSync(strictPath, 'utf-8'));
+
+          // Lazy Migration (Save to DB) - ALWAYS save back to RAW class name for consistency
+          await query(`
+             INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2)
+             ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
+          `, [rawSinif, content]);
+
+          res.json(content);
+        } catch (err) { console.error("FS Read Error:", err); res.json([]); }
+      } else {
+        console.log(`[grupListesiGetir] Not found anywhere: ${strictPath}`);
+        res.json([]);
+      }
+    }
+  } catch (e) { console.error(e); res.json([]); }
+});
 
 // Değerlendirmeyi Sıfırla
 app.post("/degerlendirmeSifirla", async (req, res) => {
@@ -556,75 +615,7 @@ app.get("/arsivListesi", async (req, res) => {
   } catch (e) { res.json([]); }
 });
 
-app.get("/grupListesiGetir", async (req, res) => {
-  try {
-    const rawSinif = req.query.sinif; // e.g. "9-A"
-    const normalizedSinif = rawSinif.replace(/[^a-zA-Z0-9]/g, ""); // e.g. "9A"
 
-    // DEBUG LOG
-    console.log(`[grupListesiGetir] Request: raw=${rawSinif}, norm=${normalizedSinif}`);
-
-    // 1. Try EXACT match from DB
-    let resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [rawSinif]);
-
-    // 2. Try NORMALIZED match from DB if exact failed
-    if (resDb.rows.length === 0) {
-      resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [normalizedSinif]);
-    }
-
-    // Check if we actually have data
-    let dbData = [];
-    if (resDb.rows.length > 0 && resDb.rows[0].groups_data && resDb.rows[0].groups_data.length > 0) {
-      dbData = resDb.rows[0].groups_data;
-    }
-
-    if (dbData.length > 0) {
-      console.log(`[grupListesiGetir] Found in DB (${dbData.length} groups)`);
-      res.json(dbData);
-    } else {
-      // Fallback: Check File System if DB is empty or missing
-      console.log(`[grupListesiGetir] DB empty/missing. Checking File System...`);
-      const fs = require('fs');
-      const path = require('path');
-
-      // Strict File Check: NormalizedClass + Grupları.json (e.g. 9CGrupları.json)
-      // User Confirmed: "9CGrupları.json şeklinde olacak her yerde"
-      let foundPath = "";
-      const strictPath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
-      console.log(`[grupListesiGetir] Checking file (Strict): ${strictPath}`);
-
-      if (fs.existsSync(strictPath)) {
-        foundPath = strictPath;
-      }
-
-      if (foundPath && fs.existsSync(foundPath)) {
-        console.log(`[grupListesiGetir] Found FILE: ${foundPath}`);
-        try {
-          const content = JSON.parse(fs.readFileSync(foundPath, 'utf-8'));
-          // Lazy Migration (Save to DB) - ALWAYS save back to RAW class name
-          await query(`
-             INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2)
-             ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
-          `, [rawSinif, content]);
-          res.json(content);
-        } catch (err) { console.error("FS Read Error:", err); res.json([]); }
-      } else {
-        console.log(`[grupListesiGetir] Not found anywhere: ${strictPath}`);
-
-        // DEBUGGING: Return diagnosis to client to show in Alert
-        const debugFiles = fs.readdirSync(__dirname).filter(f => f.includes("Grupları"));
-        res.json({
-          debugError: true,
-          triedPath: strictPath,
-          normalizedClass: normalizedSinif,
-          dirName: __dirname,
-          availableFiles: debugFiles,
-          message: "File not found on server"
-        });
-      }
-    }
-  } catch (e) { console.error(e); res.json([]); }
-});
 
 // Admin File List Helper
 app.get("/yonetimDosyaListesi", async (req, res) => {

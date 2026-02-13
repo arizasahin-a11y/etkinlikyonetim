@@ -602,22 +602,9 @@
                                 }
 
                                 // Robust Group Finding: Check by Number ONLY (User Request)
+                                // Matching User's Logic: 
                                 const g = gs.find(x => Array.isArray(x) && x.some(o => {
-                                    if (!o) return false;
-                                    const dbNoStr = String(o["Okul Numaranız"]).trim();
-                                    const sessNoStr = String(sess.no).trim();
-
-                                    // 1. Exact String Match
-                                    // DEBUG LOG
-                                    console.log("Kontrol:", dbNoStr, "vs", sessNoStr);
-                                    if (dbNoStr === sessNoStr) return true;
-
-                                    // 2. Loose Integer Match (e.g. "05" vs "5")
-                                    const dbNoInt = parseInt(dbNoStr, 10);
-                                    const sessNoInt = parseInt(sessNoStr, 10);
-                                    if (!isNaN(dbNoInt) && !isNaN(sessNoInt) && dbNoInt === sessNoInt) return true;
-
-                                    return false;
+                                    return o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim();
                                 }));
 
                                 // DEBUG: Alert if not found
