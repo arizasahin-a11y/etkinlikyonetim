@@ -587,23 +587,18 @@ app.get("/grupListesiGetir", async (req, res) => {
       const fs = require('fs');
       const path = require('path');
 
-      // Scan directory for ANY matching file (ignoring hyphens/case)
-      let foundContent = null;
+      // Strict File Check: NormalizedClass + Grupları.json (e.g. 9CGrupları.json)
+      // User Confirmed: "9CGrupları.json şeklinde olacak her yerde"
       let foundPath = "";
+      const strictPath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
+      console.log(`[grupListesiGetir] Checking file (Strict): ${strictPath}`);
 
-      const files = fs.readdirSync(__dirname);
-      const groupFiles = files.filter(f => f.endsWith("Grupları.json"));
-
-      for (const f of groupFiles) {
-        const fileClassNorm = f.replace("Grupları.json", "").replace(/[^a-zA-Z0-9]/g, "");
-        if (fileClassNorm === normalizedSinif) {
-          foundPath = path.join(__dirname, f);
-          break;
-        }
+      if (fs.existsSync(strictPath)) {
+        foundPath = strictPath;
       }
 
       if (foundPath && fs.existsSync(foundPath)) {
-        console.log(`[grupListesiGetir] Found FILE via Scan: ${foundPath}`);
+        console.log(`[grupListesiGetir] Found FILE: ${foundPath}`);
         try {
           const content = JSON.parse(fs.readFileSync(foundPath, 'utf-8'));
           // Lazy Migration (Save to DB) - ALWAYS save back to RAW class name
@@ -614,7 +609,7 @@ app.get("/grupListesiGetir", async (req, res) => {
           res.json(content);
         } catch (err) { console.error("FS Read Error:", err); res.json([]); }
       } else {
-        console.log(`[grupListesiGetir] Not found anywhere (Scanned ${groupFiles.length} files).`);
+        console.log(`[grupListesiGetir] Not found anywhere: ${strictPath}`);
         res.json([]);
       }
     }
