@@ -439,6 +439,7 @@
         });
     }
     
+    // YENİLENMİŞ MANTIK: "Bitti" sadece GİRENLER bitince yazar.
     document.getElementById("s4DosyaSec").onchange = async function() {
         const calisma = this.value; 
         const sinifSel = document.getElementById("s4SinifSec"); 
@@ -471,11 +472,12 @@
             for(let f of atananlar) {
                 const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json","")}`)).json();
                 if(data.sinif) {
-                    const buSinifinBitmisCevaplari = wwwData.filter(r => r.sinif === data.sinif && r.degerlendirme && r.degerlendirme.bitti);
+                    // DÜZELTME: Sadece sınava GİREN (kaydı olan) öğrencilere bakıyoruz.
+                    const buSinifinTumCevaplari = wwwData.filter(r => r.sinif === data.sinif);
+                    const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && r.degerlendirme.bitti);
                     
-                    const sinifMevcudu = globalData.filter(ogr => ogr["Sınıfınız"] === data.sinif).length;
-                    
-                    let hepsiBittiMi = (sinifMevcudu > 0 && buSinifinBitmisCevaplari.length >= sinifMevcudu);
+                    // Eğer en az 1 kişi girdiyse VE girenlerin HEPSİ bittiyse -> "Bitti" yaz.
+                    let hepsiBittiMi = (buSinifinTumCevaplari.length > 0 && buSinifinBitmisCevaplari.length === buSinifinTumCevaplari.length);
                     
                     sinifSel.appendChild(new Option(data.sinif + (hepsiBittiMi ? " (Bitti)" : ""), data.sinif));
                 }
@@ -483,12 +485,11 @@
         } catch(e) { console.error("Hata:", e); }
     };
     
-    // GÖRÜNÜRLÜK KONTROLÜ BURADA
+    // GÖRÜNÜRLÜK KONTROLÜ
     document.getElementById("s4SinifSec").onchange = function() {
         const btn = document.getElementById("btnDegerlendirmeSifirla");
         if (this.selectedIndex >= 0) {
             const text = this.options[this.selectedIndex].text;
-            // KURAL: Sadece "(Bitti)" yazıyorsa buton görünür.
             if(text.includes("(Bitti)")) {
                 btn.style.display = "inline-block";
             } else {
@@ -519,7 +520,6 @@
     }
 
     document.getElementById("btnDegerlendirmeBaslat").onclick = () => {
-        // "Bitti" kontrolü burada kalktı, artık modal ile yapılacak.
         DegerlendirmeApp.baslat();
     };
 
@@ -549,20 +549,27 @@
                 const gruplar = await (await fetch(`/grupListesiGetir?sinif=${this.seciliSinif}`)).json();
                 gruplar.forEach((grp, idx) => {
                     const kayit = cevaplarVerisi.find(tv => grp.some(u => String(tv.ogrenciNo) === String(u["Okul Numaranız"])));
-                    // Eğer bittiyse atlıyor, bu yüzden kuyruk boş kalıyor
+                    // BİTMİŞSE ATLA
                     if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
-                    this.kuyruk.push({ baslik: `${this.seciliSinif} - ${idx+1}. GRUP`, kayit: kayit, katilmadi: !kayit || !kayit.cevaplar.length, members: grp.map(u => String(u["Okul Numaranız"])) });
+                    // HİÇ GİRMEMİŞSE DE ATLA (KUYRUĞA EKLEME)
+                    if (!kayit || !kayit.cevaplar || kayit.cevaplar.length === 0) return;
+                    
+                    this.kuyruk.push({ baslik: `${this.seciliSinif} - ${idx+1}. GRUP`, kayit: kayit, katilmadi: false, members: grp.map(u => String(u["Okul Numaranız"])) });
                 });
             } else {
                 globalData.filter(u => u["Sınıfınız"] === this.seciliSinif).forEach(ogr => {
                     const no = String(ogr["Okul Numaranız"]); const kayit = cevaplarVerisi.find(x => String(x.ogrenciNo) === no);
+                    // BİTMİŞSE ATLA
                     if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
-                    this.kuyruk.push({ baslik: `${no} - ${ogr["Adınız Soyadınız"]}`, kayit: kayit, katilmadi: !kayit || !kayit.cevaplar.length, members: [no] });
+                    // HİÇ GİRMEMİŞSE DE ATLA
+                    if (!kayit || !kayit.cevaplar || kayit.cevaplar.length === 0) return;
+
+                    this.kuyruk.push({ baslik: `${no} - ${ogr["Adınız Soyadınız"]}`, kayit: kayit, katilmadi: false, members: [no] });
                 });
             }
             this.kuyrukIndex = 0; 
             
-            // KUYRUK BOŞSA MODAL AÇ
+            // Eğer kuyruk boşsa (ya herkes bitti ya kimse girmedi), MODAL AÇ
             if(this.kuyruk.length === 0) {
                 document.getElementById('degerlendirmeContainer').style.display = 'none';
                 document.getElementById('bitmisUyariModal').style.display = 'block';
@@ -585,13 +592,13 @@
         },
         yukle: function() {
             if(this.kuyrukIndex >= this.kuyruk.length) { alert("Bitti!"); location.reload(); return; }
-            const item = this.kuyruk[this.kuyrukIndex]; document.getElementById("degOgrenciBaslik").textContent = item.baslik;
+            const item = this.kuyruk[this.kuyrukIndex]; 
+            document.getElementById("degOgrenciBaslik").textContent = item.baslik;
             this.anlikPuanlar = (item.kayit && item.kayit.puanlar) ? item.kayit.puanlar : {}; 
-            if(item.katilmadi) { this.kuyrukIndex++; this.yukle(); }
-            else if (item.kayit && item.kayit.degerlendirme && item.kayit.degerlendirme.bitti) {
-                 document.getElementById("degNormalPanel").style.display = "flex"; this.activeVeri = item.kayit; this.sIdx = 0; this.renderSoru();
-            }
-            else { document.getElementById("degNormalPanel").style.display = "flex"; this.activeVeri = item.kayit; this.sIdx = 0; this.soruKontrolEtVeRender(1); }
+            document.getElementById("degNormalPanel").style.display = "flex"; 
+            this.activeVeri = item.kayit; 
+            this.sIdx = 0; 
+            this.soruKontrolEtVeRender(1); 
         },
         soruKontrolEtVeRender: function(direction) {
             if(this.sIdx >= this.sorular.length) { this.sonrakiKisi(); return; }
@@ -637,27 +644,27 @@
         nav: function(n) { let nextIdx = this.sIdx + n; if(nextIdx < 0) return; this.sIdx = nextIdx; this.soruKontrolEtVeRender(n); },
         sonrakiKisi: async function() {
             const item = this.kuyruk[this.kuyrukIndex]; 
-            if(!item.katilmadi) {
-                const puanPromises = [];
-                for(const ogrNo of item.members) {
-                    Object.keys(this.anlikPuanlar).forEach(sIx => { 
-                        const cevaplar = this.anlikPuanlar[sIx];
-                        if(cevaplar) {
-                            cevaplar.forEach((p,cIx)=>{ 
-                                if(p !== undefined && p !== null) { 
-                                    puanPromises.push(fetch("/puanKaydet",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dosyaAdi:`www_${this.seciliCalisma}`,ogrenciNo:ogrNo,sinif:this.seciliSinif,soruIndex:parseInt(sIx),cevapIndex:cIx,puan:p})}));
-                                }
-                            }); 
-                        }
-                    }); 
-                }
-                await Promise.all(puanPromises); 
-                const bitirPromises = [];
-                for(const ogrNo of item.members) {
-                    bitirPromises.push(fetch("/degerlendirmeBitir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dosyaAdi:`www_${this.seciliCalisma}`,ogrenciNo:ogrNo,sinif:this.seciliSinif})}));
-                }
-                await Promise.all(bitirPromises);
+            // Zaten katılanları aldığımız için if check'e gerek yok ama güvenlik için kalsın
+            const puanPromises = [];
+            for(const ogrNo of item.members) {
+                Object.keys(this.anlikPuanlar).forEach(sIx => { 
+                    const cevaplar = this.anlikPuanlar[sIx];
+                    if(cevaplar) {
+                        cevaplar.forEach((p,cIx)=>{ 
+                            if(p !== undefined && p !== null) { 
+                                puanPromises.push(fetch("/puanKaydet",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dosyaAdi:`www_${this.seciliCalisma}`,ogrenciNo:ogrNo,sinif:this.seciliSinif,soruIndex:parseInt(sIx),cevapIndex:cIx,puan:p})}));
+                            }
+                        }); 
+                    }
+                }); 
             }
+            await Promise.all(puanPromises); 
+            const bitirPromises = [];
+            for(const ogrNo of item.members) {
+                bitirPromises.push(fetch("/degerlendirmeBitir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dosyaAdi:`www_${this.seciliCalisma}`,ogrenciNo:ogrNo,sinif:this.seciliSinif})}));
+            }
+            await Promise.all(bitirPromises);
+            
             this.kuyrukIndex++; this.yukle();
         }
     };
