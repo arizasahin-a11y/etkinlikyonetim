@@ -800,7 +800,12 @@
 
         document.getElementById("sinifSec").onchange = function () {
             secilenSinif = this.value;
-            if (secilenSinif) fetch(secilenSinif + "Grupları.json").then(r => r.json()).then(g => gruplariGoster(g)).catch(() => document.getElementById("tablo").innerHTML = "");
+            if (secilenSinif) {
+                fetch(`/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}`)
+                    .then(r => r.json())
+                    .then(g => gruplariGoster(g))
+                    .catch(() => document.getElementById("tablo").innerHTML = "");
+            }
         };
         function gruplariGoster(gruplar) {
             const container = document.getElementById("tablo"); container.innerHTML = "";
