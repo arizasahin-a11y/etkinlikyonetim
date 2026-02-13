@@ -592,14 +592,21 @@
                             .then(gs => {
                                 if (!Array.isArray(gs)) throw new Error("Veri hatası");
 
-                                // Robust Group Finding: Check by Number OR Name
+                                // Robust Group Finding: Check by Number ONLY (User Request)
                                 const g = gs.find(x => Array.isArray(x) && x.some(o => {
                                     if (!o) return false;
-                                    const matchNo = String(o["Okul Numaranız"]).trim() === String(sess.no).trim();
-                                    // Also check by name as fallback if number is missing/wrong in one source
-                                    // But session usually has number. 
-                                    // Use strict number matching first.
-                                    return matchNo;
+                                    const dbNoStr = String(o["Okul Numaranız"]).trim();
+                                    const sessNoStr = String(sess.no).trim();
+
+                                    // 1. Exact String Match
+                                    if (dbNoStr === sessNoStr) return true;
+
+                                    // 2. Loose Integer Match (e.g. "05" vs "5")
+                                    const dbNoInt = parseInt(dbNoStr, 10);
+                                    const sessNoInt = parseInt(sessNoStr, 10);
+                                    if (!isNaN(dbNoInt) && !isNaN(sessNoInt) && dbNoInt === sessNoInt) return true;
+
+                                    return false;
                                 }));
 
                                 if (g) {
