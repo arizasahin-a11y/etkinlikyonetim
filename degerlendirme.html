@@ -315,8 +315,14 @@
                     if (rA.ok) {
                         const dA = await rA.json();
 
+                        // Check permissions
+                        // dC is the content of www_file. Check for AYARLAR record.
+                        const ayarlar = dC.find(x => x.ogrenciNo === "AYARLAR");
+                        const ogretmenIzni = ayarlar ? ayarlar.izin : false;
+
                         // Check if evaluation is allowed
-                        if (dA.degerl === false) {
+                        // If teacher permission exists, bypass the check.
+                        if (dA.degerl === false && !ogretmenIzni) {
                             document.getElementById('bilgi').textContent = "Bu çalışma için değerlendirme henüz açılmamış.";
                             document.getElementById('msgPanel').innerHTML = "<h3 style='color:red;'>⚠️ Değerlendirme Kapalı</h3><p>Öğretmeniniz bu çalışma için değerlendirme iznini henüz vermedi.</p>";
                             document.getElementById('msgPanel').style.display = "block";
