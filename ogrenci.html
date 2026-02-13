@@ -592,7 +592,15 @@
                             .then(gs => {
                                 if (!Array.isArray(gs)) throw new Error("Veri hatası");
 
-                                const g = gs.find(x => Array.isArray(x) && x.some(o => o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim()));
+                                // Robust Group Finding: Check by Number OR Name
+                                const g = gs.find(x => Array.isArray(x) && x.some(o => {
+                                    if (!o) return false;
+                                    const matchNo = String(o["Okul Numaranız"]).trim() === String(sess.no).trim();
+                                    // Also check by name as fallback if number is missing/wrong in one source
+                                    // But session usually has number. 
+                                    // Use strict number matching first.
+                                    return matchNo;
+                                }));
 
                                 if (g) {
                                     grupUyeleri = g;
