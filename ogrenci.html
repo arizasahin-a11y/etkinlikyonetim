@@ -590,7 +590,16 @@
                         fetch(`/grupListesiGetir?sinif=${sess.sinif}`)
                             .then(r => r.json())
                             .then(gs => {
-                                if (!Array.isArray(gs)) throw new Error("Veri hatası");
+                                // DEBUG TRAP FOR SERVER ERROR
+                                if (gs && gs.debugError) {
+                                    alert(`DEBUG ERROR:\n\nTried to find: ${gs.triedPath}\n\nBut server says file missing.\n\nServer Folder: ${gs.dirName}\n\nFiles in Folder: ${gs.availableFiles.join(", ")}\n\nNormalized Class: ${gs.normalizedClass}`);
+                                    return;
+                                }
+
+                                if (!Array.isArray(gs)) {
+                                    alert("Veri hatası: Grup listesi dizi değil.");
+                                    return;
+                                }
 
                                 // Robust Group Finding: Check by Number ONLY (User Request)
                                 const g = gs.find(x => Array.isArray(x) && x.some(o => {

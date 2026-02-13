@@ -610,7 +610,17 @@ app.get("/grupListesiGetir", async (req, res) => {
         } catch (err) { console.error("FS Read Error:", err); res.json([]); }
       } else {
         console.log(`[grupListesiGetir] Not found anywhere: ${strictPath}`);
-        res.json([]);
+
+        // DEBUGGING: Return diagnosis to client to show in Alert
+        const debugFiles = fs.readdirSync(__dirname).filter(f => f.includes("Grupları"));
+        res.json({
+          debugError: true,
+          triedPath: strictPath,
+          normalizedClass: normalizedSinif,
+          dirName: __dirname,
+          availableFiles: debugFiles,
+          message: "File not found on server"
+        });
       }
     }
   } catch (e) { console.error(e); res.json([]); }
