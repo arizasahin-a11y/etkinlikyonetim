@@ -116,7 +116,7 @@
             padding: 10px;
             border-radius: 8px;
             background: white;
-            width: 320px; /* Genişletildi */
+            width: 320px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
@@ -137,8 +137,8 @@
         th,
         td {
             border: 1px solid #eee;
-            padding: 8px; /* Padding azaltıldı */
-            text-align: left; /* Sola hizalı okuması daha kolay */
+            padding: 8px;
+            text-align: left;
         }
 
         th {
@@ -324,7 +324,26 @@
         async function veritabaniYukle() {
             try {
                 const res = await fetch('/veritabani.json');
-                veritabani = await res.json();
+                const hamVeri = await res.json();
+                
+                // DÜZELTME: Veritabanını '9' başlığından kurtarıp sınıflara ayırma işlemi
+                // { "9": [...] } yapısını -> { "9A": [...], "9B": [...] } yapısına çeviriyoruz.
+                const duzenliVeri = {};
+                
+                // Ham verideki tüm anahtarları (örn: "9") dolaş
+                Object.values(hamVeri).forEach(ogrenciListesi => {
+                    ogrenciListesi.forEach(ogr => {
+                        const sinifAdi = ogr["Sınıfınız"]; // Öğrencinin içindeki gerçek sınıf bilgisi
+                        if(sinifAdi) {
+                            if(!duzenliVeri[sinifAdi]) {
+                                duzenliVeri[sinifAdi] = [];
+                            }
+                            duzenliVeri[sinifAdi].push(ogr);
+                        }
+                    });
+                });
+
+                veritabani = duzenliVeri;
                 siniflariDoldur();
             } catch (e) {
                 console.error("Veritabanı yüklenemedi:", e);
@@ -369,8 +388,7 @@
 
             let ogrenciler = [...veritabani[sinif]];
 
-            // 1. ÖNEMLİ: LİSTE SIRASINI BOZMAMAK İÇİN OKUL NUMARASINA GÖRE SIRALA
-            // (Veritabanı json karışık gelebileceği için garantiye alıyoruz)
+            // Okul Numarasına göre sıralama
             ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
 
             const grupSayisi = prompt(`${sinif} sınıfında ${ogrenciler.length} öğrenci var.\nKaç grup oluşturulsun?`, "6");
@@ -379,11 +397,9 @@
             const n = parseInt(grupSayisi);
             mevcutGruplar = [];
 
-            // Sıralı Dağıtım (Chunking) - Listenin başından sonuna sırayla böler
             const perGroup = Math.ceil(ogrenciler.length / n);
             
             for (let i = 0; i < n; i++) {
-                // Her grup için sıradaki dilimi al
                 const start = i * perGroup;
                 const end = start + perGroup;
                 const grupUyeleri = ogrenciler.slice(start, end);
@@ -417,7 +433,6 @@
                         <tbody>`;
                 
                 g.uyeler.forEach(u => {
-                    // Türkçe büyük harf çevirimi
                     let adSoyad = u["Adınız Soyadınız"] || "";
                     adSoyad = adSoyad.toLocaleUpperCase('tr-TR');
 
@@ -476,7 +491,6 @@
         async function calismaListesiGetir() {
             const res = await fetch('/listeCalismalar');
             const dosyalar = await res.json();
-            // Sadece qwx (Çalışma İçerikleri) filtrele
             calismalar = dosyalar.filter(d => d.startsWith("qwx")).map(d => d.replace("qwx","").replace(".json",""));
             
             const ul = document.getElementById('calismaListesi');
@@ -512,7 +526,7 @@
             
             const res = await fetch(`/calismaGetir?isim=qwx${seciliCalisma}.json`);
             if(!res.ok) return alert("Çalışma içeriği alınamadı.");
-            const icerik = await res.json(); // { aciklama: "...", sorular: [...] }
+            const icerik = await res.json(); 
 
             document.getElementById('listeEkrani').style.display = "none";
             document.getElementById('editorEkrani').style.display = "block";
@@ -581,8 +595,8 @@
             });
 
             const payload = {
-                calismaIsmi: "qwx" + ad, // qwx öneki
-                sorular: { // İçerik objesi
+                calismaIsmi: "qwx" + ad,
+                sorular: {
                     aciklama: aciklama,
                     sorular: sorular
                 }
@@ -641,9 +655,9 @@
             
             const payload = {
                 calismaIsmi: "qqq" + sinif.replace(/\s/g,'') + calisma,
-                sorular: { // Assignment settings
+                sorular: { 
                     sinif: sinif,
-                    calisma: calisma, // qwx'siz isim
+                    calisma: calisma,
                     yontem: yontem,
                     gorme: true,
                     yapma: true,
@@ -660,7 +674,6 @@
             });
             alert("Atama yapıldı!");
             
-            // Listeyi yenile (Basitçe ekrana bas)
             const ul = document.getElementById('atananListesi');
             ul.innerHTML += `<li>${sinif} - ${calisma} (${yontem})</li>`;
         }
