@@ -613,10 +613,12 @@ app.get("/adminMigration", async (req, res) => {
             VALUES ($1, $2)
             ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
         `, [className, content]);
-      counting++;
     }
     res.json({ status: "ok", migrated: counting });
-  } catch (e) { console.error(e); res.status(500).json({ status: "error", msg: e.message }); }
+  } catch (e) {
+    console.error("Migration Error:", e);
+    res.status(500).json({ status: "error", msg: e.toString() || JSON.stringify(e) });
+  }
 });
 
 // --- SUNUCUYU BAŞLAT ---
