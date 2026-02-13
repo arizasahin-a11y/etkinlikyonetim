@@ -65,7 +65,7 @@
     .deg-controls { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; }
 
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
-    .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: center; }
     .soru-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: #fdfdfd; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
     .soru-no { font-weight: bold; color: #673AB7; min-width: 70px; }
 
@@ -145,7 +145,7 @@
                 <div><strong>Çalışma:</strong> <select id="s4DosyaSec" class="kucuk-select"></select></div>
                 <div><strong>Sınıf:</strong> <select id="s4SinifSec" class="kucuk-select"></select></div>
                 <button id="btnDegerlendirmeBaslat" class="action blue" style="font-size:12px; padding:6px 15px;">BAŞLAT</button>
-                <button id="btnDegerlendirmeSifirla" class="action red" style="font-size:12px; padding:6px 15px; display:none;">Değerlendirmeyi Sıfırla</button>
+                <button id="btnDegerlendirmeSifirla" class="action red" style="font-size:12px; padding:6px 15px; display:none;">Sınıfı Sıfırla (Bitti Kaldır)</button>
             </div>
         </div>
         <div id="degerlendirmeContainer">
@@ -176,6 +176,18 @@
         <h3 style="margin:0; color:#673AB7;">Arşiv</h3><span onclick="document.getElementById('arsivModal').style.display='none'" style="cursor:pointer; font-size:24px;">&times;</span>
       </div>
       <ul id="arsivDosyaListesi" style="list-style:none; padding:0; max-height:300px; overflow-y:auto;"></ul>
+    </div>
+  </div>
+
+  <div id="bitmisUyariModal" class="modal" style="z-index: 2000;">
+    <div class="modal-content">
+      <h3 style="color:#f44336;">⚠️ Değerlendirme Tamamlanmış</h3>
+      <p>Bu sınıf için bu çalışma daha önce tamamlanmış (Bitti) olarak görünüyor.</p>
+      <p>Sıfırlayıp baştan başlamak ister misiniz?</p>
+      <div style="margin-top:20px; display:flex; justify-content:center; gap:10px;">
+          <button class="action red" onclick="DegerlendirmeApp.modalSifirla()">Evet, Sıfırla ve Başla</button>
+          <button class="action" onclick="location.reload()" style="background:#999;">İptal</button>
+      </div>
     </div>
   </div>
 
@@ -342,14 +354,12 @@
         if (!secilenSinif) return alert("Sınıf seçin!");
         const n = prompt("Grup sayısı?"); if (!n) return;
         
-        // --- DEĞİŞİKLİK 1: SIRALAMA DÜZELTİLDİ (Random yerine Okul No) ---
         const ogrenciler = globalData.filter(k => k["Sınıfınız"] === secilenSinif);
         ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
 
         const gruplar = [];
         const perGroup = Math.ceil(ogrenciler.length / n);
         
-        // --- DEĞİŞİKLİK 2: SIRALI DAĞITIM (Slice ile) ---
         for(let i=0; i<n; i++) {
              const start = i * perGroup;
              const end = start + perGroup;
@@ -359,7 +369,6 @@
         
         gruplariGoster(gruplar);
         
-        // --- DEĞİŞİKLİK 3: OTOMATİK KAYIT ---
         fetch("/kaydet", { 
             method: "POST", 
             headers: { "Content-Type": "application/json" }, 
@@ -431,31 +440,42 @@
     }
     
     document.getElementById("s4DosyaSec").onchange = async function() {
-        const calisma = this.value; const sinifSel = document.getElementById("s4SinifSec"); 
+        const calisma = this.value; 
+        const sinifSel = document.getElementById("s4SinifSec"); 
         document.getElementById("btnDegerlendirmeSifirla").style.display = "none";
-        const chkOgr = document.getElementById("chkDegerlendirmeIzin"); const chkOgrt = document.getElementById("chkIzin");
+        const chkOgr = document.getElementById("chkDegerlendirmeIzin"); 
+        const chkOgrt = document.getElementById("chkIzin");
+        
         sinifSel.innerHTML = '<option value="">...</option>';
         if(!calisma) { chkOgr.disabled = true; chkOgrt.disabled = true; return; }
+        
         chkOgr.disabled = false; chkOgrt.disabled = false;
+        
         try {
             const [dosyalar, rW] = await Promise.all([
                 (await fetch("/listeCalismalar")).json(),
                 fetch(`/calismaGetir?isim=www_${calisma}`).catch(()=>null)
             ]);
-            let wwwData = []; if(rW && rW.ok) wwwData = await rW.json();
+            
+            let wwwData = []; 
+            if(rW && rW.ok) wwwData = await rW.json();
+            
             const ayar = wwwData.find(x => x.ogrenciNo === "AYARLAR");
-            chkOgr.checked = ayar ? ayar.degerlendirmeIzni : false; chkOgrt.checked = ayar ? ayar.izin : false;
+            chkOgr.checked = ayar ? ayar.degerlendirmeIzni : false; 
+            chkOgrt.checked = ayar ? ayar.izin : false;
+            
             const atananlar = dosyalar.filter(f => f.startsWith("qqq") && f.replace(".json","").endsWith(calisma));
+            
             sinifSel.innerHTML = '<option value="">-- Seç --</option>';
+            
             for(let f of atananlar) {
                 const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json","")}`)).json();
                 if(data.sinif) {
-                    const buSinifinCevaplari = wwwData.filter(r => r.sinif === data.sinif);
-                    let hepsiBittiMi = false;
+                    const buSinifinBitmisCevaplari = wwwData.filter(r => r.sinif === data.sinif && r.degerlendirme && r.degerlendirme.bitti);
                     
-                    if (buSinifinCevaplari.length > 0) {
-                        hepsiBittiMi = buSinifinCevaplari.every(r => r.degerlendirme && r.degerlendirme.bitti);
-                    }
+                    const sinifMevcudu = globalData.filter(ogr => ogr["Sınıfınız"] === data.sinif).length;
+                    
+                    let hepsiBittiMi = (sinifMevcudu > 0 && buSinifinBitmisCevaplari.length >= sinifMevcudu);
                     
                     sinifSel.appendChild(new Option(data.sinif + (hepsiBittiMi ? " (Bitti)" : ""), data.sinif));
                 }
@@ -463,24 +483,24 @@
         } catch(e) { console.error("Hata:", e); }
     };
     
+    // GÖRÜNÜRLÜK KONTROLÜ BURADA
     document.getElementById("s4SinifSec").onchange = function() {
         const btn = document.getElementById("btnDegerlendirmeSifirla");
         if (this.selectedIndex >= 0) {
-            const seciliText = this.options[this.selectedIndex].text;
-            if(seciliText.includes("(Bitti)")) { btn.style.display = "inline-block"; } else { btn.style.display = "none"; }
-        } else { btn.style.display = "none"; }
+            const text = this.options[this.selectedIndex].text;
+            // KURAL: Sadece "(Bitti)" yazıyorsa buton görünür.
+            if(text.includes("(Bitti)")) {
+                btn.style.display = "inline-block";
+            } else {
+                btn.style.display = "none";
+            }
+        } else {
+            btn.style.display = "none";
+        }
     };
 
     document.getElementById("btnDegerlendirmeSifirla").onclick = function() {
-        const calisma = document.getElementById("s4DosyaSec").value;
-        const sinifSel = document.getElementById("s4SinifSec");
-        const sinif = sinifSel.value.replace(" (Bitti)", "");
-        if(!calisma || !sinif) return;
-        const ogrenciNoListesi = globalData.filter(u => u["Sınıfınız"] === sinif).map(u => String(u["Okul Numaranız"]).trim());
-        if (ogrenciNoListesi.length === 0) { alert("HATA: Sınıf listesi bulunamadı."); return; }
-        if(!confirm(`DİKKAT! ${sinif} sınıfının "${calisma}" çalışmasındaki "BİTTİ" durumu kaldırılacak.`)) return;
-        fetch("/degerlendirmeSifirla", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: "www_" + calisma, ogrenciNoListesi: ogrenciNoListesi, sinif: sinif }) })
-        .then(r => r.json()).then(res => { if(res.status === "ok") { alert("Sıfırlandı!"); location.reload(); } else { alert("Hata!"); } });
+        DegerlendirmeApp.modalSifirla();
     };
 
     document.getElementById("chkDegerlendirmeIzin").onchange = function() {
@@ -499,11 +519,7 @@
     }
 
     document.getElementById("btnDegerlendirmeBaslat").onclick = () => {
-        const sinifSel = document.getElementById("s4SinifSec");
-        if (sinifSel.selectedIndex >= 0 && sinifSel.options[sinifSel.selectedIndex].text.includes("(Bitti)")) {
-            alert("Bu sınıfın değerlendirmesi tamamlanmış! Önce 'Değerlendirmeyi Sıfırla' butonunu kullanmalısınız.");
-            return;
-        }
+        // "Bitti" kontrolü burada kalktı, artık modal ile yapılacak.
         DegerlendirmeApp.baslat();
     };
 
@@ -533,6 +549,7 @@
                 const gruplar = await (await fetch(`/grupListesiGetir?sinif=${this.seciliSinif}`)).json();
                 gruplar.forEach((grp, idx) => {
                     const kayit = cevaplarVerisi.find(tv => grp.some(u => String(tv.ogrenciNo) === String(u["Okul Numaranız"])));
+                    // Eğer bittiyse atlıyor, bu yüzden kuyruk boş kalıyor
                     if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
                     this.kuyruk.push({ baslik: `${this.seciliSinif} - ${idx+1}. GRUP`, kayit: kayit, katilmadi: !kayit || !kayit.cevaplar.length, members: grp.map(u => String(u["Okul Numaranız"])) });
                 });
@@ -543,7 +560,28 @@
                     this.kuyruk.push({ baslik: `${no} - ${ogr["Adınız Soyadınız"]}`, kayit: kayit, katilmadi: !kayit || !kayit.cevaplar.length, members: [no] });
                 });
             }
-            this.kuyrukIndex = 0; this.yukle();
+            this.kuyrukIndex = 0; 
+            
+            // KUYRUK BOŞSA MODAL AÇ
+            if(this.kuyruk.length === 0) {
+                document.getElementById('degerlendirmeContainer').style.display = 'none';
+                document.getElementById('bitmisUyariModal').style.display = 'block';
+                return;
+            }
+            
+            this.yukle();
+        },
+        modalSifirla: function() {
+            const calisma = document.getElementById("s4DosyaSec").value;
+            const sinif = document.getElementById("s4SinifSec").value.replace(" (Bitti)", "");
+            const ogrenciNoListesi = globalData.filter(u => u["Sınıfınız"] === sinif).map(u => String(u["Okul Numaranız"]).trim());
+            fetch("/degerlendirmeSifirla", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: "www_" + calisma, ogrenciNoListesi: ogrenciNoListesi, sinif: sinif }) })
+            .then(r => r.json()).then(res => { 
+                if(res.status === "ok") { 
+                    alert("Sıfırlandı! Değerlendirme başlıyor..."); 
+                    location.reload(); 
+                } 
+            });
         },
         yukle: function() {
             if(this.kuyrukIndex >= this.kuyruk.length) { alert("Bitti!"); location.reload(); return; }
