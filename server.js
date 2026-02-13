@@ -589,10 +589,16 @@ app.get("/calismaGetir", async (req, res) => {
     } else if (isim.startsWith("www_")) {
       // Fetch Evaluations (All students for a study)
       const name = isim.replace("www_", "");
+      console.log(`[www_ Getir] İstek: ${isim}, Study adı: ${name}`);
+
       const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
 
-      if (studyRes.rows.length === 0) return res.json([]);
+      if (studyRes.rows.length === 0) {
+        console.warn(`⚠️ [www_ Getir] Study bulunamadı: ${name}`);
+        return res.json([]);
+      }
       const studyId = studyRes.rows[0].id;
+      console.log(`[www_ Getir] Study ID: ${studyId}`);
 
       // JOIN with students to get name
       const evals = await query(`
@@ -601,6 +607,8 @@ app.get("/calismaGetir", async (req, res) => {
           LEFT JOIN students s ON se.student_school_no = s.school_no
           WHERE se.study_id = $1
       `, [studyId]);
+
+      console.log(`[www_ Getir] ${evals.rows.length} kayıt bulundu`);
 
       // Map back to legacy format
       const mapped = evals.rows.map(row => {
@@ -617,6 +625,8 @@ app.get("/calismaGetir", async (req, res) => {
           degerlendirme: row.evaluation
         };
       });
+
+      console.log(`✅ [www_ Getir] ${mapped.length} kayıt döndürülüyor`);
       res.json(mapped);
 
     } else if (isim.endsWith("Grupları.json")) {
