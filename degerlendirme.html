@@ -183,27 +183,42 @@
             if (!OGR_NO || !SINIF || !CALISMA) { document.body.innerHTML = "<h3 style='text-align:center'>Hatalı Link</h3>"; return; }
 
             try {
+                // 1. Verileri Çek
                 const rS = await fetch(`/calismaGetir?isim=qwx${CALISMA}`);
                 const dS = await rS.json();
-                // SQL Adaptation: Handle both array (legacy simple) and object (legacy complex) formats
                 sorular = Array.isArray(dS) ? dS : (dS.sorular || []);
 
                 const rC = await fetch(`/calismaGetir?isim=www_${CALISMA}`);
                 const dC = await rC.json();
-
-                // SQL Adaptation: dC is array of results.
                 const kayit = dC.find(x => String(x.ogrenciNo) === String(OGR_NO));
 
                 if (!kayit) { document.getElementById('soru_alani').innerHTML = "Kayıt bulunamadı."; return; }
 
-                document.getElementById('bilgi').textContent = `${kayit.sinif} - ${kayit.adSoyad || ''} (${OGR_NO})`;
-                // Note: adSoyad might be missing in answer record if not stored explicitly, but usually is not needed for display if we trust the link
-                // Or we fetch student name? User code used `kayit.adSoyad`. 
-                // In SQL `student_evaluations` does not store name.
-                // But let's stick to user code. If it's undefined, it shows undefined.
+                // 2. Başlık Belirleme (Grup Kontrolü)
+                let baslik = `${kayit.sinif} - ${kayit.adSoyad || ''} (${OGR_NO})`;
+
+                try {
+                    // Assignment Config Check
+                    const cleanSinif = SINIF.replace(/\s/g, '');
+                    const rA = await fetch(`/calismaGetir?isim=qqq${cleanSinif}${CALISMA}`);
+                    if (rA.ok) {
+                        const dA = await rA.json();
+                        if (dA.yontem === 'Grup') {
+                            // Fetch Groups
+                            const rG = await fetch(`/grupListesiGetir?sinif=${SINIF}`);
+                            const groups = await rG.json();
+                            const myGroup = groups.find(g => Array.isArray(g) && g.some(s => s && String(s["Okul Numaranız"]) === String(OGR_NO)));
+                            if (myGroup) {
+                                const gIdx = groups.indexOf(myGroup) + 1;
+                                baslik = `${SINIF} - Grup ${gIdx}`;
+                            }
+                        }
+                    }
+                } catch (err) { console.log("Grup kontrol hatası:", err); }
+
+                document.getElementById('bilgi').textContent = baslik;
 
                 anlikPuanlar = kayit.puanlar || {};
-
                 render(kayit.cevaplar || []);
             } catch (e) { console.error(e); alert("Veri yüklenemedi!"); }
         }
