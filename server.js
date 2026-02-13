@@ -526,8 +526,27 @@ app.get("/grupListesiGetir", async (req, res) => {
   try {
     const sinif = req.query.sinif;
     const resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [sinif]);
-    if (resDb.rows.length > 0) res.json(resDb.rows[0].groups_data);
-    else res.json([]);
+    if (resDb.rows.length > 0) {
+      res.json(resDb.rows[0].groups_data);
+    } else {
+      // Fallback: Check File System (User Request: "take from files")
+      const fs = require('fs');
+      const path = require('path');
+      const filePath = path.join(__dirname, `${sinif}Grupları.json`);
+      if (fs.existsSync(filePath)) {
+        try {
+          const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          // Optional: Lazy Migration (Save to DB for next time)
+          await query(`
+             INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2)
+             ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
+          `, [sinif, content]);
+          res.json(content);
+        } catch (err) { console.error("FS Read Error:", err); res.json([]); }
+      } else {
+        res.json([]);
+      }
+    }
   } catch (e) { res.json([]); }
 });
 
