@@ -587,18 +587,25 @@ app.get("/grupListesiGetir", async (req, res) => {
       const fs = require('fs');
       const path = require('path');
 
-      // Try normalized filename first (e.g. 9AGrupları.json)
-      let filePath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
-      if (!fs.existsSync(filePath)) {
-        console.log(`[grupListesiGetir] Not found: ${filePath}`);
-        // Try raw filename (e.g. 9-AGrupları.json)
-        filePath = path.join(__dirname, `${rawSinif}Grupları.json`);
+      // Scan directory for ANY matching file (ignoring hyphens/case)
+      let foundContent = null;
+      let foundPath = "";
+
+      const files = fs.readdirSync(__dirname);
+      const groupFiles = files.filter(f => f.endsWith("Grupları.json"));
+
+      for (const f of groupFiles) {
+        const fileClassNorm = f.replace("Grupları.json", "").replace(/[^a-zA-Z0-9]/g, "");
+        if (fileClassNorm === normalizedSinif) {
+          foundPath = path.join(__dirname, f);
+          break;
+        }
       }
 
-      if (fs.existsSync(filePath)) {
-        console.log(`[grupListesiGetir] Found FILE: ${filePath}`);
+      if (foundPath && fs.existsSync(foundPath)) {
+        console.log(`[grupListesiGetir] Found FILE via Scan: ${foundPath}`);
         try {
-          const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          const content = JSON.parse(fs.readFileSync(foundPath, 'utf-8'));
           // Lazy Migration (Save to DB) - ALWAYS save back to RAW class name
           await query(`
              INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2)
@@ -607,7 +614,7 @@ app.get("/grupListesiGetir", async (req, res) => {
           res.json(content);
         } catch (err) { console.error("FS Read Error:", err); res.json([]); }
       } else {
-        console.log(`[grupListesiGetir] Not found anywhere.`);
+        console.log(`[grupListesiGetir] Not found anywhere (Scanned ${groupFiles.length} files).`);
         res.json([]);
       }
     }
