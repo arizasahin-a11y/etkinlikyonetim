@@ -595,6 +595,30 @@ app.get("/veritabani.json", async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({}); }
 });
 
+// Temporary Migration Endpoint
+app.get("/adminMigration", async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const files = fs.readdirSync(__dirname);
+    const groupFiles = files.filter(f => f.match(/^[0-9A-Za-z]+Grupları\.json$/));
+
+    let counting = 0;
+    for (const file of groupFiles) {
+      const className = file.replace("Grupları.json", "");
+      const content = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf-8'));
+
+      await query(`
+            INSERT INTO class_groups (class_name, groups_data)
+            VALUES ($1, $2)
+            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2
+        `, [className, content]);
+      counting++;
+    }
+    res.json({ status: "ok", migrated: counting });
+  } catch (e) { console.error(e); res.status(500).json({ status: "error", msg: e.message }); }
+});
+
 // --- SUNUCUYU BAŞLAT ---
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Sunucu ${PORT} portunda hazır! (SQL Modu)`);
