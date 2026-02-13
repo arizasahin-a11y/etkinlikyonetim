@@ -132,7 +132,7 @@
             border-collapse: collapse;
             width: 100%;
             font-size: 13px;
-            background: white; /* Tablo arkaplanı */
+            background: white;
         }
 
         th,
@@ -192,18 +192,14 @@
         }
 
         .btn-archive-small {
-            background: #FF9800;
-            color: white;
-            border: none;
-            padding: 5px 10px;
+            padding: 4px 8px;
             border-radius: 4px;
-            font-size: 11px;
+            border: none;
+            color: white;
             cursor: pointer;
+            font-size: 11px;
         }
-        
-        .btn-archive-small.red {
-            background: #f44336;
-        }
+        .btn-archive-small.red { background: #e74c3c; }
         
         /* Modal Stilleri */
         .modal {
@@ -298,8 +294,7 @@
                             <th style="width: 20%;">İşlem</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        </tbody>
+                    <tbody></tbody>
                 </table>
                 <div id="atananYukleniyor" style="text-align:center; color:#999; margin-top:10px; display:none;">Yükleniyor...</div>
             </div>
@@ -349,41 +344,40 @@
             document.getElementById(tabName).classList.add("active");
             evt.currentTarget.className += " active";
             
-            // Eğer 3. sekmeye tıklandıysa listeyi tazele
+            // Sekme 3 açıldığında listeyi yenile
             if(tabName === 'sekme3') {
                 atananlariListele();
             }
         }
 
-        // --- VERİTABANI VE GRUPLAMA İŞLEMLERİ ---
-
+        // --- VERİTABANI VE GRUPLAMA İŞLEMLERİ (SİZİN KODUNUZ) ---
         async function veritabaniYukle() {
             try {
                 const res = await fetch('/veritabani.json');
                 const hamVeri = await res.json();
                 
+                // DÜZELTME: Veritabanını '9' başlığından kurtarıp sınıflara ayırma işlemi
+                // { "9": [...] } yapısını -> { "9A": [...], "9B": [...] } yapısına çeviriyoruz.
                 const duzenliVeri = {};
                 
+                // Ham verideki tüm anahtarları (örn: "9") dolaş
                 Object.values(hamVeri).forEach(ogrenciListesi => {
-                    if(Array.isArray(ogrenciListesi)){
-                        ogrenciListesi.forEach(ogr => {
-                            const sinifAdi = ogr["Sınıfınız"]; 
-                            if(sinifAdi) {
-                                if(!duzenliVeri[sinifAdi]) {
-                                    duzenliVeri[sinifAdi] = [];
-                                }
-                                duzenliVeri[sinifAdi].push(ogr);
+                    ogrenciListesi.forEach(ogr => {
+                        const sinifAdi = ogr["Sınıfınız"]; // Öğrencinin içindeki gerçek sınıf bilgisi
+                        if(sinifAdi) {
+                            if(!duzenliVeri[sinifAdi]) {
+                                duzenliVeri[sinifAdi] = [];
                             }
-                        });
-                    }
+                            duzenliVeri[sinifAdi].push(ogr);
+                        }
+                    });
                 });
 
                 veritabani = duzenliVeri;
                 siniflariDoldur();
-                
             } catch (e) {
                 console.error("Veritabanı yüklenemedi:", e);
-                siniflariDoldur(); 
+                alert("Öğrenci veritabanı yüklenemedi!");
             }
         }
 
@@ -400,6 +394,7 @@
                 sel3.innerHTML += `<option value="${s}">${s}</option>`;
             });
             
+            // Sınıf değişince mevcut grupları getir
             sel1.onchange = async function() {
                 const sinif = this.value;
                 if(sinif) {
@@ -422,6 +417,8 @@
             if (!veritabani[sinif]) return alert("Bu sınıfa ait veri bulunamadı.");
 
             let ogrenciler = [...veritabani[sinif]];
+
+            // Okul Numarasına göre sıralama
             ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
 
             const grupSayisi = prompt(`${sinif} sınıfında ${ogrenciler.length} öğrenci var.\nKaç grup oluşturulsun?`, "6");
@@ -429,6 +426,7 @@
 
             const n = parseInt(grupSayisi);
             mevcutGruplar = [];
+
             const perGroup = Math.ceil(ogrenciler.length / n);
             
             for (let i = 0; i < n; i++) {
@@ -443,12 +441,14 @@
                     });
                 }
             }
+            
             gruplariCiz();
         }
 
         function gruplariCiz() {
             const div = document.getElementById('tablo');
             div.innerHTML = "";
+            
             mevcutGruplar.forEach(g => {
                 let html = `
                 <div class="grup">
@@ -461,15 +461,18 @@
                             </tr>
                         </thead>
                         <tbody>`;
+                
                 g.uyeler.forEach(u => {
                     let adSoyad = u["Adınız Soyadınız"] || "";
                     adSoyad = adSoyad.toLocaleUpperCase('tr-TR');
+
                     html += `
                         <tr>
                             <td style="text-align: center;"><b>${u["Okul Numaranız"]}</b></td>
                             <td>${adSoyad}</td>
                         </tr>`;
                 });
+
                 html += `</tbody></table></div>`;
                 div.innerHTML += html;
             });
@@ -478,11 +481,15 @@
         async function gruplariKaydet() {
             const sinif = document.getElementById('sinifSec').value;
             if (!sinif || mevcutGruplar.length === 0) return alert("Kaydedilecek grup yok!");
+
             try {
                 const res = await fetch('/kaydet', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ sinif: sinif, gruplar: mevcutGruplar })
+                    body: JSON.stringify({
+                        sinif: sinif,
+                        gruplar: mevcutGruplar
+                    })
                 });
                 const result = await res.json();
                 if(result.status === "ok") alert("Gruplar başarıyla kaydedildi!");
@@ -494,6 +501,7 @@
              const sinif = document.getElementById('sinifSec').value;
              if(!sinif) return;
              if(!confirm("Bu sınıfa ait kayıtlı grupları silmek istediğinize emin misiniz?")) return;
+             
              try {
                 await fetch('/calismaSil', {
                      method: 'POST',
@@ -511,21 +519,19 @@
         let calismalar = [];
 
         async function calismaListesiGetir() {
-            try {
-                const res = await fetch('/listeCalismalar');
-                const dosyalar = await res.json();
-                calismalar = dosyalar.filter(d => d.startsWith("qwx")).map(d => d.replace("qwx","").replace(".json",""));
-                
-                const ul = document.getElementById('calismaListesi');
-                const sel3 = document.getElementById('s3CalismaSec');
-                ul.innerHTML = "";
-                sel3.innerHTML = '<option value="">-- Seçin --</option>';
+            const res = await fetch('/listeCalismalar');
+            const dosyalar = await res.json();
+            calismalar = dosyalar.filter(d => d.startsWith("qwx")).map(d => d.replace("qwx","").replace(".json",""));
+            
+            const ul = document.getElementById('calismaListesi');
+            const sel3 = document.getElementById('s3CalismaSec');
+            ul.innerHTML = "";
+            sel3.innerHTML = '<option value="">-- Seçin --</option>';
 
-                calismalar.forEach(c => {
-                    ul.innerHTML += `<li onclick="calismaSec('${c}', this)">${c}</li>`;
-                    sel3.innerHTML += `<option value="${c}">${c}</option>`;
-                });
-            } catch(e) { console.error("Çalışma listesi hatası:", e); }
+            calismalar.forEach(c => {
+                ul.innerHTML += `<li onclick="calismaSec('${c}', this)">${c}</li>`;
+                sel3.innerHTML += `<option value="${c}">${c}</option>`;
+            });
         }
 
         function calismaSec(isim, el) {
@@ -547,20 +553,21 @@
 
         async function calismaDuzenle() {
             if(!seciliCalisma) return alert("Lütfen listeden bir çalışma seçin.");
-            try {
-                const res = await fetch(`/calismaGetir?isim=qwx${seciliCalisma}.json`);
-                if(!res.ok) throw new Error("Çalışma alınamadı");
-                const icerik = await res.json(); 
-                document.getElementById('listeEkrani').style.display = "none";
-                document.getElementById('editorEkrani').style.display = "block";
-                document.getElementById('editorBaslik').innerText = "Çalışmayı Düzenle";
-                document.getElementById('calismaAdiInput').value = seciliCalisma;
-                document.getElementById('calismaAciklama').value = icerik.aciklama || "";
-                document.getElementById('soruAlani').innerHTML = "";
-                if(icerik.sorular) {
-                    icerik.sorular.forEach(s => soruEkleUI(s));
-                }
-            } catch(e) { alert("Hata: " + e.message); }
+            
+            const res = await fetch(`/calismaGetir?isim=qwx${seciliCalisma}.json`);
+            if(!res.ok) return alert("Çalışma içeriği alınamadı.");
+            const icerik = await res.json(); 
+
+            document.getElementById('listeEkrani').style.display = "none";
+            document.getElementById('editorEkrani').style.display = "block";
+            document.getElementById('editorBaslik').innerText = "Çalışmayı Düzenle";
+            document.getElementById('calismaAdiInput').value = seciliCalisma;
+            document.getElementById('calismaAciklama').value = icerik.aciklama || "";
+            document.getElementById('soruAlani').innerHTML = "";
+            
+            if(icerik.sorular) {
+                icerik.sorular.forEach(s => soruEkleUI(s));
+            }
         }
 
         function editorKapat() {
@@ -596,14 +603,17 @@
         async function calismaKaydet() {
             const ad = document.getElementById('calismaAdiInput').value.trim();
             if(!ad) return alert("Çalışma adı giriniz.");
+            
             const aciklama = document.getElementById('calismaAciklama').value;
             const soruDivs = document.querySelectorAll('.soru-item');
             const sorular = [];
+            
             soruDivs.forEach(div => {
                 const s = div.querySelector('.inp-soru').value;
                 const m = div.querySelector('.inp-medya').value;
                 const cText = div.querySelector('.inp-cevaplar').value;
                 const d = div.querySelector('.inp-dogru').value;
+                
                 if(s) {
                     sorular.push({
                         soru: s,
@@ -613,15 +623,21 @@
                     });
                 }
             });
+
             const payload = {
                 calismaIsmi: "qwx" + ad,
-                sorular: { aciklama: aciklama, sorular: sorular }
+                sorular: {
+                    aciklama: aciklama,
+                    sorular: sorular
+                }
             };
+
             await fetch('/calismaKaydet', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });
+            
             alert("Kaydedildi!");
             editorKapat();
         }
@@ -659,8 +675,7 @@
             calismaListesiGetir();
         }
 
-        // --- ATAMA VE 3. SEKME İŞLEMLERİ (YENİLENDİ) ---
-        
+        // --- ATAMA (SEKME 3: YENİ TABLO SİSTEMİ) ---
         async function atamaYap() {
             const sinif = document.getElementById('s3SinifSec').value;
             const calisma = document.getElementById('s3CalismaSec').value;
@@ -688,19 +703,18 @@
                  body: JSON.stringify(payload)
             });
             alert("Atama yapıldı!");
-            atananlariListele(); // Tabloyu güncelle
+            atananlariListele(); // Tabloyu yenile
         }
 
+        // Yeni: Atamaları tabloya döker
         async function atananlariListele() {
             const tbody = document.querySelector('#atananTablo tbody');
             const yukleniyor = document.getElementById('atananYukleniyor');
             
-            // Yükleniyor animasyonu
             tbody.innerHTML = "";
             yukleniyor.style.display = "block";
 
             try {
-                // 1. Tüm dosya listesini al
                 const res = await fetch('/listeCalismalar');
                 const dosyalar = await res.json();
                 const atamalar = dosyalar.filter(d => d.startsWith("qqq"));
@@ -711,17 +725,16 @@
                     return;
                 }
 
-                // 2. Her atamanın detayını paralel olarak çek (Hız için)
+                // Paralel olarak detayları çek
                 const detayIstekleri = atamalar.map(dosya => 
                     fetch(`/calismaGetir?isim=${dosya}`).then(r => r.ok ? r.json() : null)
                 );
                 
                 const detaylar = await Promise.all(detayIstekleri);
 
-                // 3. Tabloyu doldur
                 detaylar.forEach((detay, index) => {
                     if(detay) {
-                        const dosyaAdi = atamalar[index]; // Silme işlemi için dosya adı lazım
+                        const dosyaAdi = atamalar[index]; 
                         tbody.innerHTML += `
                             <tr>
                                 <td><b>${detay.sinif}</b></td>
@@ -737,7 +750,6 @@
 
             } catch(e) {
                 console.error(e);
-                tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Listeleme hatası!</td></tr>';
             } finally {
                 yukleniyor.style.display = "none";
             }
@@ -751,7 +763,7 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ calismaIsmi: dosyaAdi })
                 });
-                atananlariListele(); // Listeyi yenile
+                atananlariListele();
             } catch(e) { alert("Silme hatası: " + e); }
         }
 
