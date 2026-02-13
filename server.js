@@ -489,6 +489,14 @@ app.get("/calismaGetir", async (req, res) => {
         };
       });
       res.json(mapped);
+
+    } else if (isim.startsWith("groups_")) {
+      // Fetch Class Groups
+      const className = isim.replace("groups_", "").replace(".json", "");
+      const resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [className]);
+      if (resDb.rows.length > 0) res.json(resDb.rows[0].groups_data);
+      else res.status(404).send();
+
     } else {
       res.status(404).send();
     }
@@ -543,6 +551,12 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
       });
     });
 
+    // 3. Class Groups
+    const groups = await query("SELECT class_name FROM class_groups");
+    groups.rows.forEach(g => {
+      result.push({ dosya_adi: `groups_${g.class_name}.json`, arsivde: false });
+    });
+
     // Add veritabani dummy
     result.push({ dosya_adi: "veritabani.json", arsivde: false });
 
@@ -558,7 +572,6 @@ app.get("/veritabani.json", async (req, res) => {
     const result = {};
     students.rows.forEach(s => {
       if (!result[s.class_name]) result[s.class_name] = [];
-      // Map back to legacy format
       result[s.class_name].push({
         "Okul Numaranız": s.school_no,
         "Adınız Soyadınız": s.name,
@@ -567,7 +580,7 @@ app.get("/veritabani.json", async (req, res) => {
         "Velinizin telefon numarası": s.parent_phone,
         "E-Posta Adresiniz": s.email,
         "Drive Klasörünüzün linki": s.drive_link,
-        ...s.extra_info // Spread extra info if any
+        ...s.extra_info
       });
     });
     res.json(result);
