@@ -132,7 +132,6 @@
             border-collapse: collapse;
             width: 100%;
             font-size: 13px;
-            background: white;
         }
 
         th,
@@ -190,16 +189,6 @@
             align-items: flex-end;
             justify-content: center;
         }
-
-        .btn-archive-small {
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 11px;
-        }
-        .btn-archive-small.red { background: #e74c3c; }
         
         /* Modal Stilleri */
         .modal {
@@ -277,27 +266,14 @@
                 <div>Sınıf:<br><select id="s3SinifSec" style="width:140px;"><option value="">-- Seçin --</option></select></div>
                 <div>Çalışma:<br><select id="s3CalismaSec" style="width:140px;"><option value="">-- Seçin --</option></select></div>
                 <div>Yöntem:<br><select id="s3YontemSec" style="width:110px;">
+                        <option value="">-- Seçin --</option>
                         <option value="Grup">Grup</option>
                         <option value="Tek">Tek</option>
                     </select></div>
                 <button id="btnS3Olustur" class="action blue" onclick="atamaYap()">Oluştur</button>
             </div>
-            
-            <div style="max-width: 800px; margin: 20px auto;">
-                <h3 style="text-align:center; color:#673AB7;">Aktif Atamalar</h3>
-                <table id="atananTablo">
-                    <thead>
-                        <tr>
-                            <th style="width: 25%;">Sınıf</th>
-                            <th style="width: 40%;">Çalışma Adı</th>
-                            <th style="width: 15%;">Yöntem</th>
-                            <th style="width: 20%;">İşlem</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                <div id="atananYukleniyor" style="text-align:center; color:#999; margin-top:10px; display:none;">Yükleniyor...</div>
-            </div>
+            <div style="text-align: center; color: #666; font-style: italic;">Atanan çalışmalar burada listelenir (Admin Paneli üzerinden yönetilebilir).</div>
+            <ul id="atananListesi" style="list-style: none; padding: 0; max-width: 600px; margin: 20px auto;"></ul>
         </div>
 
         <div id="sekme4" class="tab-content">
@@ -326,7 +302,6 @@
         window.onload = async function() {
             await veritabaniYukle();
             await calismaListesiGetir();
-            await atananlariListele(); // 3. Sekme için verileri çek
         };
 
         function openTab(evt, tabName) {
@@ -343,34 +318,30 @@
             document.getElementById(tabName).style.display = "block";
             document.getElementById(tabName).classList.add("active");
             evt.currentTarget.className += " active";
-            
-            // Sekme 3 açıldığında listeyi yenile
-            if(tabName === 'sekme3') {
-                atananlariListele();
-            }
         }
 
-        // --- VERİTABANI VE GRUPLAMA İŞLEMLERİ (SİZİN KODUNUZ) ---
+        // --- VERİTABANI VE GRUPLAMA İŞLEMLERİ ---
+
         async function veritabaniYukle() {
             try {
                 const res = await fetch('/veritabani.json');
                 const hamVeri = await res.json();
                 
-                // DÜZELTME: Veritabanını '9' başlığından kurtarıp sınıflara ayırma işlemi
-                // { "9": [...] } yapısını -> { "9A": [...], "9B": [...] } yapısına çeviriyoruz.
+                // DÜZELTME: Sınıfları ayırma işlemi (9 -> 9A, 9B...)
                 const duzenliVeri = {};
                 
-                // Ham verideki tüm anahtarları (örn: "9") dolaş
                 Object.values(hamVeri).forEach(ogrenciListesi => {
-                    ogrenciListesi.forEach(ogr => {
-                        const sinifAdi = ogr["Sınıfınız"]; // Öğrencinin içindeki gerçek sınıf bilgisi
-                        if(sinifAdi) {
-                            if(!duzenliVeri[sinifAdi]) {
-                                duzenliVeri[sinifAdi] = [];
+                    if(Array.isArray(ogrenciListesi)){
+                        ogrenciListesi.forEach(ogr => {
+                            const sinifAdi = ogr["Sınıfınız"]; 
+                            if(sinifAdi) {
+                                if(!duzenliVeri[sinifAdi]) {
+                                    duzenliVeri[sinifAdi] = [];
+                                }
+                                duzenliVeri[sinifAdi].push(ogr);
                             }
-                            duzenliVeri[sinifAdi].push(ogr);
-                        }
-                    });
+                        });
+                    }
                 });
 
                 veritabani = duzenliVeri;
@@ -394,7 +365,6 @@
                 sel3.innerHTML += `<option value="${s}">${s}</option>`;
             });
             
-            // Sınıf değişince mevcut grupları getir
             sel1.onchange = async function() {
                 const sinif = this.value;
                 if(sinif) {
@@ -418,7 +388,7 @@
 
             let ogrenciler = [...veritabani[sinif]];
 
-            // Okul Numarasına göre sıralama
+            // Okul Numarasına göre sıralama (İstediğiniz Düzeltme)
             ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
 
             const grupSayisi = prompt(`${sinif} sınıfında ${ogrenciler.length} öğrenci var.\nKaç grup oluşturulsun?`, "6");
@@ -519,19 +489,21 @@
         let calismalar = [];
 
         async function calismaListesiGetir() {
-            const res = await fetch('/listeCalismalar');
-            const dosyalar = await res.json();
-            calismalar = dosyalar.filter(d => d.startsWith("qwx")).map(d => d.replace("qwx","").replace(".json",""));
-            
-            const ul = document.getElementById('calismaListesi');
-            const sel3 = document.getElementById('s3CalismaSec');
-            ul.innerHTML = "";
-            sel3.innerHTML = '<option value="">-- Seçin --</option>';
+            try {
+                const res = await fetch('/listeCalismalar');
+                const dosyalar = await res.json();
+                calismalar = dosyalar.filter(d => d.startsWith("qwx")).map(d => d.replace("qwx","").replace(".json",""));
+                
+                const ul = document.getElementById('calismaListesi');
+                const sel3 = document.getElementById('s3CalismaSec');
+                ul.innerHTML = "";
+                sel3.innerHTML = '<option value="">-- Seçin --</option>';
 
-            calismalar.forEach(c => {
-                ul.innerHTML += `<li onclick="calismaSec('${c}', this)">${c}</li>`;
-                sel3.innerHTML += `<option value="${c}">${c}</option>`;
-            });
+                calismalar.forEach(c => {
+                    ul.innerHTML += `<li onclick="calismaSec('${c}', this)">${c}</li>`;
+                    sel3.innerHTML += `<option value="${c}">${c}</option>`;
+                });
+            } catch(e) { console.error("Liste hatası:", e); }
         }
 
         function calismaSec(isim, el) {
@@ -554,20 +526,22 @@
         async function calismaDuzenle() {
             if(!seciliCalisma) return alert("Lütfen listeden bir çalışma seçin.");
             
-            const res = await fetch(`/calismaGetir?isim=qwx${seciliCalisma}.json`);
-            if(!res.ok) return alert("Çalışma içeriği alınamadı.");
-            const icerik = await res.json(); 
+            try {
+                const res = await fetch(`/calismaGetir?isim=qwx${seciliCalisma}.json`);
+                if(!res.ok) throw new Error("Çalışma alınamadı");
+                const icerik = await res.json(); 
 
-            document.getElementById('listeEkrani').style.display = "none";
-            document.getElementById('editorEkrani').style.display = "block";
-            document.getElementById('editorBaslik').innerText = "Çalışmayı Düzenle";
-            document.getElementById('calismaAdiInput').value = seciliCalisma;
-            document.getElementById('calismaAciklama').value = icerik.aciklama || "";
-            document.getElementById('soruAlani').innerHTML = "";
-            
-            if(icerik.sorular) {
-                icerik.sorular.forEach(s => soruEkleUI(s));
-            }
+                document.getElementById('listeEkrani').style.display = "none";
+                document.getElementById('editorEkrani').style.display = "block";
+                document.getElementById('editorBaslik').innerText = "Çalışmayı Düzenle";
+                document.getElementById('calismaAdiInput').value = seciliCalisma;
+                document.getElementById('calismaAciklama').value = icerik.aciklama || "";
+                document.getElementById('soruAlani').innerHTML = "";
+                
+                if(icerik.sorular) {
+                    icerik.sorular.forEach(s => soruEkleUI(s));
+                }
+            } catch(e) { alert("Hata: " + e.message); }
         }
 
         function editorKapat() {
@@ -675,7 +649,7 @@
             calismaListesiGetir();
         }
 
-        // --- ATAMA (SEKME 3: YENİ TABLO SİSTEMİ) ---
+        // --- ATAMA (SEKME 3: ORİJİNAL HALİ) ---
         async function atamaYap() {
             const sinif = document.getElementById('s3SinifSec').value;
             const calisma = document.getElementById('s3CalismaSec').value;
@@ -703,68 +677,9 @@
                  body: JSON.stringify(payload)
             });
             alert("Atama yapıldı!");
-            atananlariListele(); // Tabloyu yenile
-        }
-
-        // Yeni: Atamaları tabloya döker
-        async function atananlariListele() {
-            const tbody = document.querySelector('#atananTablo tbody');
-            const yukleniyor = document.getElementById('atananYukleniyor');
             
-            tbody.innerHTML = "";
-            yukleniyor.style.display = "block";
-
-            try {
-                const res = await fetch('/listeCalismalar');
-                const dosyalar = await res.json();
-                const atamalar = dosyalar.filter(d => d.startsWith("qqq"));
-
-                if(atamalar.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Henüz atama yapılmamış.</td></tr>';
-                    yukleniyor.style.display = "none";
-                    return;
-                }
-
-                // Paralel olarak detayları çek
-                const detayIstekleri = atamalar.map(dosya => 
-                    fetch(`/calismaGetir?isim=${dosya}`).then(r => r.ok ? r.json() : null)
-                );
-                
-                const detaylar = await Promise.all(detayIstekleri);
-
-                detaylar.forEach((detay, index) => {
-                    if(detay) {
-                        const dosyaAdi = atamalar[index]; 
-                        tbody.innerHTML += `
-                            <tr>
-                                <td><b>${detay.sinif}</b></td>
-                                <td>${detay.calisma}</td>
-                                <td><span style="background:#eee; padding:2px 6px; border-radius:4px;">${detay.yontem}</span></td>
-                                <td style="text-align:center;">
-                                    <button onclick="atamaSil('${dosyaAdi}')" class="btn-archive-small red">Sil</button>
-                                </td>
-                            </tr>
-                        `;
-                    }
-                });
-
-            } catch(e) {
-                console.error(e);
-            } finally {
-                yukleniyor.style.display = "none";
-            }
-        }
-
-        async function atamaSil(dosyaAdi) {
-            if(!confirm("Bu atamayı kaldırmak istediğinize emin misiniz?")) return;
-            try {
-                await fetch('/calismaSil', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ calismaIsmi: dosyaAdi })
-                });
-                atananlariListele();
-            } catch(e) { alert("Silme hatası: " + e); }
+            const ul = document.getElementById('atananListesi');
+            ul.innerHTML += `<li>${sinif} - ${calisma} (${yontem})</li>`;
         }
 
     </script>
