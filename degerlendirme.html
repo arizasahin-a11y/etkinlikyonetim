@@ -314,6 +314,16 @@
                     const rA = await fetch(`/calismaGetir?isim=qqq${cleanSinif}${CALISMA}`);
                     if (rA.ok) {
                         const dA = await rA.json();
+
+                        // Check if evaluation is allowed
+                        if (dA.degerl === false) {
+                            document.getElementById('bilgi').textContent = "Bu çalışma için değerlendirme henüz açılmamış.";
+                            document.getElementById('msgPanel').innerHTML = "<h3 style='color:red;'>⚠️ Değerlendirme Kapalı</h3><p>Öğretmeniniz bu çalışma için değerlendirme iznini henüz vermedi.</p>";
+                            document.getElementById('msgPanel').style.display = "block";
+                            document.getElementById('anaPanel').style.display = "none";
+                            return; // Stop loading
+                        }
+
                         if (dA.yontem === 'Grup') {
                             const rG = await fetch(`/grupListesiGetir?sinif=${SINIF}`);
                             const groups = await rG.json();
