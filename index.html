@@ -1069,9 +1069,48 @@
                     alert("Sıfırlama sırasında hata oluştu: " + e);
                 }
             },
-            yukle: function () {
+            yukle: async function () {
                 if (this.kuyrukIndex >= this.kuyruk.length) { alert("Bitti!"); location.reload(); return; }
                 const item = this.kuyruk[this.kuyrukIndex];
+
+                // --- OTOMATİK "G" (GİRMEDİ/KATILMADI) İŞLEME ---
+                // Eğer cevap yoksa (katilmadi) veya boş cevap dizisi varsa
+                const cevapYok = !item.kayit || !item.kayit.cevaplar || item.kayit.cevaplar.length === 0;
+
+                if (cevapYok) {
+                    // Otomatik olarak G olarak işaretle ve geç
+                    // Kullanıcıya hissettirmeden arkada kaydet
+                    const promises = [];
+                    item.members.forEach(ogrNo => {
+                        // Puanları "G" olarak kaydet (tek bir G yeterli genel durum için ama biz puanlar objesine de işleyelim)
+                        // Not: Puanlama yapısı soru bazlı olduğu için, 'G' genel bir durumdur.
+                        // Ancak veritabanı yapımızda 'scores' jsonb tutuluyor.
+                        // Biz burada 'degerlendirme' alanına not düşelim ve puanları boş bırakalım ya da özel bir kodla işaretleyelim.
+                        // İstenen: "G" olarak girilsin.
+
+                        // 1. Değerlendirme bitir (Puan: 0, Durum: G)
+                        promises.push(fetch("/degerlendirmeBitir", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                dosyaAdi: `www_${this.seciliCalisma}`,
+                                ogrenciNo: ogrNo,
+                                sinif: this.seciliSinif,
+                                puan: "G" // Server bunu 'evaluation' içine 'toplam: "G"' olarak kaydedecek şekilde güncellenmeli veya server zaten toplam'ı alıyor mu?
+                                // Server.js /degerlendirmeBitir endpoint'i: const { toplam } = req.body; ... evaluation = { toplam: toplam, bitti: true }
+                                // Evet, server direk ne gönderirsek onu kaydediyor.
+                            })
+                        }));
+                    });
+
+                    await Promise.all(promises);
+
+                    // Sonraki kişiye geç
+                    this.kuyrukIndex++;
+                    this.yukle();
+                    return;
+                }
+
                 document.getElementById("degOgrenciBaslik").textContent = item.baslik;
                 this.anlikPuanlar = (item.kayit && item.kayit.puanlar) ? item.kayit.puanlar : {};
                 document.getElementById("degNormalPanel").style.display = "flex";
