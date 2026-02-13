@@ -40,35 +40,7 @@ app.get("/", (req, res) => {
   res.status(403).send("<h1>Giriş Yetkisi Yok. Lütfen özel linki kullanın.</h1>");
 });
 
-// Dynamic `veritabani.json` for Student Login
-app.get("/veritabani.json", async (req, res) => {
-  const tryFile = () => {
-    const p = path.join(__dirname, "veritabani.json");
-    if (fs.existsSync(p)) res.sendFile(p);
-    else res.json([]);
-  };
-
-  try {
-    const result = await query("SELECT * FROM students");
-    if (!result || !result.rows || result.rows.length === 0) {
-      throw new Error("Empty DB");
-    }
-    const students = result.rows.map(row => ({
-      "Okul Numaranız": row.school_no,
-      "Adınız Soyadınız": row.name,
-      "Sınıfınız": row.class_name,
-      "Telefon numaranız": row.phone,
-      "Velinizin telefon numarası": row.parent_phone,
-      "E-Posta Adresiniz": row.email,
-      "Drive Klasörünüzün linki": row.drive_link,
-      ...row.extra_info
-    }));
-    res.json(students);
-  } catch (e) {
-    console.warn("DB 'veritabani.json' failed, falling back to file:", e.message);
-    tryFile();
-  }
-});
+// Dynamic `veritabani.json` - Will be handled by the endpoint at line 670
 
 // --- 4. YARDIMCI FONKSİYONLAR ---
 function dosyaIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ_\- ]/g, "").trim() : ""; }
@@ -585,8 +557,6 @@ app.get("/calismaGetir", async (req, res) => {
       });
       res.json(mapped);
 
-      res.json(mapped);
-
     } else if (isim.endsWith("Grupları.json")) {
       // Fetch Class Groups (e.g. 9AGrupları.json)
       const className = isim.replace("Grupları.json", "");
@@ -667,11 +637,33 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
   } catch (e) { console.error(e); res.json([]); }
 });
 
-// Legacy veritabani.json endpoint (Simulated from DB)
+// Legacy veritabani.json endpoint (Simulated from DB with File Fallback)
 app.get("/veritabani.json", async (req, res) => {
+  const tryFile = () => {
+    const p = path.join(__dirname, "veritabani.json");
+    if (fs.existsSync(p)) {
+      try {
+        const fileData = JSON.parse(fs.readFileSync(p, 'utf-8'));
+        res.json(fileData);
+      } catch (e) {
+        console.error("File parse error:", e);
+        res.json({});
+      }
+    } else {
+      res.json({});
+    }
+  };
+
   try {
     const students = await query("SELECT * FROM students");
-    // Group by class_name
+
+    // Fallback to file if no data
+    if (!students || !students.rows || students.rows.length === 0) {
+      console.warn("No students in DB, falling back to file");
+      return tryFile();
+    }
+
+    // Group by class_name (Legacy format)
     const result = {};
     students.rows.forEach(s => {
       if (!result[s.class_name]) result[s.class_name] = [];
@@ -687,7 +679,10 @@ app.get("/veritabani.json", async (req, res) => {
       });
     });
     res.json(result);
-  } catch (e) { console.error(e); res.status(500).json({}); }
+  } catch (e) {
+    console.error("DB error in /veritabani.json, falling back to file:", e.message);
+    tryFile();
+  }
 });
 
 // Temporary Migration Endpoint
