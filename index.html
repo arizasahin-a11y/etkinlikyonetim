@@ -572,6 +572,9 @@
                 <div class="yonetim-toolbar">
                     <button id="btnPuanTablosu" class="action orange"
                         style="font-size:12px; padding:6px 15px; display:none;">📊 PUAN TABLOSU</button>
+                    <button id="btnTumCevaplariSifirla" class="action red"
+                        style="font-size:12px; padding:6px 15px; display:none; margin-left:5px;">⚠️ CEVAPLARI
+                        SIFIRLA</button>
                     <label class="chk-container"><input type="checkbox" id="chkDegerlendirmeIzin" disabled> Öğrenci
                         İzni</label>
                     <label class="chk-container"><input type="checkbox" id="chkIzin" disabled> Öğretmen İzni</label>
@@ -583,6 +586,36 @@
                         style="font-size:12px; padding:6px 15px; display:none;">Sınıfı Sıfırla (Bitti Kaldır)</button>
                 </div>
                 <script>
+                    document.getElementById('btnTumCevaplariSifirla').onclick = async function () {
+                        const calisma = document.getElementById("s4DosyaSec").value;
+                        if (!calisma) return alert("Lütfen çalışma seçin.");
+
+                        const kod = prompt("TÜM ÖĞRENCİ CEVAPLARINI SİLMEK İÇİN KOD GİRİN (1234):");
+                        if (kod === "1234") {
+                            if (confirm(`"${calisma}" çalışmasına ait TÜM ÖĞRENCİ CEVAPLARI silinecek! Emin misiniz?`)) {
+                                try {
+                                    const res = await fetch("/tumCevaplariTemizle", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ calismaIsmi: `www_${calisma}` })
+                                    });
+                                    const json = await res.json();
+                                    if (json.status === "ok") {
+                                        alert("Tüm cevaplar başarıyla silindi.");
+                                        // Refresh to reflect changes (e.g. re-fetch data)
+                                        document.getElementById("s4DosyaSec").onchange();
+                                    } else {
+                                        alert("Hata: " + json.message);
+                                    }
+                                } catch (e) {
+                                    alert("İşlem hatası: " + e);
+                                }
+                            }
+                        } else if (kod !== null) {
+                            alert("Hatalı kod!");
+                        }
+                    };
+
                     document.getElementById('btnPuanTablosu').onclick = async function () {
                         const calisma = document.getElementById("s4DosyaSec").value;
                         if (!calisma) return alert("Lütfen çalışma seçin.");
@@ -961,14 +994,17 @@
 
             sinifSel.innerHTML = '<option value="">...</option>';
             const btnPuan = document.getElementById('btnPuanTablosu');
+            const btnSifirla = document.getElementById('btnTumCevaplariSifirla');
 
             if (!calisma) {
                 chkOgr.disabled = true; chkOgrt.disabled = true;
                 btnPuan.style.display = 'none';
+                btnSifirla.style.display = 'none';
                 return;
             }
 
             btnPuan.style.display = 'inline-block';
+            btnSifirla.style.display = 'inline-block';
 
             chkOgr.disabled = false; chkOgrt.disabled = false;
 

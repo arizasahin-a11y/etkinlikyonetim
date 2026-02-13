@@ -200,6 +200,35 @@ app.post("/degerlendirmeBitir", async (req, res) => {
   } catch (e) { console.error(e); res.status(500).send(); }
 });
 
+app.post("/tumCevaplariTemizle", async (req, res) => {
+  try {
+    const { calismaIsmi } = req.body; // e.g., "www_OrnekCalisma"
+
+    // Extract real study name
+    // "www_" prefix handling
+    const cleanName = calismaIsmi.replace(/^www_/, "").replace(/\.json$/, "");
+
+    const studyRes = await query("SELECT id FROM studies WHERE name = $1", [cleanName]);
+
+    if (studyRes.rows.length === 0) {
+      // Study not found? 
+      // It might be a legacy file-based cleaning request, but we are fully DB now?
+      // If DB doesn't have it, nothing to delete from DB.
+      return res.json({ status: "ok", message: "Study not found in DB, nothing deleted." });
+    }
+
+    const studyId = studyRes.rows[0].id;
+
+    // Delete all evaluations for this study
+    await query("DELETE FROM student_evaluations WHERE study_id = $1", [studyId]);
+
+    res.json({ status: "ok" });
+  } catch (e) {
+    console.error("Tum cevaplari temizle hatasi:", e);
+    res.status(500).json({ status: "error", message: e.message });
+  }
+});
+
 // Arşiv ve Silme İşlemleri
 app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Creating/Updating Study and Assignment)
   try {
