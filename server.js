@@ -382,9 +382,14 @@ app.post("/kaydet", async (req, res) => {
   if (dosyaAdi && veri) {
     try {
       if (dosyaAdi.startsWith("www_")) {
+        console.log(`[www_ Kaydet] Başlangıç: ${dosyaAdi}, Veri tipi: ${Array.isArray(veri) ? 'Array' : 'Object'}, ${Array.isArray(veri) ? `Kayıt sayısı: ${veri.length}` : `OgrenciNo: ${veri.ogrenciNo}`}`);
+
         const studyName = dosyaAdi.replace("www_", "");
         const studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
-        if (studyRes.rows.length === 0) return res.status(404).send();
+        if (studyRes.rows.length === 0) {
+          console.error(`❌ [www_ Kaydet] Çalışma bulunamadı: ${studyName}`);
+          return res.status(404).send();
+        }
         const studyId = studyRes.rows[0].id;
 
         // veri can be array or object
@@ -392,42 +397,43 @@ app.post("/kaydet", async (req, res) => {
 
         for (const item of items) {
           if (item.ogrenciNo === "AYARLAR") {
-            // Update specific assignment settings if needed or separate setting?
-            // Legacy stores AYARLAR in www_ file.
-            // We'll store it as a special student record for now to keep it simple, OR check if we can move it to `study_assignments`.
-            // Legacy: AYARLAR has { degerlendirmeIzni, izin }
-            // Let's store it in `student_evaluations` with 'AYARLAR' as id, or updated `study_assignments` if we can match class.
-            // Problem: AYARLAR in legacy might be per study, but global for that study file?
-            // Actually `index.html` sends `sinif: "SISTEM"` for AYARLAR.
-
-            // Let's just update the assignment settings?
-            // BUT `admin.html` or `index.html` logic for AYARLAR might be specific.
-            // Let's stick to `student_evaluations` with 'AYARLAR' for now.
+            // AYARLAR kaydı - JSON.stringify ile kaydet
+            const answersJson = JSON.stringify(item);
 
             await query(`
                     INSERT INTO student_evaluations (study_id, student_school_no, answers)
-                    VALUES ($1, 'AYARLAR', $2)
-                    ON CONFLICT (study_id, student_school_no) DO UPDATE SET answers = $2
-                `, [studyId, item]);
+                    VALUES ($1, 'AYARLAR', $2::jsonb)
+                    ON CONFLICT (study_id, student_school_no) DO UPDATE SET answers = $2::jsonb
+                `, [studyId, answersJson]);
+
+            console.log(`✅ [www_ Kaydet] AYARLAR kaydedildi`);
 
           } else {
-            // Regular student answer
+            // Regular student answer - JSONB alanları için JSON.stringify
+            const answersJson = JSON.stringify({ cevaplar: item.cevaplar });
+            const scoresJson = JSON.stringify(item.puanlar || {});
+            const evaluationJson = JSON.stringify(item.degerlendirme || {});
+
             await query(`
                     INSERT INTO student_evaluations (study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                    VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, NOW())
                     ON CONFLICT (study_id, student_school_no) 
-                    DO UPDATE SET answers = $4, scores = $5, entry_count = $6, evaluation = $7, last_updated = NOW()
+                    DO UPDATE SET answers = $4::jsonb, scores = $5::jsonb, entry_count = $6, evaluation = $7::jsonb, last_updated = NOW()
                  `, [
               studyId,
               String(item.ogrenciNo),
               item.sinif,
-              { cevaplar: item.cevaplar }, // Wrap to match expected DB structure 
-              item.puanlar || {},
+              answersJson,
+              scoresJson,
               item.girisSayisi || 0,
-              item.degerlendirme || {}
+              evaluationJson
             ]);
+
+            console.log(`✅ [www_ Kaydet] Öğrenci kaydedildi: ${item.ogrenciNo}`);
           }
         }
+
+        console.log(`✅ [www_ Kaydet] Tamamlandı: ${dosyaAdi}, ${items.length} kayıt`);
         return res.json({ status: "ok" });
       } else {
         // Generic file save (mostly admin uploads or creating legacy files via upload)
