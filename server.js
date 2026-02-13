@@ -192,39 +192,20 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
 
 app.post("/calismaSil", async (req, res) => {
   try {
-    const { calismaIsmi } = req.body;
-    // Identify if study or assignment
-    // Legacy: qwxName -> Study, qqqName -> Assignment
+    let { calismaIsmi } = req.body;
+    // Normalize: remove .json extension if present
+    const cleanIsim = calismaIsmi.replace(".json", "");
 
-    if (calismaIsmi.startsWith("qwx")) {
+    if (cleanIsim.startsWith("qwx")) {
       // Delete Study
-      const name = calismaIsmi.replace("qwx", "");
+      const name = cleanIsim.replace("qwx", "");
       await query("DELETE FROM studies WHERE name = $1", [name]);
-    } else if (calismaIsmi.startsWith("qqq")) {
+      // Also cascade delete? FK usually handles it, but let's be sure logic is sound.
+      // Postgres FKs with ON DELETE CASCADE will handle assignments and evaluations.
+
+    } else if (cleanIsim.startsWith("qqq")) {
       // Delete Assignment
-      // Need to parse ID to find study/class? 
-      // Or just delete from assignments table if we can match legacy ID?
-      // Legacy ID: qqqClassStudy
-      // We might need a smarter way or just delete by ID if we send ID.
-      // The frontend sends ID as `calismaIsmi`.
-      // Let's try to match it or clean up DB later.
-      // Actually, frontend sends `id` for assignments.
-      // We'll trust the frontend naming convention for now OR fix frontend to send ID.
-      // For now, let's assume we can find the assignment.
-      // But since we moved to SQL, we should prefer ID. 
-      // However, maintaining compatibility means we parse the string.
-      // "qqq9ASıvı Basıncı" -> Class: 9A, Study: Sıvı Basıncı
-      // This parsing is brittle.
-      // BETTER: Frontend logic sends the ID. In new system, we can just delete from assignments table.
-      // But for compatibility with existing frontend logic:
-      // We will loop through assignments and constructs IDs to match? No, too slow.
-      // Let's assume we delete by Study Name if `qwx` and by Assignment attributes if `qqq`.
-
-      // Actually, let's look at `index.html`: `s3Del(id)` sends `calismaIsmi: id`.
-      // `id` is constructed as `qqq` + `sinif.replace(/\s/g,'')` + `calisma.replace("qwx","")`.
-
-      // We can reconstruct this logic in SQL via a smart query or just list assignments and match in JS.
-      // Listing is better for small data.
+      // List all and match constructed ID (safest for legacy ID format)
       const allAssignments = await query(`
             SELECT a.id, s.name as study_name, a.class_name 
             FROM study_assignments a 
@@ -233,15 +214,28 @@ app.post("/calismaSil", async (req, res) => {
 
       const target = allAssignments.rows.find(row => {
         const constructedId = "qqq" + row.class_name.replace(/\s/g, '') + row.study_name;
-        return constructedId === calismaIsmi;
+        return constructedId === cleanIsim;
       });
 
       if (target) {
         await query("DELETE FROM study_assignments WHERE id = $1", [target.id]);
+      } else {
+        // Fallback: Try to delete by raw ID if frontend sent an ID? 
+        // But admin.html sends filename.
+      }
+
+    } else if (cleanIsim.startsWith("www_")) {
+      // Delete Evaluations (Reset for that study)
+      const name = cleanIsim.replace("www_", "");
+      const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
+      if (studyRes.rows.length > 0) {
+        const studyId = studyRes.rows[0].id;
+        // Delete all evaluations for this study
+        await query("DELETE FROM student_evaluations WHERE study_id = $1", [studyId]);
       }
     } else {
-      // Assume normal study deletion if not prefixed
-      await query("DELETE FROM studies WHERE name = $1", [calismaIsmi]);
+      // Try deleting as study name if no prefix?
+      await query("DELETE FROM studies WHERE name = $1", [cleanIsim]);
     }
 
     res.json({ status: "ok" });
