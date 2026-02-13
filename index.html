@@ -72,7 +72,7 @@
     /* MEDYA GÖMME STİLLERİ */
     .embedded-wrapper { width: 100%; margin-top: 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 6px; padding: 5px; background:#fff; }
     .embedded-img { max-height: 200px; max-width: 100%; cursor: pointer; transition: transform 0.2s; display: block; margin: 0 auto; }
-    .embedded-img:hover { transform: scale(1.02); }
+    .embedded-img.hover { transform: scale(1.02); }
     .embedded-img.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; max-height: 100vh; object-fit: contain; z-index: 9999; background: rgba(0,0,0,0.9); padding: 20px; box-sizing: border-box; }
     .embedded-video { max-width: 100%; height: auto; max-height: 300px; display: block; margin: 0 auto; }
     .embedded-audio { width: 100%; }
@@ -183,9 +183,9 @@
     <div class="modal-content">
       <h3 style="color:#f44336;">⚠️ Değerlendirme Tamamlanmış</h3>
       <p>Bu sınıf için bu çalışma daha önce tamamlanmış (Bitti) olarak görünüyor.</p>
-      <p>Sıfırlayıp baştan başlamak ister misiniz?</p>
+      <p>Puanları sıfırlayıp (cevapları koruyarak) tekrar değerlendirmek ister misiniz?</p>
       <div style="margin-top:20px; display:flex; justify-content:center; gap:10px;">
-          <button class="action red" onclick="DegerlendirmeApp.modalSifirla()">Evet, Sıfırla ve Başla</button>
+          <button class="action red" onclick="DegerlendirmeApp.modalSifirla()">Evet, Puanları Sıfırla</button>
           <button class="action" onclick="location.reload()" style="background:#999;">İptal</button>
       </div>
     </div>
@@ -439,7 +439,6 @@
         });
     }
     
-    // YENİLENMİŞ MANTIK: "Bitti" sadece GİRENLER bitince yazar.
     document.getElementById("s4DosyaSec").onchange = async function() {
         const calisma = this.value; 
         const sinifSel = document.getElementById("s4SinifSec"); 
@@ -472,11 +471,9 @@
             for(let f of atananlar) {
                 const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json","")}`)).json();
                 if(data.sinif) {
-                    // DÜZELTME: Sadece sınava GİREN (kaydı olan) öğrencilere bakıyoruz.
                     const buSinifinTumCevaplari = wwwData.filter(r => r.sinif === data.sinif);
                     const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && r.degerlendirme.bitti);
                     
-                    // Eğer en az 1 kişi girdiyse VE girenlerin HEPSİ bittiyse -> "Bitti" yaz.
                     let hepsiBittiMi = (buSinifinTumCevaplari.length > 0 && buSinifinBitmisCevaplari.length === buSinifinTumCevaplari.length);
                     
                     sinifSel.appendChild(new Option(data.sinif + (hepsiBittiMi ? " (Bitti)" : ""), data.sinif));
@@ -485,7 +482,6 @@
         } catch(e) { console.error("Hata:", e); }
     };
     
-    // GÖRÜNÜRLÜK KONTROLÜ
     document.getElementById("s4SinifSec").onchange = function() {
         const btn = document.getElementById("btnDegerlendirmeSifirla");
         if (this.selectedIndex >= 0) {
@@ -549,46 +545,67 @@
                 const gruplar = await (await fetch(`/grupListesiGetir?sinif=${this.seciliSinif}`)).json();
                 gruplar.forEach((grp, idx) => {
                     const kayit = cevaplarVerisi.find(tv => grp.some(u => String(tv.ogrenciNo) === String(u["Okul Numaranız"])));
-                    // BİTMİŞSE ATLA
                     if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
-                    // HİÇ GİRMEMİŞSE DE ATLA (KUYRUĞA EKLEME)
-                    if (!kayit || !kayit.cevaplar || kayit.cevaplar.length === 0) return;
                     
-                    this.kuyruk.push({ baslik: `${this.seciliSinif} - ${idx+1}. GRUP`, kayit: kayit, katilmadi: false, members: grp.map(u => String(u["Okul Numaranız"])) });
+                    // Cevap olmasa bile listeye ekle (Sıfırlandıktan sonra erişim için)
+                    const safeKayit = kayit || { ogrenciNo: grp[0]["Okul Numaranız"], cevaplar: [], puanlar: {} };
+                    this.kuyruk.push({ baslik: `${this.seciliSinif} - ${idx+1}. GRUP`, kayit: safeKayit, katilmadi: false, members: grp.map(u => String(u["Okul Numaranız"])) });
                 });
             } else {
                 globalData.filter(u => u["Sınıfınız"] === this.seciliSinif).forEach(ogr => {
-                    const no = String(ogr["Okul Numaranız"]); const kayit = cevaplarVerisi.find(x => String(x.ogrenciNo) === no);
-                    // BİTMİŞSE ATLA
+                    const no = String(ogr["Okul Numaranız"]); 
+                    const kayit = cevaplarVerisi.find(x => String(x.ogrenciNo) === no);
                     if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
-                    // HİÇ GİRMEMİŞSE DE ATLA
-                    if (!kayit || !kayit.cevaplar || kayit.cevaplar.length === 0) return;
-
-                    this.kuyruk.push({ baslik: `${no} - ${ogr["Adınız Soyadınız"]}`, kayit: kayit, katilmadi: false, members: [no] });
+                    
+                    // Cevap olmasa bile listeye ekle
+                    const safeKayit = kayit || { ogrenciNo: no, cevaplar: [], puanlar: {} };
+                    this.kuyruk.push({ baslik: `${no} - ${ogr["Adınız Soyadınız"]}`, kayit: safeKayit, katilmadi: false, members: [no] });
                 });
             }
             this.kuyrukIndex = 0; 
             
-            // Eğer kuyruk boşsa (ya herkes bitti ya kimse girmedi), MODAL AÇ
             if(this.kuyruk.length === 0) {
                 document.getElementById('degerlendirmeContainer').style.display = 'none';
                 document.getElementById('bitmisUyariModal').style.display = 'block';
                 return;
             }
-            
             this.yukle();
         },
-        modalSifirla: function() {
+        modalSifirla: async function() {
+            // YENİLENEN SIFIRLAMA MANTIĞI: Verileri çek, puanı temizle, geri yükle.
             const calisma = document.getElementById("s4DosyaSec").value;
             const sinif = document.getElementById("s4SinifSec").value.replace(" (Bitti)", "");
-            const ogrenciNoListesi = globalData.filter(u => u["Sınıfınız"] === sinif).map(u => String(u["Okul Numaranız"]).trim());
-            fetch("/degerlendirmeSifirla", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: "www_" + calisma, ogrenciNoListesi: ogrenciNoListesi, sinif: sinif }) })
-            .then(r => r.json()).then(res => { 
-                if(res.status === "ok") { 
-                    alert("Sıfırlandı! Değerlendirme başlıyor..."); 
-                    location.reload(); 
-                } 
-            });
+            
+            try {
+                // 1. Mevcut cevapları çek
+                const res = await fetch(`/calismaGetir?isim=www_${calisma}`);
+                const data = await res.json();
+                
+                const promises = [];
+                // 2. İlgili sınıfın kayıtlarını bul ve güncelle
+                data.forEach(student => {
+                    if (student.sinif === sinif) {
+                        student.puanlar = {}; // Puanları sil
+                        if(student.degerlendirme) student.degerlendirme.bitti = false; // Bitti işaretini kaldır
+                        
+                        // 3. Güncellenmiş veriyi sunucuya geri yükle (Cevaplar korunur)
+                        promises.push(fetch("/kaydet", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ 
+                                dosyaAdi: "www_" + calisma, 
+                                veri: student 
+                            })
+                        }));
+                    }
+                });
+                
+                await Promise.all(promises);
+                alert("Puanlar sıfırlandı, cevaplar korundu! Tekrar değerlendirebilirsiniz.");
+                location.reload();
+            } catch(e) {
+                alert("Sıfırlama sırasında hata oluştu: " + e);
+            }
         },
         yukle: function() {
             if(this.kuyrukIndex >= this.kuyruk.length) { alert("Bitti!"); location.reload(); return; }
@@ -603,15 +620,7 @@
         soruKontrolEtVeRender: function(direction) {
             if(this.sIdx >= this.sorular.length) { this.sonrakiKisi(); return; }
             if(this.sIdx < 0) { this.sIdx = 0; }
-            const cevapObj = (this.activeVeri.cevaplar||[]).find(c => c.soruIndex === this.sIdx);
-            const cevaplar = (cevapObj && cevapObj.cevaplar) ? cevapObj.cevaplar : [];
-            const gercekCevapVarMi = cevaplar.some(txt => txt && txt.trim() !== "");
-            if(!gercekCevapVarMi) {
-                this.sIdx += direction;
-                if(this.sIdx < 0) { this.sIdx = 0; this.renderSoru(); return; }
-                if(this.sIdx >= this.sorular.length) { this.sonrakiKisi(); return; }
-                this.soruKontrolEtVeRender(direction);
-            } else { this.renderSoru(); }
+            this.renderSoru();
         },
         renderSoru: function() {
             document.getElementById("degSoruNo").textContent = this.sIdx + 1;
@@ -621,18 +630,24 @@
             const cevaplar = (cevapObj && cevapObj.cevaplar) ? cevapObj.cevaplar : [];
             const puanlar = this.anlikPuanlar[this.sIdx] || [];
             let h = "";
-            cevaplar.forEach((txt, i) => { 
-                if(txt && txt.trim() !== "") {
-                    const convertedTxt = linkleriDonustur(txt);
-                    h += `<div class="deg-cevap-item" ondblclick="DegerlendirmeApp.hizliGecBos(event, '${txt || ''}')">
-                            <div class="deg-cevap-metin">${convertedTxt}</div>
-                            <div class="deg-buton-grubu">
-                                <button class="deg-btn-puan deg-dogru ${puanlar[i]===1?'aktif':''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},1)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},1)">D</button>
-                                <button class="deg-btn-puan deg-yanlis ${puanlar[i]===0?'aktif':''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},0)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},0)">Y</button>
-                            </div></div>`; 
-                }
-            });
-            document.getElementById("degCevapListesi").innerHTML = h || "Boş.";
+            
+            if(cevaplar.length === 0) {
+                 h = "<div style='padding:20px; color:#999; font-style:italic;'>Bu soruya cevap verilmemiş.</div>";
+            } else {
+                cevaplar.forEach((txt, i) => { 
+                    if(txt && txt.trim() !== "") {
+                        const convertedTxt = linkleriDonustur(txt);
+                        h += `<div class="deg-cevap-item" ondblclick="DegerlendirmeApp.hizliGecBos(event, '${txt || ''}')">
+                                <div class="deg-cevap-metin">${convertedTxt}</div>
+                                <div class="deg-buton-grubu">
+                                    <button class="deg-btn-puan deg-dogru ${puanlar[i]===1?'aktif':''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},1)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},1)">D</button>
+                                    <button class="deg-btn-puan deg-yanlis ${puanlar[i]===0?'aktif':''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},0)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},0)">Y</button>
+                                </div></div>`; 
+                    }
+                });
+            }
+            
+            document.getElementById("degCevapListesi").innerHTML = h;
             const son = (this.sIdx === this.sorular.length - 1);
             document.getElementById("btnDegIleri").style.display = son ? "none" : "block"; document.getElementById("btnDegBitir").style.display = son ? "block" : "none";
             this.guncellePuan();
@@ -644,27 +659,27 @@
         nav: function(n) { let nextIdx = this.sIdx + n; if(nextIdx < 0) return; this.sIdx = nextIdx; this.soruKontrolEtVeRender(n); },
         sonrakiKisi: async function() {
             const item = this.kuyruk[this.kuyrukIndex]; 
-            // Zaten katılanları aldığımız için if check'e gerek yok ama güvenlik için kalsın
-            const puanPromises = [];
-            for(const ogrNo of item.members) {
-                Object.keys(this.anlikPuanlar).forEach(sIx => { 
-                    const cevaplar = this.anlikPuanlar[sIx];
-                    if(cevaplar) {
-                        cevaplar.forEach((p,cIx)=>{ 
-                            if(p !== undefined && p !== null) { 
-                                puanPromises.push(fetch("/puanKaydet",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dosyaAdi:`www_${this.seciliCalisma}`,ogrenciNo:ogrNo,sinif:this.seciliSinif,soruIndex:parseInt(sIx),cevapIndex:cIx,puan:p})}));
-                            }
-                        }); 
-                    }
-                }); 
+            if(!item.katilmadi) {
+                const puanPromises = [];
+                for(const ogrNo of item.members) {
+                    Object.keys(this.anlikPuanlar).forEach(sIx => { 
+                        const cevaplar = this.anlikPuanlar[sIx];
+                        if(cevaplar) {
+                            cevaplar.forEach((p,cIx)=>{ 
+                                if(p !== undefined && p !== null) { 
+                                    puanPromises.push(fetch("/puanKaydet",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dosyaAdi:`www_${this.seciliCalisma}`,ogrenciNo:ogrNo,sinif:this.seciliSinif,soruIndex:parseInt(sIx),cevapIndex:cIx,puan:p})}));
+                                }
+                            }); 
+                        }
+                    }); 
+                }
+                await Promise.all(puanPromises); 
+                const bitirPromises = [];
+                for(const ogrNo of item.members) {
+                    bitirPromises.push(fetch("/degerlendirmeBitir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dosyaAdi:`www_${this.seciliCalisma}`,ogrenciNo:ogrNo,sinif:this.seciliSinif})}));
+                }
+                await Promise.all(bitirPromises);
             }
-            await Promise.all(puanPromises); 
-            const bitirPromises = [];
-            for(const ogrNo of item.members) {
-                bitirPromises.push(fetch("/degerlendirmeBitir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dosyaAdi:`www_${this.seciliCalisma}`,ogrenciNo:ogrNo,sinif:this.seciliSinif})}));
-            }
-            await Promise.all(bitirPromises);
-            
             this.kuyrukIndex++; this.yukle();
         }
     };
