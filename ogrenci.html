@@ -1,481 +1,787 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Öğrenci Paneli</title>
     <style>
-        :root { --ana: #A52A2A; --zemin: #f8f9fa; --yesil: #2e7d32; --mavi: #1976D2; --mor: #7B1FA2; --gri: #607d8b; --turuncu: #F57C00; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--zemin); margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
-        
-        .header { width: 100%; background: var(--ana); color: white; padding: 15px 0; display: flex; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .header h1 { margin: 0; font-size: 1.1rem; text-align: center; }
-        .header-left { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; font-weight: bold; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; }
-        .header-nav { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; gap: 8px; align-items: center; }
-        .nav-btn-small { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
-        .giris-badge { background: #FFC107; color: #333; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; margin-right: 5px; display: none; }
+        :root {
+            --ana: #A52A2A;
+            --zemin: #f8f9fa;
+            --yesil: #2e7d32;
+            --mavi: #1976D2;
+            --mor: #7B1FA2;
+            --gri: #607d8b;
+            --turuncu: #F57C00;
+        }
 
-        .container { width: 95%; max-width: 800px; margin: 80px 0 20px 0; padding-bottom: 50px; }
-        .panel { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        input, textarea { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
-        button { width: 100%; padding: 14px; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 5px; }
-        
-        .btn-mavi { background: var(--mavi); }
-        .btn-gri { background: var(--gri); }
-        .btn-yesil { background: var(--yesil); }
-        .btn-ana { background: var(--ana); }
-        .btn-kirmizi { background: #d32f2f; }
-        .btn-mor { background: var(--mor); }
-        
-        .yonerge-box { background: #e3f2fd; border: 1px solid #bbdefb; color: #0d47a1; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--zemin);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            width: 100%;
+            background: var(--ana);
+            color: white;
+            padding: 15px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .header-left {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85rem;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .header-nav {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-btn-small {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .giris-badge {
+            background: #FFC107;
+            color: #333;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+            margin-right: 5px;
+            display: none;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 800px;
+            margin: 80px 0 20px 0;
+            padding-bottom: 50px;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 5px;
+        }
+
+        .btn-mavi {
+            background: var(--mavi);
+        }
+
+        .btn-gri {
+            background: var(--gri);
+        }
+
+        .btn-yesil {
+            background: var(--yesil);
+        }
+
+        .btn-ana {
+            background: var(--ana);
+        }
+
+        .btn-kirmizi {
+            background: #d32f2f;
+        }
+
+        .btn-mor {
+            background: var(--mor);
+        }
+
+        .yonerge-box {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            color: #0d47a1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
         /* GRUP KUTUSU */
-        .grup-bilgi { padding: 15px; background: #fff8e1; border: 1px solid #ffe0b2; border-left: 5px solid #ffc107; margin-bottom: 15px; font-size: 0.95rem; border-radius: 6px; display: none; }
-        .grup-baslik { color: #E65100; font-weight: bold; font-size: 1.1rem; display: block; margin-bottom: 8px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px; }
-        .ogrenci-siz { color: var(--yesil); font-weight: bold; text-decoration: underline; }
-        
-        .soru-metni { font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 15px; display: block; }
-        .cevap-konteynir { position: relative; width: 100%; margin-bottom: 10px; }
-        .satir-sil { position: absolute; right: 8px; top: 8px; background: #fdfdfd; color: #333; border: 1px solid #ddd; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
-        th, td { border: 1px solid #ccc; padding: 12px; text-align: left; }
-        th { background: #f4f4f4; }
-        .cevap-alt { font-weight: bold; color: #000; display: block; white-space: pre-wrap; margin-top: 2px; }
-        
-        .nav-btns { display: flex; gap: 10px; margin-top: 15px; }
-        .footer-info { position: fixed; bottom: 5px; right: 10px; font-size: 0.75rem; color: #555; background-color: rgba(255, 255, 255, 0.8); padding: 3px 6px; border-radius: 4px; pointer-events: none; }
+        .grup-bilgi {
+            padding: 15px;
+            background: #fff8e1;
+            border: 1px solid #ffe0b2;
+            border-left: 5px solid #ffc107;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .grup-baslik {
+            color: #E65100;
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: block;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #ffe0b2;
+            padding-bottom: 5px;
+        }
+
+        .ogrenci-siz {
+            color: var(--yesil);
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .soru-metni {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .cevap-konteynir {
+            position: relative;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .satir-sil {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            background: #fdfdfd;
+            color: #333;
+            border: 1px solid #ddd;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #f4f4f4;
+        }
+
+        .cevap-alt {
+            font-weight: bold;
+            color: #000;
+            display: block;
+            white-space: pre-wrap;
+            margin-top: 2px;
+        }
+
+        .nav-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .footer-info {
+            position: fixed;
+            bottom: 5px;
+            right: 10px;
+            font-size: 0.75rem;
+            color: #555;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 3px 6px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
 
         /* MEDYA GÖMME STİLLERİ */
-        .embedded-wrapper { width: 100%; margin-top: 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 6px; padding: 5px; background:#fff; }
-        .embedded-img { max-height: 200px; max-width: 100%; cursor: pointer; transition: transform 0.2s; display: block; margin: 0 auto; }
-        .embedded-img:hover { transform: scale(1.02); }
-        .embedded-img.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; max-height: 100vh; object-fit: contain; z-index: 9999; background: rgba(0,0,0,0.9); padding: 20px; box-sizing: border-box; }
-        .embedded-video { max-width: 100%; height: auto; max-height: 300px; display: block; margin: 0 auto; }
-        .embedded-audio { width: 100%; }
-        .embedded-iframe { width: 100%; height: 400px; border: none; }
-        .embed-fallback { text-align: center; font-size: 12px; margin-top: 5px; background: #f1f1f1; padding: 5px; border-radius: 4px; }
-        .embed-fallback a { color: #1976D2; text-decoration: none; font-weight: bold; }
+        .embedded-wrapper {
+            width: 100%;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 5px;
+            background: #fff;
+        }
+
+        .embedded-img {
+            max-height: 200px;
+            max-width: 100%;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .embedded-img:hover {
+            transform: scale(1.02);
+        }
+
+        .embedded-img.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            max-height: 100vh;
+            object-fit: contain;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .embedded-video {
+            max-width: 100%;
+            height: auto;
+            max-height: 300px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .embedded-audio {
+            width: 100%;
+        }
+
+        .embedded-iframe {
+            width: 100%;
+            height: 400px;
+            border: none;
+        }
+
+        .embed-fallback {
+            text-align: center;
+            font-size: 12px;
+            margin-top: 5px;
+            background: #f1f1f1;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .embed-fallback a {
+            color: #1976D2;
+            text-decoration: none;
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
 
-<div class="header">
-    <div id="h_ad" class="header-left">Giriş Gerekli</div>
-    <h1>Öğrenci Paneli</h1>
-    <div class="header-nav" id="h_nav" style="display:none;">
-        <span id="giris_sayaci_badge" class="giris-badge">Giriş: 1</span>
-        <span id="h_sure" style="font-family:monospace; background:rgba(0,0,0,0.2); padding:3px 6px; border-radius:4px; font-weight:bold;">--:--</span>
-        <button onclick="ekranDegis('p_yonerge')" class="nav-btn-small">Açıklama</button>
-        <button id="nav_ozet_btn" onclick="ozetCiz()" class="nav-btn-small" style="display:none;">Özet</button>
-        <button onclick="cikisYap()" class="nav-btn-small" style="border-color:#ff8a80;">Çıkış</button>
+    <div class="header">
+        <div id="h_ad" class="header-left">Giriş Gerekli</div>
+        <h1>Öğrenci Paneli</h1>
+        <div class="header-nav" id="h_nav" style="display:none;">
+            <span id="giris_sayaci_badge" class="giris-badge">Giriş: 1</span>
+            <span id="h_sure"
+                style="font-family:monospace; background:rgba(0,0,0,0.2); padding:3px 6px; border-radius:4px; font-weight:bold;">--:--</span>
+            <button onclick="ekranDegis('p_yonerge')" class="nav-btn-small">Açıklama</button>
+            <button id="nav_ozet_btn" onclick="ozetCiz()" class="nav-btn-small" style="display:none;">Özet</button>
+            <button onclick="cikisYap()" class="nav-btn-small" style="border-color:#ff8a80;">Çıkış</button>
+        </div>
     </div>
-</div>
 
-<div class="container">
-    <div class="panel">
-        
-        <div id="p_giris">
-            <h2 style="text-align:center;">Öğrenci Girişi</h2>
-            <input type="number" id="i_no" placeholder="Okul Numaranız">
-            <input type="password" id="i_tel" placeholder="Velinizin Telefonunun Son 4 Rakamı">
-            <button onclick="girisYap()" class="btn-ana">SİSTEME GİR</button>
-        </div>
+    <div class="container">
+        <div class="panel">
 
-        <div id="p_yonerge" style="display:none;">
-            <h3 id="c_baslik" style="color:var(--ana); text-align:center; margin-top:0;"></h3>
-            <div id="c_yonerge" class="yonerge-box"></div>
-            
-            <div id="c_grup" class="grup-bilgi">
-                <span class="grup-baslik" id="grup_baslik_metni">GRUP BİLGİSİ ARANIYOR...</span>
-                <ul id="g_liste" style="margin:0; padding-left:20px;"></ul>
+            <div id="p_giris">
+                <h2 style="text-align:center;">Öğrenci Girişi</h2>
+                <input type="number" id="i_no" placeholder="Okul Numaranız">
+                <input type="password" id="i_tel" placeholder="Velinizin Telefonunun Son 4 Rakamı">
+                <button onclick="girisYap()" class="btn-ana">SİSTEME GİR</button>
             </div>
-            
-            <div id="c_bekle" style="text-align:center; color:#d32f2f; display:none; padding:15px; font-weight:bold;">⛔ Çalışma süresi doldu veya öğretmen kapattı.</div>
-            <div id="c_sure_bitti_msg" style="text-align:center; color:#d32f2f; display:none; padding:15px; font-weight:bold;">⛔ Çalışma süresi doldu.</div>
-            <div id="c_baslamadi_msg" style="text-align:center; color:#E65100; display:none; padding:15px; font-weight:bold;">⏳ Çalışma henüz başlatılmadı.</div>
-            <div id="c_incele" style="text-align:center; color:#1976D2; display:none; padding:15px; font-weight:bold; background:#e3f2fd; border-radius:8px; margin-bottom:10px;">ℹ️ Çalışma bitti. İnceleyebilirsiniz.</div>
-            <div id="c_yok" style="text-align:center; color:#E65100; display:none; padding:15px; font-weight:bold; background:#FFF3E0; border-radius:8px; margin-bottom:10px; border:1px solid #FFE0B2;">⚠️ Aktif çalışma bulunmamaktadır.</div>
 
-            <button id="btn_basla" onclick="ekranDegis('p_soru')" class="btn-mavi" style="display:none;">ÇALIŞMAYA BAŞLA</button>
-            <button id="btn_ozet_ana" onclick="ozetCiz()" class="btn-yesil" style="margin-top:10px; display:none;">CEVAPLARI GÖRÜNTÜLE</button>
-            <button id="btn_degerlendirme_ana" onclick="degerlendirmeyeGec()" class="btn-mor" style="margin-top:10px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
-        </div>
+            <div id="p_yonerge" style="display:none;">
+                <h3 id="c_baslik" style="color:var(--ana); text-align:center; margin-top:0;"></h3>
+                <div id="c_yonerge" class="yonerge-box"></div>
 
-        <div id="p_soru" style="display:none;">
-            <div style="display:flex; justify-content:space-between; color:#888; font-size:0.8rem; margin-bottom:10px;">
-                <span id="s_sayac"></span><span id="s_durum">Senkronize Edildi</span>
+                <div id="c_grup" class="grup-bilgi">
+                    <span class="grup-baslik" id="grup_baslik_metni">GRUP BİLGİSİ ARANIYOR...</span>
+                    <ul id="g_liste" style="margin:0; padding-left:20px;"></ul>
+                </div>
+
+                <div id="c_bekle"
+                    style="text-align:center; color:#d32f2f; display:none; padding:15px; font-weight:bold;">⛔ Çalışma
+                    süresi doldu veya öğretmen kapattı.</div>
+                <div id="c_sure_bitti_msg"
+                    style="text-align:center; color:#d32f2f; display:none; padding:15px; font-weight:bold;">⛔ Çalışma
+                    süresi doldu.</div>
+                <div id="c_baslamadi_msg"
+                    style="text-align:center; color:#E65100; display:none; padding:15px; font-weight:bold;">⏳ Çalışma
+                    henüz başlatılmadı.</div>
+                <div id="c_incele"
+                    style="text-align:center; color:#1976D2; display:none; padding:15px; font-weight:bold; background:#e3f2fd; border-radius:8px; margin-bottom:10px;">
+                    ℹ️ Çalışma bitti. İnceleyebilirsiniz.</div>
+                <div id="c_yok"
+                    style="text-align:center; color:#E65100; display:none; padding:15px; font-weight:bold; background:#FFF3E0; border-radius:8px; margin-bottom:10px; border:1px solid #FFE0B2;">
+                    ⚠️ Aktif çalışma bulunmamaktadır.</div>
+
+                <button id="btn_basla" onclick="ekranDegis('p_soru')" class="btn-mavi" style="display:none;">ÇALIŞMAYA
+                    BAŞLA</button>
+                <button id="btn_ozet_ana" onclick="ozetCiz()" class="btn-yesil"
+                    style="margin-top:10px; display:none;">CEVAPLARI GÖRÜNTÜLE</button>
+                <button id="btn_degerlendirme_ana" onclick="degerlendirmeyeGec()" class="btn-mor"
+                    style="margin-top:10px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
             </div>
-            <span id="s_metin" class="soru-metni"></span>
-            <div id="s_inputs"></div>
-            <button onclick="yeniSatirEkle('')" class="btn-gri" style="width:auto; padding:8px 15px;">+ Yeni Cevap Satırı</button>
-            <div class="nav-btns">
-                <button id="nav_geri" onclick="soruGit(-1)" class="btn-gri" style="flex:1">❮ GERİ</button>
-                <button id="nav_ileri" onclick="soruGit(1)" class="btn-mavi" style="flex:2">KAYDET VE İLERİ ❯</button>
-                <button id="nav_bitir" onclick="ozetCiz()" class="btn-yesil" style="flex:2; display:none;">KAYDET VE BİTİR</button>
+
+            <div id="p_soru" style="display:none;">
+                <div
+                    style="display:flex; justify-content:space-between; color:#888; font-size:0.8rem; margin-bottom:10px;">
+                    <span id="s_sayac"></span><span id="s_durum">Senkronize Edildi</span>
+                </div>
+                <span id="s_metin" class="soru-metni"></span>
+                <div id="s_inputs"></div>
+                <button onclick="yeniSatirEkle('')" class="btn-gri" style="width:auto; padding:8px 15px;">+ Yeni Cevap
+                    Satırı</button>
+                <div class="nav-btns">
+                    <button id="nav_geri" onclick="soruGit(-1)" class="btn-gri" style="flex:1">❮ GERİ</button>
+                    <button id="nav_ileri" onclick="soruGit(1)" class="btn-mavi" style="flex:2">KAYDET VE İLERİ
+                        ❯</button>
+                    <button id="nav_bitir" onclick="ozetCiz()" class="btn-yesil" style="flex:2; display:none;">KAYDET VE
+                        BİTİR</button>
+                </div>
             </div>
-        </div>
 
-        <div id="p_ozet" style="display:none;">
-            <h3 style="text-align:center; color:var(--ana); margin-top:0;">Cevap Özetiniz</h3>
-            <div id="ozet_tablo_alani"></div>
-            <button id="btn_degerlendirme" onclick="degerlendirmeyeGec()" class="btn-mor" style="margin-top:20px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
-            <button id="ozet_don_btn" onclick="ekranDegis('p_soru')" class="btn-ana" style="margin-top:10px;">DÜZENLEMEYE DÖN</button>
-            <button onclick="ekranDegis('p_yonerge')" class="btn-gri" style="margin-top:10px;">AÇIKLAMA SAYFASINA DÖN</button>
-        </div>
+            <div id="p_ozet" style="display:none;">
+                <h3 style="text-align:center; color:var(--ana); margin-top:0;">Cevap Özetiniz</h3>
+                <div id="ozet_tablo_alani"></div>
+                <button id="btn_degerlendirme" onclick="degerlendirmeyeGec()" class="btn-mor"
+                    style="margin-top:20px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
+                <button id="ozet_don_btn" onclick="ekranDegis('p_soru')" class="btn-ana"
+                    style="margin-top:10px;">DÜZENLEMEYE DÖN</button>
+                <button onclick="ekranDegis('p_yonerge')" class="btn-gri" style="margin-top:10px;">AÇIKLAMA SAYFASINA
+                    DÖN</button>
+            </div>
 
+        </div>
     </div>
-</div>
 
-<div class="footer-info">Kod: <span>Ali Rıza ŞAHİN</span></div>
+    <div class="footer-info">Kod: <span>Ali Rıza ŞAHİN</span></div>
 
-<script>
-    let sess = null, atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false, grupUyeleri = [];
-    let otoKayitYapildi = false, girisSayisi = 0, girisIslandi = false; 
-    let grupSorgusuYapildi = false; 
+    <script>
+        let sess = null, atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false, grupUyeleri = [];
+        let otoKayitYapildi = false, girisSayisi = 0, girisIslandi = false;
+        let grupSorgusuYapildi = false;
 
-    // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
-    function linkleriDonustur(text) {
-        if (!text) return "";
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        return text.replace(urlRegex, function(url) {
-            const cleanUrl = url.trim();
-            // Uzantı kontrolü için URL parametrelerini at
-            const urlNoParams = cleanUrl.split('?')[0];
-            const ext = urlNoParams.split('.').pop().toLowerCase();
-            
-            // 1. Google Drive & Docs (Akıllı ID Yakalama)
-            if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com')) {
-                let id = null;
-                // /d/ID/ yapısı
-                const parts = cleanUrl.split(/\/d\//);
-                if (parts.length > 1) {
-                    id = parts[1].split('/')[0];
-                } else {
-                    // id=ID yapısı
-                    const match = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                    if (match) id = match[1];
+        // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
+        function linkleriDonustur(text) {
+            if (!text) return "";
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlRegex, function (url) {
+                const cleanUrl = url.trim();
+                // Uzantı kontrolü için URL parametrelerini at
+                const urlNoParams = cleanUrl.split('?')[0];
+                const ext = urlNoParams.split('.').pop().toLowerCase();
+
+                // 1. Google Drive & Docs (Akıllı ID Yakalama)
+                if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com')) {
+                    let id = null;
+                    // /d/ID/ yapısı
+                    const parts = cleanUrl.split(/\/d\//);
+                    if (parts.length > 1) {
+                        id = parts[1].split('/')[0];
+                    } else {
+                        // id=ID yapısı
+                        const match = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                        if (match) id = match[1];
+                    }
+
+                    if (id) {
+                        // Türüne göre doğru embed linkini üret
+                        let embedUrl = `https://drive.google.com/file/d/${id}/preview`; // Varsayılan
+                        if (cleanUrl.includes('/document/')) embedUrl = `https://docs.google.com/document/d/${id}/preview`;
+                        else if (cleanUrl.includes('/spreadsheets/')) embedUrl = `https://docs.google.com/spreadsheets/d/${id}/preview`;
+                        else if (cleanUrl.includes('/presentation/')) embedUrl = `https://docs.google.com/presentation/d/${id}/preview`;
+
+                        return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allow="autoplay"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank">📄 Dosyayı Yeni Sekmede Aç</a></div></div>`;
+                    }
                 }
 
-                if (id) {
-                    // Türüne göre doğru embed linkini üret
-                    let embedUrl = `https://drive.google.com/file/d/${id}/preview`; // Varsayılan
-                    if (cleanUrl.includes('/document/')) embedUrl = `https://docs.google.com/document/d/${id}/preview`;
-                    else if (cleanUrl.includes('/spreadsheets/')) embedUrl = `https://docs.google.com/spreadsheets/d/${id}/preview`;
-                    else if (cleanUrl.includes('/presentation/')) embedUrl = `https://docs.google.com/presentation/d/${id}/preview`;
-
-                    return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allow="autoplay"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank">📄 Dosyayı Yeni Sekmede Aç</a></div></div>`;
+                // 2. Resimler
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
+                    return `<img src="${cleanUrl}" class="embedded-img" onclick="this.classList.toggle('fullscreen')" title="Büyütmek için tıkla">`;
                 }
-            }
 
-            // 2. Resimler
-            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
-                return `<img src="${cleanUrl}" class="embedded-img" onclick="this.classList.toggle('fullscreen')" title="Büyütmek için tıkla">`;
-            }
-            
-            // 3. Ses
-            if (['mp3', 'wav', 'ogg'].includes(ext)) {
-                return `<div class="embedded-wrapper"><audio controls src="${cleanUrl}" class="embedded-audio"></audio></div>`;
-            }
-            
-            // 4. Video (Dosya)
-            if (['mp4', 'webm', 'mov'].includes(ext)) {
-                return `<div class="embedded-wrapper"><video controls src="${cleanUrl}" class="embedded-video"></video></div>`;
-            }
-            
-            // 5. YouTube
-            if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
-                let embedUrl = cleanUrl;
-                if (cleanUrl.includes('watch?v=')) embedUrl = cleanUrl.replace('watch?v=', 'embed/');
-                else if (cleanUrl.includes('youtu.be/')) embedUrl = cleanUrl.replace('youtu.be/', 'youtube.com/embed/');
-                // Fazlalık parametreleri temizle
-                if(embedUrl.includes('&')) embedUrl = embedUrl.split('&')[0];
-                return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allowfullscreen></iframe></div>`;
-            }
+                // 3. Ses
+                if (['mp3', 'wav', 'ogg'].includes(ext)) {
+                    return `<div class="embedded-wrapper"><audio controls src="${cleanUrl}" class="embedded-audio"></audio></div>`;
+                }
 
-            // 6. HER ŞEY İÇİN FALLBACK (GENEL WEB SİTESİ)
-            // iframe içinde açmayı dener, olmazsa link verir.
-            return `<div class="embedded-wrapper">
+                // 4. Video (Dosya)
+                if (['mp4', 'webm', 'mov'].includes(ext)) {
+                    return `<div class="embedded-wrapper"><video controls src="${cleanUrl}" class="embedded-video"></video></div>`;
+                }
+
+                // 5. YouTube
+                if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+                    let embedUrl = cleanUrl;
+                    if (cleanUrl.includes('watch?v=')) embedUrl = cleanUrl.replace('watch?v=', 'embed/');
+                    else if (cleanUrl.includes('youtu.be/')) embedUrl = cleanUrl.replace('youtu.be/', 'youtube.com/embed/');
+                    // Fazlalık parametreleri temizle
+                    if (embedUrl.includes('&')) embedUrl = embedUrl.split('&')[0];
+                    return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allowfullscreen></iframe></div>`;
+                }
+
+                // 6. HER ŞEY İÇİN FALLBACK (GENEL WEB SİTESİ)
+                // iframe içinde açmayı dener, olmazsa link verir.
+                return `<div class="embedded-wrapper">
                         <iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy"></iframe>
                         <div class="embed-fallback">
                             <a href="${cleanUrl}" target="_blank">🌐 Bağlantıyı Yeni Sekmede Aç (Görüntülenemiyorsa Tıkla)</a>
                         </div>
                     </div>`;
-        });
-    }
+            });
+        }
 
-    window.onload = () => {
-        const saved = localStorage.getItem('ogrenciSession');
-        if(saved) { sess = JSON.parse(saved); panelHazirla(); }
-    };
+        window.onload = () => {
+            const saved = localStorage.getItem('ogrenciSession');
+            if (saved) { sess = JSON.parse(saved); panelHazirla(); }
+        };
 
-    async function girisYap() {
-        const no = document.getElementById('i_no').value.trim();
-        const tel = document.getElementById('i_tel').value.trim();
-        if(!no || !tel) return alert("Eksik bilgi!");
-        try {
-            const res = await fetch("veritabani.json");
-            const db = await res.json();
-            const list = Array.isArray(db) ? db : Object.values(db)[0];
-            const user = list.find(x => String(x["Okul Numaranız"]).trim() === no && String(x["Velinizin telefon numarası"]).replace(/\D/g,'').endsWith(tel));
-            if(!user) throw new Error();
-            sess = { no: no, ad: user["Adınız Soyadınız"], sinif: user["Sınıfınız"] };
-            localStorage.setItem('ogrenciSession', JSON.stringify(sess));
-            panelHazirla();
-        } catch(e) { alert("Giriş bilgileri hatalı!"); }
-    }
+        async function girisYap() {
+            const no = document.getElementById('i_no').value.trim();
+            const tel = document.getElementById('i_tel').value.trim();
+            if (!no || !tel) return alert("Eksik bilgi!");
+            try {
+                const res = await fetch("veritabani.json");
+                const db = await res.json();
+                const list = Array.isArray(db) ? db : Object.values(db).flat(); // Handle both array and object formats
+                const user = list.find(x => String(x["Okul Numaranız"]).trim() === no && String(x["Velinizin telefon numarası"]).replace(/\D/g, '').endsWith(tel));
+                if (!user) throw new Error();
+                sess = { no: no, ad: user["Adınız Soyadınız"], sinif: user["Sınıfınız"] };
+                localStorage.setItem('ogrenciSession', JSON.stringify(sess));
+                panelHazirla();
+            } catch (e) { alert("Giriş bilgileri hatalı!"); }
+        }
 
-    function panelHazirla() {
-        document.getElementById('p_giris').style.display = "none";
-        document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
-        document.getElementById('h_nav').style.display = "flex";
-        ekranDegis('p_yonerge');
-        veriCek();
-        setInterval(veriCek, 3000);
-    }
+        function panelHazirla() {
+            document.getElementById('p_giris').style.display = "none";
+            document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
+            document.getElementById('h_nav').style.display = "flex";
+            ekranDegis('p_yonerge');
+            veriCek();
+            setInterval(veriCek, 3000);
+        }
 
-    async function veriCek() {
-        try {
-            const r1 = await fetch("/listeCalismalar");
-            const list = await r1.json();
-            
-            const adaylar = list.filter(f => f.startsWith(`qqq${sess.sinif}`));
-            
-            atan = null; 
-            for (const dosya of adaylar) {
-                const r = await fetch(`/calismaGetir?isim=${dosya}`);
-                const veri = await r.json();
-                if (veri.yapma === true || veri.gorme === true || veri.degerl === true) {
-                    atan = veri;
-                    break;
+        async function veriCek() {
+            try {
+                const r1 = await fetch("/listeCalismalar");
+                const list = await r1.json();
+
+                const adaylar = list.filter(f => f.startsWith(`qqq${sess.sinif}`));
+
+                atan = null;
+                for (const dosya of adaylar) {
+                    const r = await fetch(`/calismaGetir?isim=${dosya}`);
+                    const veri = await r.json();
+                    if (veri.yapma === true || veri.gorme === true || veri.degerl === true) {
+                        atan = veri;
+                        break;
+                    }
                 }
-            }
 
-            if(!atan) {
-                ['c_yok'].forEach(id => document.getElementById(id).style.display = "block");
-                ['btn_basla','c_baslik','c_yonerge','c_grup','btn_ozet_ana','c_bekle'].forEach(id => document.getElementById(id).style.display = "none");
-                return; 
-            }
-            document.getElementById('c_yok').style.display = "none";
+                if (!atan) {
+                    ['c_yok'].forEach(id => document.getElementById(id).style.display = "block");
+                    ['btn_basla', 'c_baslik', 'c_yonerge', 'c_grup', 'btn_ozet_ana', 'c_bekle'].forEach(id => document.getElementById(id).style.display = "none");
+                    return;
+                }
+                document.getElementById('c_yok').style.display = "none";
 
-            if(sorular.length === 0) {
-                const r3 = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
-                const icerik = await r3.json();
-                sorular = icerik.sorular || [];
-                document.getElementById('c_baslik').textContent = atan.calisma;
-                
-                // LİNK DÖNÜŞTÜRME
-                document.getElementById('c_yonerge').innerHTML = linkleriDonustur(icerik.aciklama);
-            }
+                if (sorular.length === 0) {
+                    const r3 = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
+                    const icerik = await r3.json();
+                    // SQL Adaptation: robust check for content format
+                    sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
+                    document.getElementById('c_baslik').textContent = atan.calisma;
 
-            if(atan.yontem === "Grup") {
-                document.getElementById('c_grup').style.display = "block";
-                
-                if(grupUyeleri.length === 0 && !grupSorgusuYapildi) {
-                    grupSorgusuYapildi = true; 
-                    const temizSinif = sess.sinif.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]/g, "");
-                    const dosyaYolu = `${temizSinif}Grupları.json?t=${Date.now()}`;
+                    // LİNK DÖNÜŞTÜRME
+                    // If content is just array of strings, no aciklama property
+                    const desc = icerik.aciklama || "";
+                    document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
+                }
 
-                    fetch(dosyaYolu)
-                    .then(r => {
-                        if(!r.ok) throw new Error("Grup dosyası yok");
-                        return r.json();
-                    })
-                    .then(gs => {
-                        if(!Array.isArray(gs)) throw new Error("Veri hatası");
+                // Grup and other logic follows...
+                // SQL Adaptation: /grupListesiGetir endpoint is compatible in server.js
 
-                        const g = gs.find(x => Array.isArray(x) && x.some(o => o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim()));
-                        
-                        if(g) {
-                            grupUyeleri = g;
-                            const grupNo = gs.indexOf(g) + 1;
-                            document.getElementById('h_ad').textContent = `${sess.sinif} - Grup ${grupNo}`;
-                            document.getElementById('grup_baslik_metni').textContent = `${sess.sinif} - ${grupNo}. GRUP ÜYELERİ:`;
-                            
-                            const ul = document.getElementById('g_liste'); 
-                            ul.innerHTML = "";
-                            g.forEach(m => { 
-                                if(m && m["Adınız Soyadınız"]) {
-                                    let li = document.createElement('li'); 
-                                    let isSiz = String(m["Okul Numaranız"]).trim() === sess.no;
-                                    li.innerHTML = m["Adınız Soyadınız"] + (isSiz ? " <span class='ogrenci-siz'>(Siz)</span>" : "");
-                                    ul.appendChild(li); 
+                if (atan.yontem === "Grup") {
+                    document.getElementById('c_grup').style.display = "block";
+
+                    if (grupUyeleri.length === 0 && !grupSorgusuYapildi) {
+                        grupSorgusuYapildi = true;
+                        // server.js expects "sinif" param for group list
+                        fetch(`/grupListesiGetir?sinif=${sess.sinif}`)
+                            .then(r => r.json())
+                            .then(gs => {
+                                if (!Array.isArray(gs)) throw new Error("Veri hatası");
+
+                                const g = gs.find(x => Array.isArray(x) && x.some(o => o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim()));
+
+                                if (g) {
+                                    grupUyeleri = g;
+                                    const grupNo = gs.indexOf(g) + 1;
+                                    document.getElementById('h_ad').textContent = `${sess.sinif} - Grup ${grupNo}`;
+                                    document.getElementById('grup_baslik_metni').textContent = `${sess.sinif} - ${grupNo}. GRUP ÜYELERİ:`;
+
+                                    const ul = document.getElementById('g_liste');
+                                    ul.innerHTML = "";
+                                    g.forEach(m => {
+                                        if (m && m["Adınız Soyadınız"]) {
+                                            let li = document.createElement('li');
+                                            let isSiz = String(m["Okul Numaranız"]).trim() === sess.no;
+                                            li.innerHTML = m["Adınız Soyadınız"] + (isSiz ? " <span class='ogrenci-siz'>(Siz)</span>" : "");
+                                            ul.appendChild(li);
+                                        }
+                                    });
+                                } else {
+                                    document.getElementById('grup_baslik_metni').textContent = "GRUP LİSTESİNDE YOKSUNUZ";
                                 }
+                            })
+                            .catch(e => {
+                                console.error(e);
+                                document.getElementById('grup_baslik_metni').textContent = "GRUP BİLGİSİ BULUNAMADI";
                             });
-                        } else {
-                            document.getElementById('grup_baslik_metni').textContent = "GRUP LİSTESİNDE YOKSUNUZ";
-                        }
-                    })
-                    .catch(e => {
-                        console.error(e);
-                        document.getElementById('grup_baslik_metni').textContent = "GRUP DOSYASI BULUNAMADI (" + dosyaYolu + ")";
-                    });
-                }
-            } else {
-                document.getElementById('c_grup').style.display = "none";
-                document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
-                grupUyeleri = []; 
-                grupSorgusuYapildi = false; 
-            }
-
-            const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
-            if(rC.ok) {
-                const tumCevaplar = await rC.json();
-                const benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
-                
-                if(benimKaydim) {
-                    if(!isTyping) cevaplar = benimKaydim.cevaplar || [];
-                    girisSayisi = benimKaydim.girisSayisi || 0;
+                    }
+                } else {
+                    document.getElementById('c_grup').style.display = "none";
+                    document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
+                    grupUyeleri = [];
+                    grupSorgusuYapildi = false;
                 }
 
-                if(!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
-                document.getElementById('giris_sayaci_badge').textContent = `Giriş: ${girisSayisi}`;
-                document.getElementById('giris_sayaci_badge').style.display = "inline-block";
+                const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
+                if (rC.ok) {
+                    const tumCevaplar = await rC.json();
+                    const benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
 
-                const cevapVarmi = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
-                document.getElementById('btn_basla').textContent = cevapVarmi ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
-                document.getElementById('btn_ozet_ana').textContent = cevapVarmi ? "CEVAPLARI GÖRÜNTÜLE" : "SORULARI GÖRÜNTÜLE";
-            }
-            durumYonetimi();
-        } catch(e) {}
-    }
+                    if (benimKaydim) {
+                        if (!isTyping) cevaplar = benimKaydim.cevaplar || [];
+                        girisSayisi = benimKaydim.girisSayisi || 0;
+                    }
 
-    function durumYonetimi() {
-        const hSure = document.getElementById('h_sure');
-        let sureBitti = false;
-        
-        if(atan.bitis) {
-            const fark = atan.bitis - Date.now();
-            if(fark > 0) {
-                hSure.textContent = Math.floor(fark/60000) + ":" + Math.floor((fark%60000)/1000).toString().padStart(2,'0');
-                hSure.parentElement.style.display = "flex";
-            } else { hSure.textContent = "BİTTİ"; sureBitti = true; }
+                    if (!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
+                    document.getElementById('giris_sayaci_badge').textContent = `Giriş: ${girisSayisi}`;
+                    document.getElementById('giris_sayaci_badge').style.display = "inline-block";
+
+                    const cevapVarmi = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
+                    document.getElementById('btn_basla').textContent = cevapVarmi ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
+                    document.getElementById('btn_ozet_ana').textContent = cevapVarmi ? "CEVAPLARI GÖRÜNTÜLE" : "SORULARI GÖRÜNTÜLE";
+                }
+                durumYonetimi();
+            } catch (e) { }
         }
 
-        if((sureBitti || !atan.yapma) && !otoKayitYapildi) { kaydet(); otoKayitYapildi = true; }
+        function durumYonetimi() {
+            const hSure = document.getElementById('h_sure');
+            let sureBitti = false;
 
-        const aktif = (atan.yapma && !sureBitti);
-        const gorme = atan.gorme;
-        
-        const goster = (aktif || gorme);
-        
-        document.getElementById('c_baslik').style.display = goster ? "block" : "none";
-        document.getElementById('c_yonerge').style.display = goster ? "block" : "none";
-        
-        document.getElementById('btn_basla').style.display = aktif ? "block" : "none";
-        document.getElementById('btn_ozet_ana').style.display = goster ? "block" : "none";
-        document.getElementById('nav_ozet_btn').style.display = goster ? "inline-block" : "none";
-        
-        document.getElementById('c_bekle').style.display = (!aktif && !gorme) ? "block" : "none";
-        document.getElementById('c_baslamadi_msg').style.display = (!aktif && !sureBitti && !gorme) ? "block" : "none";
-        document.getElementById('c_sure_bitti_msg').style.display = (sureBitti && !gorme) ? "block" : "none";
-        document.getElementById('c_incele').style.display = (gorme && sureBitti) ? "block" : "none";
+            if (atan.bitis) {
+                const fark = atan.bitis - Date.now();
+                if (fark > 0) {
+                    hSure.textContent = Math.floor(fark / 60000) + ":" + Math.floor((fark % 60000) / 1000).toString().padStart(2, '0');
+                    hSure.parentElement.style.display = "flex";
+                } else { hSure.textContent = "BİTTİ"; sureBitti = true; }
+            }
 
-        document.getElementById('btn_degerlendirme_ana').style.display = atan.degerl ? "block" : "none";
-        if(document.getElementById('btn_degerlendirme')) document.getElementById('btn_degerlendirme').style.display = atan.degerl ? "block" : "none";
-    }
+            if ((sureBitti || !atan.yapma) && !otoKayitYapildi) { kaydet(); otoKayitYapildi = true; }
 
-    function ekranDegis(id) {
-        ['p_yonerge','p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
-        document.getElementById(id).style.display = "block";
-        window.scrollTo(0,0);
-        if(id === 'p_soru') soruYukle();
-    }
+            const aktif = (atan.yapma && !sureBitti);
+            const gorme = atan.gorme;
 
-    function soruYukle() {
-        const s = sorular[sIdx];
-        document.getElementById('s_sayac').textContent = `SORU ${sIdx+1} / ${sorular.length}`;
-        // LİNK DÖNÜŞTÜRME
-        document.getElementById('s_metin').innerHTML = linkleriDonustur((typeof s === 'object' ? s.soru : s));
-        document.getElementById('nav_geri').disabled = (sIdx === 0);
-        document.getElementById('nav_ileri').style.display = (sIdx === sorular.length - 1) ? "none" : "block";
-        document.getElementById('nav_bitir').style.display = (sIdx === sorular.length - 1) ? "block" : "none";
-        renderInputs(true);
-    }
+            const goster = (aktif || gorme);
 
-    function renderInputs(full) {
-        const cont = document.getElementById('s_inputs');
-        if(full) cont.innerHTML = "";
-        const kayit = cevaplar.find(c => c.soruIndex === sIdx);
-        const satirlar = (kayit && kayit.cevaplar.length > 0) ? kayit.cevaplar : [""];
-        if(full) {
-            satirlar.forEach(v => yeniSatirEkle(v));
-            const ilk = cont.querySelector('textarea'); if(ilk) ilk.focus();
-        } else {
-            const inps = cont.querySelectorAll('textarea');
-            if(inps.length === satirlar.length) {
-                inps.forEach((inp, i) => { if(document.activeElement !== inp) inp.value = satirlar[i]; });
+            document.getElementById('c_baslik').style.display = goster ? "block" : "none";
+            document.getElementById('c_yonerge').style.display = goster ? "block" : "none";
+
+            document.getElementById('btn_basla').style.display = aktif ? "block" : "none";
+            document.getElementById('btn_ozet_ana').style.display = goster ? "block" : "none";
+            document.getElementById('nav_ozet_btn').style.display = goster ? "inline-block" : "none";
+
+            document.getElementById('c_bekle').style.display = (!aktif && !gorme) ? "block" : "none";
+            document.getElementById('c_baslamadi_msg').style.display = (!aktif && !sureBitti && !gorme) ? "block" : "none";
+            document.getElementById('c_sure_bitti_msg').style.display = (sureBitti && !gorme) ? "block" : "none";
+            document.getElementById('c_incele').style.display = (gorme && sureBitti) ? "block" : "none";
+
+            document.getElementById('btn_degerlendirme_ana').style.display = atan.degerl ? "block" : "none";
+            if (document.getElementById('btn_degerlendirme')) document.getElementById('btn_degerlendirme').style.display = atan.degerl ? "block" : "none";
+        }
+
+        function ekranDegis(id) {
+            ['p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
+            document.getElementById(id).style.display = "block";
+            window.scrollTo(0, 0);
+            if (id === 'p_soru') soruYukle();
+        }
+
+        function soruYukle() {
+            const s = sorular[sIdx];
+            document.getElementById('s_sayac').textContent = `SORU ${sIdx + 1} / ${sorular.length}`;
+            // LİNK DÖNÜŞTÜRME
+            document.getElementById('s_metin').innerHTML = linkleriDonustur((typeof s === 'object' ? s.soru : s));
+            document.getElementById('nav_geri').disabled = (sIdx === 0);
+            document.getElementById('nav_ileri').style.display = (sIdx === sorular.length - 1) ? "none" : "block";
+            document.getElementById('nav_bitir').style.display = (sIdx === sorular.length - 1) ? "block" : "none";
+            renderInputs(true);
+        }
+
+        function renderInputs(full) {
+            const cont = document.getElementById('s_inputs');
+            if (full) cont.innerHTML = "";
+            const kayit = cevaplar.find(c => c.soruIndex === sIdx);
+            const satirlar = (kayit && kayit.cevaplar.length > 0) ? kayit.cevaplar : [""];
+            if (full) {
+                satirlar.forEach(v => yeniSatirEkle(v));
+                const ilk = cont.querySelector('textarea'); if (ilk) ilk.focus();
             } else {
-                cont.innerHTML = ""; satirlar.forEach(v => yeniSatirEkle(v));
+                const inps = cont.querySelectorAll('textarea');
+                if (inps.length === satirlar.length) {
+                    inps.forEach((inp, i) => { if (document.activeElement !== inp) inp.value = satirlar[i]; });
+                } else {
+                    cont.innerHTML = ""; satirlar.forEach(v => yeniSatirEkle(v));
+                }
             }
         }
-    }
 
-    function yeniSatirEkle(v) {
-        const div = document.createElement('div'); div.className = "cevap-konteynir";
-        const t = document.createElement('textarea'); t.rows = 2; t.value = v; t.placeholder = "Cevap...";
-        t.onfocus = () => { isTyping = true; document.getElementById('s_durum').textContent = "Yazıyor..."; };
-        t.onblur = () => { isTyping = false; kaydet(); };
-        const sBtn = document.createElement('button'); sBtn.className = "satir-sil"; sBtn.innerHTML = "X";
-        sBtn.onclick = () => { if(confirm("Sil?")) { div.remove(); kaydet(); } };
-        div.appendChild(t); div.appendChild(sBtn);
-        document.getElementById('s_inputs').appendChild(div);
-        if(!v) t.focus();
-    }
-
-    async function kaydet() {
-        if(document.getElementById('p_soru').style.display === "block") {
-            const vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
-            const idx = cevaplar.findIndex(c => c.soruIndex === sIdx);
-            if(idx > -1) cevaplar[idx] = { soruIndex: sIdx, cevaplar: vals }; 
-            else cevaplar.push({ soruIndex: sIdx, cevaplar: vals });
+        function yeniSatirEkle(v) {
+            const div = document.createElement('div'); div.className = "cevap-konteynir";
+            const t = document.createElement('textarea'); t.rows = 2; t.value = v; t.placeholder = "Cevap...";
+            t.onfocus = () => { isTyping = true; document.getElementById('s_durum').textContent = "Yazıyor..."; };
+            t.onblur = () => { isTyping = false; kaydet(); };
+            const sBtn = document.createElement('button'); sBtn.className = "satir-sil"; sBtn.innerHTML = "X";
+            sBtn.onclick = () => { if (confirm("Sil?")) { div.remove(); kaydet(); } };
+            div.appendChild(t); div.appendChild(sBtn);
+            document.getElementById('s_inputs').appendChild(div);
+            if (!v) t.focus();
         }
-        
-        let p;
-        if(atan.yontem === "Grup" && grupUyeleri.length > 0) {
-            p = grupUyeleri.map(u => ({ 
-                ogrenciNo: String(u["Okul Numaranız"]).trim(), 
-                adSoyad: u["Adınız Soyadınız"], 
-                sinif: sess.sinif, 
-                cevaplar: cevaplar, 
-                girisSayisi: girisSayisi, 
-                tarih: new Date().toLocaleString() 
-            }));
-        } else {
-            p = { ogrenciNo: sess.no, adSoyad: sess.ad, sinif: sess.sinif, cevaplar: cevaplar, girisSayisi: girisSayisi, tarih: new Date().toLocaleString() };
+
+        async function kaydet() {
+            if (document.getElementById('p_soru').style.display === "block") {
+                const vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
+                const idx = cevaplar.findIndex(c => c.soruIndex === sIdx);
+                if (idx > -1) cevaplar[idx] = { soruIndex: sIdx, cevaplar: vals };
+                else cevaplar.push({ soruIndex: sIdx, cevaplar: vals });
+            }
+
+            let p;
+            if (atan.yontem === "Grup" && grupUyeleri.length > 0) {
+                // Group members - keep structure
+                p = grupUyeleri.map(u => ({
+                    ogrenciNo: String(u["Okul Numaranız"]).trim(),
+                    adSoyad: u["Adınız Soyadınız"],
+                    sinif: sess.sinif,
+                    cevaplar: cevaplar,
+                    girisSayisi: girisSayisi,
+                    tarih: new Date().toLocaleString()
+                }));
+                // Server needs a way to store multi-user answers?
+                // Actually server.js handles array or object in `kaydet`: `const items = Array.isArray(veri) ? veri : [veri];`
+                // So array is fine!
+            } else {
+                p = { ogrenciNo: sess.no, adSoyad: sess.ad, sinif: sess.sinif, cevaplar: cevaplar, girisSayisi: girisSayisi, tarih: new Date().toLocaleString() };
+            }
+
+            // Use simplified dosyaAdi for SQL backend
+            await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${atan.calisma}`, veri: p }) });
+            document.getElementById('s_durum').textContent = "Buluta Kaydedildi ✔️";
         }
-        
-        await fetch("/kaydet", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ dosyaAdi: `www_${atan.calisma}`, veri: p }) });
-        document.getElementById('s_durum').textContent = "Buluta Kaydedildi ✔️";
-    }
 
-    async function soruGit(n) { await kaydet(); sIdx += n; soruYukle(); }
+        async function soruGit(n) { await kaydet(); sIdx += n; soruYukle(); }
 
-    function ozetCiz() {
-        if(document.getElementById('p_soru').style.display === "block" && atan.yapma) kaydet();
-        ['p_yonerge','p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
-        document.getElementById('p_ozet').style.display = "block";
-        const canEdit = atan && atan.yapma;
-        
-        let h = `<table><thead><tr><th>#</th><th>Soru ve Cevaplar</th>${canEdit ? '<th>İşlem</th>' : ''}</tr></thead><tbody>`;
-        sorular.forEach((s, i) => {
-            const k = cevaplar.find(c => c.soruIndex === i);
-            
-            // LİNK DÖNÜŞTÜRME (ÖZET EKRANI)
-            const cvs = (k && k.cevaplar.length > 0) ? k.cevaplar.map(x => `<span class="cevap-alt">${linkleriDonustur(x)}</span>`).join('') : '<span style="color:red; font-style:italic;">Boş</span>';
-            const soruMetni = (typeof s === 'object' ? s.soru : s);
-            
-            h += `<tr><td>${i+1}</td><td><span class="soru-ust">${linkleriDonustur(soruMetni)}</span>${cvs}</td>
+        function ozetCiz() {
+            if (document.getElementById('p_soru').style.display === "block" && atan.yapma) kaydet();
+            ['p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
+            document.getElementById('p_ozet').style.display = "block";
+            const canEdit = atan && atan.yapma;
+
+            let h = `<table><thead><tr><th>#</th><th>Soru ve Cevaplar</th>${canEdit ? '<th>İşlem</th>' : ''}</tr></thead><tbody>`;
+            sorular.forEach((s, i) => {
+                const k = cevaplar.find(c => c.soruIndex === i);
+
+                // LİNK DÖNÜŞTÜRME (ÖZET EKRANI)
+                const cvs = (k && k.cevaplar.length > 0) ? k.cevaplar.map(x => `<span class="cevap-alt">${linkleriDonustur(x)}</span>`).join('') : '<span style="color:red; font-style:italic;">Boş</span>';
+                const soruMetni = (typeof s === 'object' ? s.soru : s);
+
+                h += `<tr><td>${i + 1}</td><td><span class="soru-ust">${linkleriDonustur(soruMetni)}</span>${cvs}</td>
                 ${canEdit ? `<td><button class="btn-mavi btn-sm" onclick="sIdx=${i};ekranDegis('p_soru')">Düzelt</button> 
                 <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${i})">Sil</button></td>` : ''}</tr>`;
-        });
-        document.getElementById('ozet_tablo_alani').innerHTML = h + "</tbody></table>";
-        document.getElementById('ozet_don_btn').style.display = canEdit ? "block" : "none";
-    }
-    
-    function degerlendirmeyeGec() { window.location.href = `degerlendirme.html?sinif=${sess.sinif}&ogrenci=${sess.no}&calisma=${atan.calisma}`; }
-    async function cevapTemizle(idx) { if(confirm("Sil?")) { const i = cevaplar.findIndex(c => c.soruIndex === idx); if(i > -1) cevaplar[i].cevaplar = []; await kaydet(); ozetCiz(); } }
-    function cikisYap() { if(confirm("Çıkış?")) { localStorage.clear(); location.reload(); } }
-</script>
+            });
+            document.getElementById('ozet_tablo_alani').innerHTML = h + "</tbody></table>";
+            document.getElementById('ozet_don_btn').style.display = canEdit ? "block" : "none";
+        }
+
+        function degerlendirmeyeGec() { window.location.href = `degerlendirme.html?sinif=${sess.sinif}&ogrenci=${sess.no}&calisma=${atan.calisma}`; }
+        async function cevapTemizle(idx) { if (confirm("Sil?")) { const i = cevaplar.findIndex(c => c.soruIndex === idx); if (i > -1) cevaplar[i].cevaplar = []; await kaydet(); ozetCiz(); } }
+        function cikisYap() { if (confirm("Çıkış?")) { localStorage.clear(); location.reload(); } }
+    </script>
 </body>
+
 </html>
