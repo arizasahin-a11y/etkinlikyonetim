@@ -411,12 +411,17 @@
                 const cObj = (State.activeVeri.cevaplar || []).find(c => c.soruIndex === State.sIdx);
                 const liste = cObj ? cObj.cevaplar : [];
                 const puanlar = State.anlikPuanlar[State.sIdx] || [];
+
+                // Değerlendirme bitti mi kontrol et
+                const degerlendirmeBitti = State.activeVeri?.degerlendirme?.bitti === true;
+
                 let h = "";
                 liste.forEach((txt, i) => {
                     const p = Number(puanlar[i]);
+                    const disabled = degerlendirmeBitti ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '';
                     h += `<div class="cevap-item"><div class="cevap-metin">${txt}</div>
-                    <button class="cevap-puan-btn ${p === 1 ? 'btn-dogru-aktif' : ''}" onclick="App.puanla(${i},1)">D</button>
-                    <button class="cevap-puan-btn ${p === 0 ? 'btn-yanlis-aktif' : ''}" onclick="App.puanla(${i},0)">Y</button></div>`;
+                    <button class="cevap-puan-btn ${p === 1 ? 'btn-dogru-aktif' : ''}" onclick="App.puanla(${i},1)" ${disabled}>D</button>
+                    <button class="cevap-puan-btn ${p === 0 ? 'btn-yanlis-aktif' : ''}" onclick="App.puanla(${i},0)" ${disabled}>Y</button></div>`;
                 });
                 document.getElementById('cevap_listesi').innerHTML = h || "<i>Cevap yok.</i>";
 
@@ -425,10 +430,19 @@
                 document.getElementById('btn_ileri').style.display = son ? "none" : "block";
                 document.getElementById('btn_bitir').style.display = son ? "block" : "none";
 
+                // Eğer değerlendirme bittiyse bitir butonunu gizle
+                if (degerlendirmeBitti) {
+                    document.getElementById('btn_bitir').style.display = "none";
+                }
+
                 if (isTeacher) document.getElementById('btn_bitir').textContent = "💾 Sıradaki Öğrenci ❯";
             },
             puanla: async (cIdx, p) => {
-                if (!isTeacher && State.activeVeri?.degerlendirme?.bitti) return;
+                // Değerlendirme bittiyse puanlama yapılamaz (hem öğrenci hem öğretmen)
+                if (State.activeVeri?.degerlendirme?.bitti) {
+                    alert("⚠️ Bu değerlendirme tamamlanmış. Değişiklik yapmak için 'Değerlendirmeyi Sıfırla' butonunu kullanın.");
+                    return;
+                }
 
                 if (!State.anlikPuanlar[State.sIdx]) State.anlikPuanlar[State.sIdx] = [];
                 State.anlikPuanlar[State.sIdx][cIdx] = p;
