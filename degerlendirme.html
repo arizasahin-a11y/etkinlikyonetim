@@ -14,7 +14,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background: white;
             padding: 20px;
@@ -30,97 +30,141 @@
             padding-bottom: 10px;
         }
 
-        .soru-kutu {
-            margin-bottom: 20px;
-            background: #fafafa;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-        }
-
-        .soru-metin {
-            font-weight: bold;
-            color: #1565C0;
-            margin-bottom: 10px;
-            display: block;
-            font-size: 1.1em;
-        }
-
-        .cevap-satir {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+        /* UI FROM index.html */
+        .deg-card {
             background: white;
-            padding: 10px;
+            width: 100%;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: row;
+            height: 500px;
+            border: 1px solid #bbb;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .deg-soru-bolumu {
+            background: #e8f5e9;
+            padding: 20px;
+            border-right: 1px solid #c8e6c9;
+            color: #1b5e20;
+            overflow-y: auto;
+            flex: 0 0 40%;
+            display: flex;
+            flex-direction: column;
+            font-size: 1.1rem;
+        }
+
+        .deg-cevap-bolumu {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+            background: #fff;
+            font-size: 1rem;
+        }
+
+        .deg-cevap-item {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            padding: 12px;
+            background: #fafafa;
             border: 1px solid #eee;
             border-radius: 6px;
-            margin-bottom: 5px;
+            min-height: 60px;
+            cursor: pointer;
         }
 
-        .cevap-icerik {
+        .deg-cevap-metin {
             flex: 1;
-            margin-right: 15px;
-            word-break: break-word;
+            min-height: 40px;
+            padding-right: 70px;
+            word-wrap: break-word;
         }
 
-        .btn-puan {
+        .deg-buton-grubu {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            z-index: 5;
+        }
+
+        .deg-btn-puan {
             width: 32px;
             height: 32px;
             border-radius: 50%;
             border: 1px solid #ccc;
-            font-weight: bold;
+            background: white;
             cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #666;
             transition: 0.2s;
         }
 
-        .dogru {
-            background: white;
-            color: #2e7d32;
+        .deg-dogru.aktif {
+            background: #2e7d32 !important;
+            color: white !important;
             border-color: #2e7d32;
         }
 
-        .yanlis {
-            background: white;
-            color: #c62828;
-            border-color: #c62828;
+        .deg-yanlis.aktif {
+            background: #d32f2f !important;
+            color: white !important;
+            border-color: #d32f2f;
         }
 
-        .dogru.secili {
-            background: #2e7d32;
-            color: white;
+        .deg-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
         }
 
-        .yanlis.secili {
-            background: #c62828;
-            color: white;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
-        }
-
-        .btn-bitir {
-            background: #673AB7;
-            color: white;
+        .action {
+            padding: 10px 20px;
             border: none;
-            padding: 12px 30px;
-            border-radius: 6px;
-            font-size: 16px;
+            border-radius: 4px;
+            color: white;
             cursor: pointer;
             font-weight: bold;
+            font-size: 1rem;
         }
 
-        .btn-bitir:hover {
-            background: #5e35b1;
+        .blue {
+            background-color: #2196F3;
+        }
+
+        .red {
+            background-color: #f44336;
+        }
+
+        .gray {
+            background-color: #9e9e9e;
+        }
+
+        .action:hover {
+            opacity: 0.9;
+        }
+
+        .info-bar {
+            background: #eee;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            color: #333;
         }
 
         /* MEDYA GÖMME STİLLERİ */
         .embedded-wrapper {
             width: 100%;
-            margin: 5px 0;
+            margin: 10px 0;
             border: 1px solid #eee;
             border-radius: 6px;
             padding: 5px;
@@ -128,15 +172,50 @@
         }
 
         .embedded-img {
-            max-height: 200px;
+            max-height: 250px;
             max-width: 100%;
             cursor: pointer;
+            display: block;
+            margin: 0 auto;
         }
 
         .embedded-iframe {
             width: 100%;
             height: 300px;
             border: none;
+        }
+
+        .embed-fallback {
+            text-align: center;
+            font-size: 12px;
+            margin-top: 5px;
+            background: #f1f1f1;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .embed-fallback a {
+            color: #1976D2;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .deg-card {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .deg-soru-bolumu {
+                flex: none;
+                border-right: none;
+                border-bottom: 1px solid #c8e6c9;
+                max-height: 200px;
+            }
+
+            .deg-cevap-bolumu {
+                max-height: 400px;
+            }
         }
     </style>
 </head>
@@ -145,11 +224,31 @@
 
     <div class="container">
         <h2>DEĞERLENDİRME</h2>
-        <div id="bilgi" style="text-align:center; color:#666; margin-bottom:15px; font-weight:bold;">Yükleniyor...</div>
-        <div id="soru_alani"></div>
-        <div class="footer">
-            <button onclick="bitir()" class="btn-bitir">DEĞERLENDİRMEYİ BİTİR</button>
+        <div id="bilgi" class="info-bar">Yükleniyor...</div>
+
+        <div id="anaPanel" style="display:none;">
+            <div class="deg-card">
+                <div class="deg-soru-bolumu">
+                    <div
+                        style="margin-bottom:10px; font-weight:bold; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">
+                        <span id="degSoruNo">1</span>. SORU
+                    </div>
+                    <div id="degSoruMetin"></div>
+                </div>
+                <div class="deg-cevap-bolumu">
+                    <div id="degCevapListesi"></div>
+                </div>
+            </div>
+
+            <div class="deg-controls">
+                <button class="action gray" onclick="nav(-1)">❮ Geri</button>
+                <button class="action blue" id="btnIleri" onclick="nav(1)">İleri ❯</button>
+                <button class="action red" id="btnBitir" onclick="bitir()" style="display:none;">💾 KAYDET VE
+                    BİTİR</button>
+            </div>
         </div>
+
+        <div id="msgPanel" style="text-align:center; padding:20px; display:none;"></div>
     </div>
 
     <script>
@@ -160,20 +259,32 @@
 
         let sorular = [];
         let anlikPuanlar = {};
+        let cevaplarListesi = []; // Öğrencinin cevapları
+        let sIdx = 0;
 
         function linkleriDonustur(text) {
             if (!text) return "";
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             return text.replace(urlRegex, function (url) {
                 const cleanUrl = url.trim();
+                const urlNoParams = cleanUrl.split('?')[0];
+                const ext = urlNoParams.split('.').pop().toLowerCase();
+
                 if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com')) {
-                    let id = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                    if (id) return `<div class="embedded-wrapper"><iframe src="https://drive.google.com/file/d/${id[1]}/preview" class="embedded-iframe"></iframe></div>`;
+                    let id = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                    if (id) {
+                        let embedUrl = `https://drive.google.com/file/d/${id[1]}/preview`;
+                        if (cleanUrl.includes('/document/')) embedUrl = `https://docs.google.com/document/d/${id[1]}/preview`;
+                        else if (cleanUrl.includes('/spreadsheets/')) embedUrl = `https://docs.google.com/spreadsheets/d/${id[1]}/preview`;
+                        else if (cleanUrl.includes('/presentation/')) embedUrl = `https://docs.google.com/presentation/d/${id[1]}/preview`;
+                        return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allow="autoplay"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank">📄 Dosyayı Yeni Sekmede Aç</a></div></div>`;
+                    }
                 }
-                if (cleanUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) return `<img src="${cleanUrl}" class="embedded-img">`;
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return `<img src="${cleanUrl}" class="embedded-img" onclick="window.open(this.src)">`;
                 if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
                     let embedUrl = cleanUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
-                    return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe"></iframe></div>`;
+                    if (embedUrl.includes('&')) embedUrl = embedUrl.split('&')[0];
+                    return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allowfullscreen></iframe></div>`;
                 }
                 return `<a href="${cleanUrl}" target="_blank">${cleanUrl}</a>`;
             });
@@ -192,20 +303,18 @@
                 const dC = await rC.json();
                 const kayit = dC.find(x => String(x.ogrenciNo) === String(OGR_NO));
 
-                if (!kayit) { document.getElementById('soru_alani').innerHTML = "Kayıt bulunamadı."; return; }
+                if (!kayit) { document.getElementById('bilgi').innerHTML = "Kayıt bulunamadı."; return; }
 
-                // 2. Başlık Belirleme (Grup Kontrolü)
+                // 2. Başlık Belirleme
                 let baslik = `${kayit.sinif} - ${kayit.adSoyad || ''} (${OGR_NO})`;
+                if (kayit.degerlendirme && kayit.degerlendirme.bitti) baslik += " - (TAMAMLANDI)";
 
                 try {
-                    // Assignment Config Check
                     const cleanSinif = SINIF.replace(/\s/g, '');
                     const rA = await fetch(`/calismaGetir?isim=qqq${cleanSinif}${CALISMA}`);
                     if (rA.ok) {
                         const dA = await rA.json();
-
                         if (dA.yontem === 'Grup') {
-                            // Fetch Groups
                             const rG = await fetch(`/grupListesiGetir?sinif=${SINIF}`);
                             const groups = await rG.json();
                             const myGroup = groups.find(g => Array.isArray(g) && g.some(s => s && String(s["Okul Numaranız"]) === String(OGR_NO)));
@@ -214,63 +323,84 @@
                                 baslik = `${SINIF} - Grup ${gIdx}`;
                             }
                         } else if (dA.yontem === 'Tek' || !dA.yontem) {
-                            // Individual: Class - No - Name
-                            // kayit.adSoyad might be undefined if not in answer record, 
-                            // typically it's "Class - Name (No)" in old code, user asked for "Class No Name"
                             baslik = `${kayit.sinif} - ${OGR_NO} - ${kayit.adSoyad || ''}`;
                         }
                     }
-                } catch (err) { console.log("Grup kontrol hatası:", err); }
+                } catch (err) { console.log("Kontrol hatası:", err); }
 
                 document.getElementById('bilgi').textContent = baslik;
 
                 anlikPuanlar = kayit.puanlar || {};
-                render(kayit.cevaplar || []);
+                cevaplarListesi = kayit.cevaplar || [];
+
+                if (sorular.length > 0) {
+                    document.getElementById('anaPanel').style.display = "block";
+                    sIdx = 0;
+                    renderSoru();
+                } else {
+                    document.getElementById('msgPanel').innerHTML = "Soru bulunamadı.";
+                    document.getElementById('msgPanel').style.display = "block";
+                }
+
             } catch (e) { console.error(e); alert("Veri yüklenemedi!"); }
         }
 
-        function render(cevapListesi) {
-            const div = document.getElementById('soru_alani');
-            div.innerHTML = "";
+        function renderSoru() {
+            document.getElementById("degSoruNo").textContent = sIdx + 1;
 
-            sorular.forEach((s, sIdx) => {
-                const cObj = cevapListesi.find(c => c.soruIndex === sIdx);
-                const cArr = cObj ? cObj.cevaplar : [];
-                const pArr = anlikPuanlar[sIdx] || [];
+            let soruMetni = typeof sorular[sIdx] === 'object' ? sorular[sIdx].soru : sorular[sIdx];
+            document.getElementById("degSoruMetin").innerHTML = linkleriDonustur(soruMetni);
 
-                let html = `<div class="soru-kutu"><span class="soru-metin">${sIdx + 1}. ${linkleriDonustur(typeof s === 'object' ? s.soru : s)}</span>`;
+            const cObj = cevaplarListesi.find(c => c.soruIndex === sIdx);
+            const cevaplar = cObj ? cObj.cevaplar : [];
+            const puanlar = anlikPuanlar[sIdx] || [];
 
-                if (cArr.length === 0) html += "<div style='color:red; font-style:italic'>Cevap yok.</div>";
-                else {
-                    cArr.forEach((txt, cIdx) => {
-                        const puan = pArr[cIdx];
-                        const dCls = puan === 1 ? 'secili' : '';
-                        const yCls = puan === 0 ? 'secili' : '';
-
-                        html += `<div class="cevap-satir">
-                        <div class="cevap-icerik">${linkleriDonustur(txt)}</div>
-                        <div style="min-width:80px">
-                            <button class="btn-puan dogru ${dCls}" onclick="puanla(${sIdx},${cIdx},1,this)">D</button>
-                            <button class="btn-puan yanlis ${yCls}" onclick="puanla(${sIdx},${cIdx},0,this)">Y</button>
+            let html = "";
+            if (cevaplar.length === 0) {
+                html = "<div style='padding:20px; color:#999; text-align:center; font-style:italic;'>Bu soru için cevap verilmemiş.</div>";
+            } else {
+                cevaplar.forEach((txt, i) => {
+                    if (txt && txt.trim() !== "") {
+                        html += `<div class="deg-cevap-item" ondblclick="hizliGec(${i}, 1)">
+                        <div class="deg-cevap-metin">${linkleriDonustur(txt)}</div>
+                        <div class="deg-buton-grubu">
+                            <button class="deg-btn-puan deg-dogru ${puanlar[i] === 1 ? 'aktif' : ''}" onclick="puanla(${i},1)">D</button>
+                            <button class="deg-btn-puan deg-yanlis ${puanlar[i] === 0 ? 'aktif' : ''}" onclick="puanla(${i},0)">Y</button>
                         </div>
                     </div>`;
-                    });
-                }
-                html += "</div>";
-                div.innerHTML += html;
-            });
+                    }
+                });
+            }
+
+            document.getElementById("degCevapListesi").innerHTML = html;
+
+            const son = sIdx === sorular.length - 1;
+            document.getElementById("btnIleri").style.display = son ? "none" : "inline-block";
+            document.getElementById("btnBitir").style.display = son ? "inline-block" : "none";
         }
 
-        function puanla(sIdx, cIdx, p, btn) {
-            btn.parentElement.querySelectorAll('.btn-puan').forEach(b => b.classList.remove('secili'));
-            btn.classList.add('secili');
+        function puanla(cIdx, p) {
             if (!anlikPuanlar[sIdx]) anlikPuanlar[sIdx] = [];
             anlikPuanlar[sIdx][cIdx] = p;
+            renderSoru(); // Re-render to update classes
+        }
+
+        function hizliGec(cIdx, p) {
+            puanla(cIdx, p);
+            if (sIdx < sorular.length - 1) nav(1);
+        }
+
+        function nav(n) {
+            let next = sIdx + n;
+            if (next < 0) return;
+            if (next >= sorular.length) return;
+            sIdx = next;
+            renderSoru();
         }
 
         async function bitir() {
-            if (!confirm("Bitirmek istiyor musunuz?")) return;
-            const btn = document.querySelector('.btn-bitir');
+            if (!confirm("Değerlendirmeyi bitirip kaydetmek istiyor musunuz?")) return;
+            const btn = document.getElementById('btnBitir');
             btn.disabled = true; btn.textContent = "Kaydediliyor...";
 
             const ps = [];
@@ -293,13 +423,11 @@
 
             const res = await r.json();
             if (res.status === "ok") {
-                alert(`Bitti! Toplam Puan: ${res.toplam}`);
-                // window.location.href = "giris"; // User didn't have this but usually good. User code provided has it.
-                // User code: window.location.href = "giris"; 
+                alert(`Değerlendirme tamamlandı! Toplam Puan: ${res.toplam}`);
                 window.location.href = "giris";
             } else {
-                alert("Hata!");
-                btn.disabled = false;
+                alert("Hata oluştu!");
+                btn.disabled = false; btn.textContent = "💾 KAYDET VE BİTİR";
             }
         }
 
