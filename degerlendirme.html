@@ -203,6 +203,7 @@
                     const rA = await fetch(`/calismaGetir?isim=qqq${cleanSinif}${CALISMA}`);
                     if (rA.ok) {
                         const dA = await rA.json();
+
                         if (dA.yontem === 'Grup') {
                             // Fetch Groups
                             const rG = await fetch(`/grupListesiGetir?sinif=${SINIF}`);
@@ -212,6 +213,11 @@
                                 const gIdx = groups.indexOf(myGroup) + 1;
                                 baslik = `${SINIF} - Grup ${gIdx}`;
                             }
+                        } else if (dA.yontem === 'Tek' || !dA.yontem) {
+                            // Individual: Class - No - Name
+                            // kayit.adSoyad might be undefined if not in answer record, 
+                            // typically it's "Class - Name (No)" in old code, user asked for "Class No Name"
+                            baslik = `${kayit.sinif} - ${OGR_NO} - ${kayit.adSoyad || ''}`;
                         }
                     }
                 } catch (err) { console.log("Grup kontrol hatası:", err); }
