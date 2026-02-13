@@ -1000,8 +1000,27 @@
                         const kayit = cevaplarVerisi.find(x => String(x.ogrenciNo) === no);
                         if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
 
-                        // Cevap olmasa bile listeye ekle
-                        const safeKayit = kayit || { ogrenciNo: no, cevaplar: [], puanlar: {} };
+                        // Robustly handle kayit structure
+                        let safeKayit = { ogrenciNo: no, cevaplar: [], puanlar: {} };
+
+                        if (kayit) {
+                            let cevaplarListesi = [];
+                            if (Array.isArray(kayit)) {
+                                cevaplarListesi = kayit;
+                            } else if (Array.isArray(kayit.cevaplar)) {
+                                cevaplarListesi = kayit.cevaplar;
+                            } else if (kayit.answers && Array.isArray(kayit.answers)) { // Handle raw SQL fallback if any
+                                cevaplarListesi = kayit.answers;
+                            }
+
+                            safeKayit = {
+                                ogrenciNo: no,
+                                cevaplar: cevaplarListesi,
+                                puanlar: kayit.puanlar || {},
+                                degerlendirme: kayit.degerlendirme
+                            };
+                        }
+
                         this.kuyruk.push({ baslik: `${no} - ${ogr["Adınız Soyadınız"]}`, kayit: safeKayit, katilmadi: false, members: [no] });
                     });
                 }
