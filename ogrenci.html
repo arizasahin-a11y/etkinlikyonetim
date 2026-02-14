@@ -730,12 +730,12 @@ Aranan Sınıf: '${sess.sinif}'
             document.getElementById('btn_basla').style.display = aktif ? "block" : "none";
 
             // Soru Görme (Aktif değilse ama izin varsa VEYA ÖĞRENCİNİN CEVABI VARSA)
-            // Fix: User wants to see answers if they exist, even if permission is off.
             const cevapVar = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
             const soruGorebilir = (!aktif && (permSoru || cevapVar));
 
-            document.getElementById('btn_ozet_ana').style.display = soruGorebilir ? "block" : "none";
-            document.getElementById('nav_ozet_btn').style.display = soruGorebilir ? "inline-block" : "none"; // Top right summary button
+            // "Özet" button: Visible if (Read Only Allowed) OR (Study is Active)
+            document.getElementById('nav_ozet_btn').style.display = (soruGorebilir || aktif) ? "inline-block" : "none";
+            document.getElementById('btn_ozet_ana').style.display = (soruGorebilir) ? "block" : "none"; // Main button usually for read-only entry from start page
 
             // Messages
             // Hiçbir izin yoksa BEKLE

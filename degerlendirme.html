@@ -608,8 +608,9 @@
 
                 if (State.activeVeri?.degerlendirme?.bitti) {
                     guncelleToplamPuan();
-                    App.bitisGoster();
-                    return;
+                    // Fix: Do not block view, just render in read-only mode (supported by renderSoru)
+                    // App.bitisGoster(); 
+                    // return;
                 }
 
                 document.getElementById('main_content').style.display = "flex";
