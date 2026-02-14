@@ -580,13 +580,12 @@
                 }
 
                 if (!State.activeVeri) {
-                    if (!State.grupCalismasi) {
-                        State.activeVeri = tum.find(x => String(x.ogrenciNo) === String(State.pOgrenci));
-                        console.log('[DEBUG degerlendirme] Direct match result:', State.activeVeri ? 'FOUND' : 'NOT FOUND');
-                        if (!State.activeVeri && tum.length > 0) {
-                            console.log('[DEBUG degerlendirme] Available ogrenciNo values:', tum.map(x => x.ogrenciNo));
-                            console.log('[DEBUG degerlendirme] Looking for:', State.pOgrenci);
-                        }
+                    // FIX: ALWAYS try direct ogrenciNo match, even in group mode
+                    State.activeVeri = tum.find(x => String(x.ogrenciNo) === String(State.pOgrenci));
+                    console.log('[DEBUG degerlendirme] Direct match result:', State.activeVeri ? 'FOUND' : 'NOT FOUND');
+                    if (!State.activeVeri && tum.length > 0) {
+                        console.log('[DEBUG degerlendirme] Available ogrenciNo values:', tum.map(x => x.ogrenciNo));
+                        console.log('[DEBUG degerlendirme] Looking for:', State.pOgrenci);
                     }
 
                     if (!State.activeVeri) {
