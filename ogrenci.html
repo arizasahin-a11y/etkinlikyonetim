@@ -219,6 +219,56 @@
             cursor: pointer;
         }
 
+        .status-panel {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .status-active {
+            background: #e8f5e9;
+            color: #1b5e20;
+            border-color: #81c784;
+        }
+
+        .status-ended {
+            background: #ffebee;
+            color: #b71c1c;
+            border-color: #ef9a9a;
+        }
+
+        .status-eval {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            border-color: #ce93d8;
+        }
+
+        .status-pending {
+            background: #fff8e1;
+            color: #e65100;
+            border-color: #ffe0b2;
+        }
+
+        .status-none {
+            background: #eceff1;
+            color: #455a64;
+            border-color: #cfd8dc;
+        }
+
+        .status-done {
+            background: #e1f5fe;
+            color: #01579b;
+            border-color: #81d4fa;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -363,6 +413,7 @@
 
             <div id="p_yonerge" style="display:none;">
                 <h3 id="c_baslik" style="color:var(--ana); text-align:center; margin-top:0;"></h3>
+                <div id="c_status_box" style="display:none;"></div>
                 <div id="c_yonerge" class="yonerge-box"></div>
 
                 <div id="c_grup" class="grup-bilgi">
@@ -579,8 +630,18 @@
                 }
 
                 if (!atan) {
-                    ['c_yok'].forEach(id => document.getElementById(id).style.display = "block");
-                    ['btn_basla', 'c_baslik', 'c_yonerge', 'c_grup', 'btn_ozet_ana', 'c_bekle'].forEach(id => document.getElementById(id).style.display = "none");
+                    const statusBox = document.getElementById('c_status_box');
+                    if (statusBox) {
+                        statusBox.style.display = "flex";
+                        statusBox.className = "status-panel status-none";
+                        statusBox.innerHTML = "⚪ AKTİF ÇALIŞMA BULUNMAMAKTADIR";
+                    }
+                    ['btn_basla', 'c_baslik', 'c_yonerge', 'c_grup', 'btn_ozet_ana', 'c_bekle', 'c_yok', 'c_status_box_dummy_hidden'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.style.display = "none";
+                    });
+                    // Except the status box itself which we just showed
+                    if (statusBox) statusBox.style.display = "flex";
                     return;
                 }
                 document.getElementById('c_yok').style.display = "none";
@@ -713,6 +774,7 @@ Aranan Sınıf: '${sess.sinif}'
 
         function durumYonetimi() {
             const hSure = document.getElementById('h_sure');
+            const statusBox = document.getElementById('c_status_box');
             let sureBitti = false;
 
             if (atan.bitis) {
@@ -734,9 +796,7 @@ Aranan Sınıf: '${sess.sinif}'
             const aktif = (atan.yapma && !sureBitti);
 
             // Permissions Logic
-            // If granular permissions exist (are boolean), use them. Otherwise fall back to legacy 'gorme'.
             const hasGranular = (typeof atan.aciklamaIzni === 'boolean' || typeof atan.soruIzni === 'boolean');
-
             const permAciklama = hasGranular ? (atan.aciklamaIzni === true) : (atan.gorme === true);
             const permSoru = hasGranular ? (atan.soruIzni === true) : (atan.gorme === true);
 
@@ -744,32 +804,48 @@ Aranan Sınıf: '${sess.sinif}'
 
             document.getElementById('c_baslik').style.display = goster ? "block" : "none";
             document.getElementById('c_yonerge').style.display = (aktif || permAciklama) ? "block" : "none";
-
             document.getElementById('btn_basla').style.display = aktif ? "block" : "none";
 
-            // Soru Görme (Aktif değilse ama izin varsa VEYA ÖĞRENCİNİN CEVABI VARSA)
+            // Soru Görme
             const cevapVar = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
             const soruGorebilir = (!aktif && (permSoru || cevapVar));
 
-            // "Özet" button: Visible if (Read Only Allowed) OR (Study is Active)
             document.getElementById('nav_ozet_btn').style.display = (soruGorebilir || aktif) ? "inline-block" : "none";
-            document.getElementById('btn_ozet_ana').style.display = (soruGorebilir) ? "block" : "none"; // Main button usually for read-only entry from start page
+            document.getElementById('btn_ozet_ana').style.display = (soruGorebilir) ? "block" : "none";
 
-            // Messages
-            // Hiçbir izin yoksa BEKLE
-            document.getElementById('c_bekle').style.display = (!aktif && !permAciklama && !permSoru && !cevapVar) ? "block" : "none";
-
-            // Sadece Açıklama İzni Varsa (ve soru göremiyorsa)
-            const sadeceAciklama = (!aktif && permAciklama && !soruGorebilir);
-            document.getElementById('c_sadece_aciklama_msg').style.display = sadeceAciklama ? "block" : "none";
-
-            document.getElementById('c_baslamadi_msg').style.display = "none"; // Deprecated or handled by specific messages
-            document.getElementById('c_sure_bitti_msg').style.display = (sureBitti && !permAciklama && !permSoru && !cevapVar) ? "block" : "none";
-
-            // "İnceleyebilirsiniz" mesajı: Soru görebiliyorsa ve aktif değilse
-            document.getElementById('c_incele').style.display = (soruGorebilir) ? "block" : "none";
-
+            // STATUS PANEL LOGIC
             const evaluationFinished = (benimKaydim && benimKaydim.degerlendirme && benimKaydim.degerlendirme.bitti === true);
+
+            if (statusBox) {
+                statusBox.style.display = "flex";
+                statusBox.className = "status-panel"; // Reset
+
+                if (evaluationFinished) {
+                    statusBox.innerHTML = "🏁 BU ÇALIŞMA TAMAMLANDI / BİTTİ";
+                    statusBox.classList.add("status-done");
+                } else if (atan.degerl) {
+                    statusBox.innerHTML = "🟣 DEĞERLENDİRME AŞAMASINDA";
+                    statusBox.classList.add("status-eval");
+                } else if (aktif) {
+                    statusBox.innerHTML = "🟢 ÇALIŞMA DEVAM EDİYOR";
+                    statusBox.classList.add("status-active");
+                } else if (sureBitti) {
+                    statusBox.innerHTML = "🔴 ÇALIŞMA SÜRESİ DOLDU";
+                    statusBox.classList.add("status-ended");
+                } else if (atan.yapma === false && !sureBitti) {
+                    statusBox.innerHTML = "🟡 ÇALIŞMA HENÜZ BAŞLAMADI";
+                    statusBox.classList.add("status-pending");
+                } else {
+                    statusBox.style.display = "none"; // Fallback for undefined states
+                }
+            }
+
+            // Old messages cleanup
+            ['c_bekle', 'c_sure_bitti_msg', 'c_baslamadi_msg', 'c_incele', 'c_sadece_aciklama_msg', 'c_yok'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = "none";
+            });
+
             const degBtnAna = document.getElementById('btn_degerlendirme_ana');
             const degBtnSub = document.getElementById('btn_degerlendirme');
 
