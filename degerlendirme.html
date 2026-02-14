@@ -540,7 +540,7 @@
                     let l = "<strong>GRUP ÜYELERİ:</strong><ul style='margin:8px 0; padding-left:20px; font-size:0.95em; color:#444;'>";
                     State.grupUyeleri.forEach(u => {
                         const isMe = String(u["Okul Numaranız"]).trim() === String(State.pOgrenci).trim();
-                        l += `<li${isMe ? ' style="font-weight:bold; color:var(--ana); padding:2px 0;"' : ' style="padding:2px 0;"'}>${u["Okul Numaranız"]} - ${u["Adınız Soyadınız"]}${isMe ? ' <strong>(Sen)</strong>' : ''}</li>`;
+                        l += `<li${isMe ? ' style="font-weight:bold; color:var(--ana); padding:2px 0;"' : ' style="padding:2px 0;"'}>${u["Okul Numaranız"]} - ${u["Adınız Soyadınız"]}${isMe ? ' <strong>(Siz)</strong>' : ''}</li>`;
                     });
                     infoHtml += l + "</ul>";
                 } else {
