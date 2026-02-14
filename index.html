@@ -1121,7 +1121,26 @@
                     const tumCevaplar = await rW.json();
                     const sinifKaydiVarMi = tumCevaplar.some(x => x.sinif === this.seciliSinif);
                     if (!sinifKaydiVarMi) throw new Error("Sınıf Kaydı Yok");
-                } catch (e) { alert("Şu an bu Çalışmayı Değerlendiremezsiniz (Kayıt yok)."); return; }
+
+                    // CHECK: Hiç cevap var mı?
+                    const buSinifCevaplari = tumCevaplar.filter(x => x.sinif === this.seciliSinif);
+                    const cevapVarMi = buSinifCevaplari.some(x => {
+                        // Check for valid un-evaluated answers or just any answers
+                        // User said: "Hiç cevap yoksa" -> so check if any student has submitted answers
+                        if (x.cevaplar && x.cevaplar.length > 0) return true;
+                        if (x.answers && x.answers.length > 0) return true; // Legacy fallback
+                        return false;
+                    });
+
+                    if (!cevapVarMi) {
+                        alert("Şu an değerlendirme yapamazsınız. Henüz cevaplar alınmamış.");
+                        // Reset selection or UI?
+                        document.getElementById("degSecimPaneli").style.display = "block";
+                        document.getElementById("degerlendirmeContainer").style.display = "none";
+                        return;
+                    }
+
+                } catch (e) { alert("Şu an bu Çalışmayı Değerlendiremezsiniz (Kayıt yok veya Hata)."); return; }
 
                 const qName = "qqq" + this.seciliSinif.replace(/\s/g, '') + this.seciliCalisma;
                 const dQ = await (await fetch(`/calismaGetir?isim=${qName}`)).json();
