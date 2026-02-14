@@ -47,6 +47,13 @@ app.get("/", (req, res) => {
 function dosyaIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ_\- ]/g, "").trim() : ""; }
 function sinifIsmiTemizle(isim) { return isim ? isim.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]/g, "") : ""; }
 
+function logToFile(msg) {
+  const logLine = `[${new Date().toISOString()}] ${msg}\n`;
+  try {
+    require('fs').appendFileSync(require('path').join(__dirname, 'debug_server.log'), logLine);
+  } catch (e) { console.error("Log Error:", e); }
+}
+
 // --- 5. API İŞLEMLERİ (SQL UYARLAMASI) ---
 
 // ... (Other endpoints) ...
@@ -537,10 +544,10 @@ app.post("/kaydet", async (req, res) => {
             // Eğer cevaplar gönderilmişse kullan, yoksa mevcut cevapları koru
             let answersJson = null;
             if (item.cevaplar !== undefined) {
-              console.log(`[www_ Kaydet] Gelen cevaplar (${item.ogrenciNo}):`, item.cevaplar); // DEBUG LOG
+              logToFile(`[SAVE] Received ANSWERS for ${item.ogrenciNo}: Length=${item.cevaplar ? item.cevaplar.length : 'null'}`);
               answersJson = JSON.stringify({ cevaplar: item.cevaplar });
             } else {
-              console.log(`[www_ Kaydet] Cevap yok, sadece puan/degerlendirme (${item.ogrenciNo})`); // DEBUG LOG
+              logToFile(`[SAVE] No ANSWERS payload for ${item.ogrenciNo}. Preserving existing.`);
             }
 
             const scoresJson = JSON.stringify(item.puanlar || {});
@@ -555,6 +562,7 @@ app.post("/kaydet", async (req, res) => {
             if (existingRes.rows.length > 0) {
               // UPDATE - Mevcut kayıt var
               if (answersJson !== null) {
+                logToFile(`[SAVE] Updating DB with NEW ANSWERS for ${item.ogrenciNo}`);
                 // Cevaplar da güncellenecek
                 await query(`
                   UPDATE student_evaluations 
@@ -562,6 +570,7 @@ app.post("/kaydet", async (req, res) => {
                   WHERE study_id = $6 AND student_school_no = $7
                 `, [answersJson, scoresJson, item.girisSayisi || 0, evaluationJson, item.sinif, studyId, String(item.ogrenciNo)]);
               } else {
+                logToFile(`[SAVE] Updating DB (SCORES ONLY) for ${item.ogrenciNo}`);
                 // Sadece puanlar ve değerlendirme güncellenecek, cevaplar korunacak
                 await query(`
                   UPDATE student_evaluations 
@@ -570,6 +579,7 @@ app.post("/kaydet", async (req, res) => {
                 `, [scoresJson, evaluationJson, item.sinif, studyId, String(item.ogrenciNo)]);
               }
             } else {
+              logToFile(`[SAVE] INSERTING NEW RECORD for ${item.ogrenciNo}`);
               // INSERT - Yeni kayıt
               const finalAnswersJson = answersJson || JSON.stringify({ cevaplar: [] });
               await query(`
@@ -718,6 +728,7 @@ app.get("/calismaGetir", async (req, res) => {
       `, [studyId]);
 
       console.log(`[www_ Getir] ${evals.rows.length} kayıt bulundu`);
+      logToFile(`[GET] Fetching ${isim} (Study: ${name}). Found ${evals.rows.length} records in DB.`);
 
       // Map back to legacy format
       const mapped = evals.rows.map(row => {
