@@ -720,7 +720,13 @@ Aranan Sınıf: '${sess.sinif}'
                 if (fark > 0) {
                     hSure.textContent = Math.floor(fark / 60000) + ":" + Math.floor((fark % 60000) / 1000).toString().padStart(2, '0');
                     hSure.parentElement.style.display = "flex";
-                } else { hSure.textContent = "BİTTİ"; sureBitti = true; }
+                } else {
+                    hSure.textContent = "BİTTİ";
+                    sureBitti = true;
+                    hSure.parentElement.style.display = "flex";
+                }
+            } else {
+                hSure.parentElement.style.display = "none";
             }
 
             if ((sureBitti || !atan.yapma) && !otoKayitYapildi) { kaydet(); otoKayitYapildi = true; }

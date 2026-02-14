@@ -997,8 +997,24 @@
             }
         }
         function s3Start(id) {
-            const a = aktifAtamalar.find(x => x.id === id); const s = parseInt(document.getElementById("inp_" + id).value) || 0;
-            if (a && s > 0) { a.sure = s; a.yapma = true; a.bitis = Date.now() + (s * 60 * 1000); s3Upd(id, 'bitis', a.bitis); s3Upd(id, 'yapma', true); s3TabloCiz(); }
+            const a = aktifAtamalar.find(x => x.id === id);
+            if (!a) return;
+            const s = parseInt(document.getElementById("inp_" + id).value);
+            if (isNaN(s)) return;
+
+            if (s > 0) {
+                a.sure = s;
+                a.yapma = true;
+                a.bitis = Date.now() + (s * 60 * 1000);
+            } else {
+                a.sure = 0;
+                a.yapma = false;
+                a.bitis = null;
+                const el = document.getElementById("t_" + id);
+                if (el) el.textContent = "--:--";
+            }
+            s3Upd(id, 'bitis', a.bitis);
+            s3TabloCiz();
         }
         function s3Del(id) { if (confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: id }) }).then(() => s3AtamalariCek()); }
 
