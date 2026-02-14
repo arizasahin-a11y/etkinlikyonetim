@@ -528,7 +528,7 @@
                 if (!user) {
                     const foundNo = list.find(x => String(x["Okul Numaranız"]).trim() === no);
                     if (foundNo) {
-                        alert(`Okul numarası (${no}) bulundu ama telefon eşleşmedi.\nSistemdeki Telefonun sonu: ${String(foundNo["Velinizin telefon numarası"]).replace(/\D/g, '').slice(-4)}`);
+                        alert(`Okul numarası (${no}) bulundu ama telefon eşleşmedi.\nLütfen velinizin telefon numarasının son 4 hanesini doğru girdiğinizden emin olun.`);
                     } else {
                         alert(`Okul numarası (${no}) listede bulunamadı.\n(Listede toplam ${list.length} öğrenci var)`);
                     }
