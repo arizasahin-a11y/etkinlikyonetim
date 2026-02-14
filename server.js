@@ -725,33 +725,45 @@ app.get("/calismaGetir", async (req, res) => {
           return row.answers; // Already legacy object
         }
 
-        // Robust handling for answers
+        // ULTRA-ROBUST ANSWER EXTRACTION
         let cevaplarListesi = [];
         let answersData = row.answers;
+        let extractionMethod = "none";
 
-        // Double check if answersData is a string (double-serialized JSON)
+        // 1. Handle String (Double Serialization)
         if (typeof answersData === 'string') {
-          try { answersData = JSON.parse(answersData); } catch (e) { }
+          try {
+            answersData = JSON.parse(answersData);
+            extractionMethod = "string-parse";
+          } catch (e) { console.error("JSON Parse Error for answers:", e); }
         }
 
+        // 2. Extract Array
         if (answersData) {
           if (Array.isArray(answersData)) {
             cevaplarListesi = answersData;
+            extractionMethod += "->direct-array";
           } else if (answersData.cevaplar && Array.isArray(answersData.cevaplar)) {
             cevaplarListesi = answersData.cevaplar;
+            extractionMethod += "->prop-cevaplar";
           } else if (answersData.answers && Array.isArray(answersData.answers)) {
-            // Fallback for some legacy structures
             cevaplarListesi = answersData.answers;
+            extractionMethod += "->prop-answers";
           } else {
-            console.warn(`[www_ Getir] Beklenmeyen answers formatı (Öğrenci: ${row.student_school_no}):`, typeof answersData);
+            console.warn(`[www_ Getir] Unknown format for ${row.student_school_no}:`, JSON.stringify(answersData));
           }
+        }
+
+        // Debug Log only if we have answers but extraction failed or if we found answers
+        if (cevaplarListesi.length > 0) {
+          // console.log(`[DEBUG] Extracted ${cevaplarListesi.length} answers for ${row.student_school_no} via ${extractionMethod}`);
         }
 
         return {
           ogrenciNo: row.student_school_no,
-          adSoyad: row.student_name, // Added for compatibility
+          adSoyad: row.student_name,
           sinif: row.class_name,
-          cevaplar: cevaplarListesi, // Unwrap safely
+          cevaplar: cevaplarListesi,
           puanlar: row.scores,
           girisSayisi: row.entry_count,
           degerlendirme: row.evaluation

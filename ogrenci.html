@@ -683,7 +683,16 @@ Aranan Sınıf: '${sess.sinif}'
 
                     if (benimKaydim) {
                         // Prevent stale overwrite if recently saved (5s grace period)
-                        if (!isTyping && (Date.now() - lastSaveTime > 5000)) cevaplar = benimKaydim.cevaplar || [];
+                        if (!isTyping && (Date.now() - lastSaveTime > 5000)) {
+                            // Safety: If server returns empty answers but we have local answers, KEEP local.
+                            // Only overwrite if server has actual data.
+                            if (benimKaydim.cevaplar && benimKaydim.cevaplar.length > 0) {
+                                cevaplar = benimKaydim.cevaplar;
+                            } else if (cevaplar.length === 0 && benimKaydim.cevaplar) {
+                                // If we have nothing, accept whatever server has (even empty)
+                                cevaplar = benimKaydim.cevaplar;
+                            }
+                        }
                         girisSayisi = benimKaydim.girisSayisi || 0;
                     }
 
