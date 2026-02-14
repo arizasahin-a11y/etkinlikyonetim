@@ -854,8 +854,14 @@ Aranan Sınıf: '${sess.sinif}'
             // Use simplified dosyaAdi for SQL backend
             const payload = { dosyaAdi: `www_${atan.calisma}`, veri: p };
             console.log('[DEBUG ogrenci kaydet] Saving:', JSON.stringify({ dosyaAdi: payload.dosyaAdi, ogrenciNo: p.ogrenciNo || (p[0] && p[0].ogrenciNo), cevaplarLength: answersPayload ? answersPayload.length : 'undefined(preserved)' }));
-            await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            document.getElementById('s_durum').textContent = "Buluta Kaydedildi ✔️";
+            const saveRes = await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            if (saveRes.ok) {
+                document.getElementById('s_durum').textContent = "Buluta Kaydedildi ✔️";
+            } else {
+                console.error('[DEBUG ogrenci kaydet] SAVE FAILED! Status:', saveRes.status);
+                document.getElementById('s_durum').textContent = "❌ KAYIT HATASI!";
+                document.getElementById('s_durum').style.color = "red";
+            }
             lastSaveTime = Date.now();
         }
 

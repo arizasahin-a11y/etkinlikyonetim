@@ -515,10 +515,13 @@ app.post("/kaydet", async (req, res) => {
         console.log(`[www_ Kaydet] Başlangıç: ${dosyaAdi}, Veri tipi: ${Array.isArray(veri) ? 'Array' : 'Object'}, ${Array.isArray(veri) ? `Kayıt sayısı: ${veri.length}` : `OgrenciNo: ${veri.ogrenciNo}`}`);
 
         const studyName = dosyaAdi.replace("www_", "");
-        const studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
+        let studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
         if (studyRes.rows.length === 0) {
-          console.error(`❌ [www_ Kaydet] Çalışma bulunamadı: ${studyName}`);
-          return res.status(404).send();
+          // AUTO-CREATE study if it doesn't exist (backwards compatibility)
+          console.log(`[www_ Kaydet] Study bulunamadı, otomatik oluşturuluyor: ${studyName}`);
+          logToFile(`[SAVE] Auto-creating study: ${studyName}`);
+          const insertRes = await query("INSERT INTO studies (name) VALUES ($1) RETURNING id", [studyName]);
+          studyRes = { rows: [{ id: insertRes.rows[0].id }] };
         }
         const studyId = studyRes.rows[0].id;
 
@@ -713,7 +716,8 @@ app.get("/calismaGetir", async (req, res) => {
       const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
 
       if (studyRes.rows.length === 0) {
-        console.warn(`⚠️ [www_ Getir] Study bulunamadı: ${name}`);
+        console.warn(`⚠️ [www_ Getir] Study bulunamadı: ${name}. Henüz kayıt yok.`);
+        logToFile(`[GET] Study not found in DB: ${name}. Returning empty.`);
         return res.json([]);
       }
       const studyId = studyRes.rows[0].id;
