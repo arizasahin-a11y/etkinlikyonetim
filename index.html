@@ -1061,13 +1061,15 @@
                 for (let f of atananlar) {
                     const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json", "")}`)).json();
                     if (data.sinif) {
-                        const buSinifinTumCevaplari = wwwData.filter(r => String(r.sinif).trim() === String(data.sinif).trim());
+                        const buSinifinTumCevaplari = wwwData.filter(r => String(r.sinif).trim() === String(data.sinif).trim() && r.ogrenciNo !== "AYARLAR");
                         const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && r.degerlendirme.bitti === true);
 
-                        // Completion Check: compare finished records with total class size from server
-                        let hepsiBittiMi = (data.toplamKatilimci > 0 && buSinifinBitmisCevaplari.length >= data.toplamKatilimci);
+                        // Base completion on actual records count (participants)
+                        const kayitSayisi = buSinifinTumCevaplari.length;
+                        const bitenSayisi = buSinifinBitmisCevaplari.length;
+                        let hepsiBittiMi = (kayitSayisi > 0 && bitenSayisi === kayitSayisi);
 
-                        console.log(`[DEBUG Bitti Kontrol] Sinif: ${data.sinif}, Toplam: ${data.toplamKatilimci}, Bitmis: ${buSinifinBitmisCevaplari.length}, Sonuc: ${hepsiBittiMi}`);
+                        console.log(`[DEBUG Bitti Kontrol] Sinif: ${data.sinif}, Toplam Beklenen: ${data.toplamKatilimci}, Kayitli Katilimci: ${kayitSayisi}, Bitmiş: ${bitenSayisi}, HepsiBitti: ${hepsiBittiMi}`);
 
                         sinifSel.appendChild(new Option(data.sinif + (hepsiBittiMi ? " (Bitti)" : ""), data.sinif));
                     }
