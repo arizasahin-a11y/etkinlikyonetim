@@ -562,12 +562,16 @@ app.post("/kaydet", async (req, res) => {
               logToFile(`[SAVE] No ANSWERS payload for ${studentNo}. Preserving existing.`);
             }
 
-            const scoresJson = JSON.stringify(item.puanlar || {});
-            const evaluationJson = JSON.stringify(item.degerlendirme || {});
+            // Eğer puanlar/değerlendirme gönderilmemişse mevcut olanları koru (NULL göndererek COALESCE kullanacağız)
+            const scoresJson = item.puanlar !== undefined ? JSON.stringify(item.puanlar) : null;
+            const evaluationJson = item.degerlendirme !== undefined ? JSON.stringify(item.degerlendirme) : null;
+
+            if (scoresJson === null) logToFile(`[SAVE] No SCORES payload for ${studentNo}. Preserving existing.`);
+            if (evaluationJson === null) logToFile(`[SAVE] No EVALUATION payload for ${studentNo}. Preserving existing.`);
 
             // Önce mevcut kaydı kontrol et
             const existingRes = await query(
-              "SELECT answers FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
+              "SELECT id FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
               [studyId, studentNo]
             );
 
@@ -575,18 +579,26 @@ app.post("/kaydet", async (req, res) => {
               // UPDATE - Mevcut kayıt var
               if (answersJson !== null) {
                 logToFile(`[SAVE] Updating DB with NEW ANSWERS for ${studentNo}`);
-                // Cevaplar da güncellenecek
+                // Cevaplar da güncellenecek, puanlar/değerlendirme sadece gelmişse ezilecek (COALESCE)
                 await query(`
                   UPDATE student_evaluations 
-                  SET answers = $1::jsonb, scores = $2::jsonb, entry_count = $3, evaluation = $4::jsonb, class_name = $5, last_updated = NOW()
+                  SET answers = $1::jsonb, 
+                      scores = COALESCE($2::jsonb, scores), 
+                      entry_count = $3, 
+                      evaluation = COALESCE($4::jsonb, evaluation), 
+                      class_name = $5, 
+                      last_updated = NOW()
                   WHERE study_id = $6 AND student_school_no = $7
                 `, [answersJson, scoresJson, item.girisSayisi || 0, evaluationJson, item.sinif, studyId, studentNo]);
               } else {
-                logToFile(`[SAVE] Updating DB (SCORES ONLY) for ${studentNo}`);
-                // Sadece puanlar ve değerlendirme güncellenecek, cevaplar korunacak
+                logToFile(`[SAVE] Updating DB (METADATA ONLY) for ${studentNo}`);
+                // Sadece puanlar ve değerlendirme güncellenecek (gelmişse), cevaplar korunacak
                 await query(`
                   UPDATE student_evaluations 
-                  SET scores = $1::jsonb, evaluation = $2::jsonb, class_name = $3, last_updated = NOW()
+                  SET scores = COALESCE($1::jsonb, scores), 
+                      evaluation = COALESCE($2::jsonb, evaluation), 
+                      class_name = $3, 
+                      last_updated = NOW()
                   WHERE study_id = $4 AND student_school_no = $5
                 `, [scoresJson, evaluationJson, item.sinif, studyId, studentNo]);
               }
@@ -594,10 +606,12 @@ app.post("/kaydet", async (req, res) => {
               logToFile(`[SAVE] INSERTING NEW RECORD for ${studentNo}`);
               // INSERT - Yeni kayıt
               const finalAnswersJson = answersJson || JSON.stringify({ cevaplar: [] });
+              const finalScoresJson = scoresJson || JSON.stringify({});
+              const finalEvalJson = evaluationJson || JSON.stringify({ bitti: false });
               await query(`
                 INSERT INTO student_evaluations (study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
                 VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, NOW())
-              `, [studyId, studentNo, item.sinif, finalAnswersJson, scoresJson, item.girisSayisi || 0, evaluationJson]);
+              `, [studyId, studentNo, item.sinif, finalAnswersJson, finalScoresJson, item.girisSayisi || 0, finalEvalJson]);
             }
 
             console.log(`✅ [www_ Kaydet] Öğrenci kaydedildi: ${studentNo}${answersJson === null ? ' (sadece puanlar/değerlendirme)' : ''}`);
