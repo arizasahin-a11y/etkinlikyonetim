@@ -304,7 +304,7 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
 });
 
 // Grupları Kaydet
-app.post("/kaydet", async (req, res) => {
+app.post("/kaydet", async (req, res, next) => {
   try {
     // Case 1: Groups (from index.html)
     if (req.body.sinif && req.body.gruplar) {
@@ -324,6 +324,12 @@ app.post("/kaydet", async (req, res) => {
     // Case 2: Admin File Upload (e.g., studies)
     if (req.body.dosyaAdi && req.body.veri) {
       const { dosyaAdi, veri } = req.body;
+
+      // www_ files are handled by the SECOND /kaydet handler below
+      if (dosyaAdi.startsWith('www_')) {
+        return next(); // Pass to second /kaydet handler
+      }
+
       console.log(`[Admin Upload] ${dosyaAdi}`);
 
       // If it's a study file (starts with qwx or just handled as study)
