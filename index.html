@@ -1136,11 +1136,12 @@
                     });
 
                     if (!cevapVarMi) {
-                        alert("Şu an değerlendirme yapamazsınız. Henüz cevaplar alınmamış.");
-                        // Reset selection or UI?
-                        document.getElementById("degSecimPaneli").style.display = "block";
-                        document.getElementById("degerlendirmeContainer").style.display = "none";
-                        return;
+                        if (!confirm("⚠️ UYARI: Bu sınıf için henüz kaydedilmiş cevap görünmüyor.\n\nEğer öğrenciler cevapları gönderdiyse senkronizasyon tamamlanmamış olabilir.\nYine de değerlendirmeyi başlatmak istiyor musunuz?")) {
+                            // Reset selection or UI?
+                            document.getElementById("degSecimPaneli").style.display = "block";
+                            document.getElementById("degerlendirmeContainer").style.display = "none";
+                            return;
+                        }
                     }
 
                 } catch (e) { alert("Şu an bu Çalışmayı Değerlendiremezsiniz (Kayıt yok veya Hata)."); return; }
