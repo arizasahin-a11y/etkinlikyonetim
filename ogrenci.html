@@ -729,22 +729,27 @@ Aranan Sınıf: '${sess.sinif}'
 
             document.getElementById('btn_basla').style.display = aktif ? "block" : "none";
 
-            // Soru Görme (Aktif değilse ama izin varsa)
-            const soruGorebilir = (!aktif && permSoru);
+            // Soru Görme (Aktif değilse ama izin varsa VEYA ÖĞRENCİNİN CEVABI VARSA)
+            // Fix: User wants to see answers if they exist, even if permission is off.
+            const cevapVar = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
+            const soruGorebilir = (!aktif && (permSoru || cevapVar));
+
             document.getElementById('btn_ozet_ana').style.display = soruGorebilir ? "block" : "none";
-            document.getElementById('nav_ozet_btn').style.display = soruGorebilir ? "inline-block" : "none";
+            document.getElementById('nav_ozet_btn').style.display = soruGorebilir ? "inline-block" : "none"; // Top right summary button
 
             // Messages
             // Hiçbir izin yoksa BEKLE
-            document.getElementById('c_bekle').style.display = (!aktif && !permAciklama && !permSoru) ? "block" : "none";
+            document.getElementById('c_bekle').style.display = (!aktif && !permAciklama && !permSoru && !cevapVar) ? "block" : "none";
 
-            // Sadece Açıklama İzni Varsa
-            const sadeceAciklama = (!aktif && permAciklama && !permSoru);
+            // Sadece Açıklama İzni Varsa (ve soru göremiyorsa)
+            const sadeceAciklama = (!aktif && permAciklama && !soruGorebilir);
             document.getElementById('c_sadece_aciklama_msg').style.display = sadeceAciklama ? "block" : "none";
 
             document.getElementById('c_baslamadi_msg').style.display = "none"; // Deprecated or handled by specific messages
-            document.getElementById('c_sure_bitti_msg').style.display = (sureBitti && !permAciklama && !permSoru) ? "block" : "none";
-            document.getElementById('c_incele').style.display = (permSoru && sureBitti) ? "block" : "none";
+            document.getElementById('c_sure_bitti_msg').style.display = (sureBitti && !permAciklama && !permSoru && !cevapVar) ? "block" : "none";
+
+            // "İnceleyebilirsiniz" mesajı: Soru görebiliyorsa ve aktif değilse
+            document.getElementById('c_incele').style.display = (soruGorebilir) ? "block" : "none";
 
             document.getElementById('btn_degerlendirme_ana').style.display = atan.degerl ? "block" : "none";
             if (document.getElementById('btn_degerlendirme')) document.getElementById('btn_degerlendirme').style.display = atan.degerl ? "block" : "none";
