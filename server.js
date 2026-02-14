@@ -533,6 +533,9 @@ app.post("/kaydet", async (req, res) => {
             // AYARLAR kaydı - JSON.stringify ile kaydet
             const answersJson = JSON.stringify(item);
 
+            // Ensure AYARLAR exists in students table (FK constraint)
+            await query(`INSERT INTO students (school_no, name, class_name) VALUES ('AYARLAR', 'AYARLAR', 'SYSTEM') ON CONFLICT (school_no) DO NOTHING`);
+
             await query(`
                     INSERT INTO student_evaluations (study_id, student_school_no, answers)
                     VALUES ($1, 'AYARLAR', $2::jsonb)
@@ -543,14 +546,25 @@ app.post("/kaydet", async (req, res) => {
 
           } else {
             // Regular student answer - JSONB alanları için JSON.stringify
+            const studentNo = String(item.ogrenciNo).trim();
+
+            // AUTO-CREATE student if not exists (FK constraint requires it)
+            try {
+              await query(
+                `INSERT INTO students (school_no, name, class_name) VALUES ($1, $2, $3) ON CONFLICT (school_no) DO NOTHING`,
+                [studentNo, item.adSoyad || 'Bilinmiyor', item.sinif || '']
+              );
+            } catch (studentErr) {
+              logToFile(`[SAVE] Warning: Could not auto-create student ${studentNo}: ${studentErr.message}`);
+            }
 
             // Eğer cevaplar gönderilmişse kullan, yoksa mevcut cevapları koru
             let answersJson = null;
             if (item.cevaplar !== undefined) {
-              logToFile(`[SAVE] Received ANSWERS for ${item.ogrenciNo}: Length=${item.cevaplar ? item.cevaplar.length : 'null'}`);
+              logToFile(`[SAVE] Received ANSWERS for ${studentNo}: Length=${item.cevaplar ? item.cevaplar.length : 'null'}`);
               answersJson = JSON.stringify({ cevaplar: item.cevaplar });
             } else {
-              logToFile(`[SAVE] No ANSWERS payload for ${item.ogrenciNo}. Preserving existing.`);
+              logToFile(`[SAVE] No ANSWERS payload for ${studentNo}. Preserving existing.`);
             }
 
             const scoresJson = JSON.stringify(item.puanlar || {});
@@ -559,39 +573,39 @@ app.post("/kaydet", async (req, res) => {
             // Önce mevcut kaydı kontrol et
             const existingRes = await query(
               "SELECT answers FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
-              [studyId, String(item.ogrenciNo)]
+              [studyId, studentNo]
             );
 
             if (existingRes.rows.length > 0) {
               // UPDATE - Mevcut kayıt var
               if (answersJson !== null) {
-                logToFile(`[SAVE] Updating DB with NEW ANSWERS for ${item.ogrenciNo}`);
+                logToFile(`[SAVE] Updating DB with NEW ANSWERS for ${studentNo}`);
                 // Cevaplar da güncellenecek
                 await query(`
                   UPDATE student_evaluations 
                   SET answers = $1::jsonb, scores = $2::jsonb, entry_count = $3, evaluation = $4::jsonb, class_name = $5, last_updated = NOW()
                   WHERE study_id = $6 AND student_school_no = $7
-                `, [answersJson, scoresJson, item.girisSayisi || 0, evaluationJson, item.sinif, studyId, String(item.ogrenciNo)]);
+                `, [answersJson, scoresJson, item.girisSayisi || 0, evaluationJson, item.sinif, studyId, studentNo]);
               } else {
-                logToFile(`[SAVE] Updating DB (SCORES ONLY) for ${item.ogrenciNo}`);
+                logToFile(`[SAVE] Updating DB (SCORES ONLY) for ${studentNo}`);
                 // Sadece puanlar ve değerlendirme güncellenecek, cevaplar korunacak
                 await query(`
                   UPDATE student_evaluations 
                   SET scores = $1::jsonb, evaluation = $2::jsonb, class_name = $3, last_updated = NOW()
                   WHERE study_id = $4 AND student_school_no = $5
-                `, [scoresJson, evaluationJson, item.sinif, studyId, String(item.ogrenciNo)]);
+                `, [scoresJson, evaluationJson, item.sinif, studyId, studentNo]);
               }
             } else {
-              logToFile(`[SAVE] INSERTING NEW RECORD for ${item.ogrenciNo}`);
+              logToFile(`[SAVE] INSERTING NEW RECORD for ${studentNo}`);
               // INSERT - Yeni kayıt
               const finalAnswersJson = answersJson || JSON.stringify({ cevaplar: [] });
               await query(`
                 INSERT INTO student_evaluations (study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
                 VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, NOW())
-              `, [studyId, String(item.ogrenciNo), item.sinif, finalAnswersJson, scoresJson, item.girisSayisi || 0, evaluationJson]);
+              `, [studyId, studentNo, item.sinif, finalAnswersJson, scoresJson, item.girisSayisi || 0, evaluationJson]);
             }
 
-            console.log(`✅ [www_ Kaydet] Öğrenci kaydedildi: ${item.ogrenciNo}${answersJson === null ? ' (sadece puanlar/değerlendirme)' : ''}`);
+            console.log(`✅ [www_ Kaydet] Öğrenci kaydedildi: ${studentNo}${answersJson === null ? ' (sadece puanlar/değerlendirme)' : ''}`);
           }
         }
 
