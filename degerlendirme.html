@@ -516,8 +516,15 @@
                             </div>`;
 
                 if (State.grupCalismasi && State.grupUyeleri) {
+                    // Show group number prominently
+                    infoHtml += `<div style="margin-bottom:10px; padding:8px; background:#f0f4ff; border-radius:8px; text-align:center;">
+                        <strong style="font-size:1.2em; color:var(--ana);">${State.grupAdi || 'GRUP'}</strong>
+                    </div>`;
                     let l = "<strong>GRUP ÜYELERİ:</strong><ul style='margin:5px 0; padding-left:20px; font-size:0.9em;'>";
-                    State.grupUyeleri.forEach(u => l += `<li>${u["Okul Numaranız"]} - ${u["Adınız Soyadınız"]}</li>`);
+                    State.grupUyeleri.forEach(u => {
+                        const isMe = String(u["Okul Numaranız"]).trim() === String(State.pOgrenci).trim();
+                        l += `<li${isMe ? ' style="font-weight:bold; color:var(--ana);"' : ''}>${u["Okul Numaranız"]} - ${u["Adınız Soyadınız"]}${isMe ? ' (Sen)' : ''}</li>`;
+                    });
                     infoHtml += l + "</ul>";
                 } else {
                     infoHtml += `<strong>ÖĞRENCİ:</strong><br>${State.activeVeri.ogrenciNo} - ${State.activeVeri.adSoyad}`;
@@ -635,9 +642,12 @@
 
                 if (State.activeVeri?.degerlendirme?.bitti) {
                     guncelleToplamPuan();
-                    // Fix: Do not block view, just render in read-only mode (supported by renderSoru)
-                    // App.bitisGoster(); 
-                    // return;
+                    if (!isTeacher) {
+                        // Student: Block re-evaluation, show result screen
+                        App.bitisGoster();
+                        return;
+                    }
+                    // Teacher: Allow viewing in read-only mode
                 }
 
                 document.getElementById('main_content').style.display = "flex";
