@@ -1062,12 +1062,10 @@
                     const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json", "")}`)).json();
                     if (data.sinif) {
                         const buSinifinTumCevaplari = wwwData.filter(r => r.sinif === data.sinif);
-                        const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && r.degerlendirme.bitti);
+                        const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && r.degerlendirme.bitti === true);
 
-                        // FIX: check if there are any answers first
-                        const cevapVerenSayisi = buSinifinTumCevaplari.filter(r => (r.cevaplar && r.cevaplar.length > 0) || (r.answers && r.answers.length > 0)).length;
-
-                        let hepsiBittiMi = (cevapVerenSayisi > 0 && buSinifinBitmisCevaplari.length === buSinifinTumCevaplari.length);
+                        // Completion Check: compare finished records with total class size from server
+                        let hepsiBittiMi = (data.toplamKatilimci > 0 && buSinifinBitmisCevaplari.length >= data.toplamKatilimci);
 
                         sinifSel.appendChild(new Option(data.sinif + (hepsiBittiMi ? " (Bitti)" : ""), data.sinif));
                     }

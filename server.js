@@ -722,6 +722,15 @@ app.get("/calismaGetir", async (req, res) => {
       });
 
       if (found) {
+        let toplamKatilimci = 0;
+        try {
+          // Calculate total students expected in this class
+          const sRes = await query("SELECT COUNT(*) FROM students WHERE sinif = $1", [found.class_name]);
+          toplamKatilimci = parseInt(sRes.rows[0].count);
+        } catch (err) {
+          console.error(`[GET qqq_] Error counting students for ${found.class_name}:`, err);
+        }
+
         const settings = found.settings || {};
         // Merge with ID and class info for frontend
         res.json({
@@ -729,6 +738,7 @@ app.get("/calismaGetir", async (req, res) => {
           sinif: found.class_name,
           calisma: found.study_name, // prefixed? Legacy: qwxName
           yontem: found.method,
+          toplamKatilimci,
           ...settings
         });
       } else {
