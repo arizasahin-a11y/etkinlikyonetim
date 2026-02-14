@@ -564,17 +564,35 @@
 
                 if (State.grupCalismasi && State.pSinif) {
                     try {
-                        const rG = await fetch(`/grupListesiGetir?sinif=${State.pSinif}`);
+                        const grupUrl = `/grupListesiGetir?sinif=${encodeURIComponent(State.pSinif)}`;
+                        console.log('[DEBUG degerlendirme] Fetching groups from:', grupUrl);
+                        const rG = await fetch(grupUrl);
                         const gruplar = await rG.json();
+                        console.log('[DEBUG degerlendirme] Groups loaded:', Array.isArray(gruplar) ? `${gruplar.length} groups` : 'NOT ARRAY', typeof gruplar);
 
-                        const myGroupIndex = gruplar.findIndex(g => g.some(u => String(u["Okul Numaranız"]) === String(State.pOgrenci)));
+                        if (Array.isArray(gruplar) && gruplar.length > 0) {
+                            const myGroupIndex = gruplar.findIndex(g => Array.isArray(g) && g.some(u => String(u["Okul Numaranız"]).trim() === String(State.pOgrenci).trim()));
+                            console.log('[DEBUG degerlendirme] myGroupIndex:', myGroupIndex, 'for student:', State.pOgrenci);
 
-                        if (myGroupIndex !== -1) {
-                            const myGroup = gruplar[myGroupIndex];
-                            State.grupUyeleri = myGroup;
-                            State.grupAdi = `${myGroupIndex + 1}. GRUP`;
-                            const groupIds = myGroup.map(u => String(u["Okul Numaranız"]));
-                            State.activeVeri = tum.find(x => groupIds.includes(String(x.ogrenciNo)));
+                            if (myGroupIndex !== -1) {
+                                const myGroup = gruplar[myGroupIndex];
+                                State.grupUyeleri = myGroup;
+                                State.grupAdi = `${myGroupIndex + 1}. GRUP`;
+                                const groupIds = myGroup.map(u => String(u["Okul Numaranız"]).trim());
+                                console.log('[DEBUG degerlendirme] Group member IDs:', groupIds);
+
+                                // Try to find ANY group member's record in tum
+                                State.activeVeri = tum.find(x => groupIds.includes(String(x.ogrenciNo).trim()));
+                                console.log('[DEBUG degerlendirme] Group tum match:', State.activeVeri ? 'FOUND' : 'NOT FOUND');
+
+                                // If no group member found in tum, try direct match for this specific student
+                                if (!State.activeVeri) {
+                                    State.activeVeri = tum.find(x => String(x.ogrenciNo).trim() === String(State.pOgrenci).trim());
+                                    console.log('[DEBUG degerlendirme] Direct fallback in group:', State.activeVeri ? 'FOUND' : 'NOT FOUND');
+                                }
+                            }
+                        } else {
+                            console.log('[DEBUG degerlendirme] No groups data returned or empty array');
                         }
                     } catch (e) { console.log("Grup hatası:", e); }
                 }
