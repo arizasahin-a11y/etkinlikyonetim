@@ -899,7 +899,8 @@
                 const div = document.createElement("div"); div.className = "grup";
                 div.innerHTML = `<h3>Grup ${idx + 1}</h3>`;
                 const table = document.createElement("table");
-                const keys = Object.keys(grup[0]).slice(2, 4);
+                // Explicitly select the desired columns
+                const keys = ["Okul Numaranız", "Adınız Soyadınız"];
                 table.innerHTML = `<thead><tr>${keys.map(k => `<th>${k}</th>`).join("")}</tr></thead><tbody>${grup.map(r => `<tr>${keys.map(k => `<td>${r[k] || ""}</td>`).join("")}</tr>`).join("")}</tbody>`;
                 div.appendChild(table); container.appendChild(div);
             });
