@@ -434,6 +434,7 @@
     <script>
         let sess = null, atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false, grupUyeleri = [];
         let otoKayitYapildi = false, girisSayisi = 0, girisIslandi = false;
+        let benimKaydim = null;
         let grupSorgusuYapildi = false;
         let lastSaveTime = 0;
 
@@ -680,7 +681,7 @@ Aranan Sınıf: '${sess.sinif}'
                 if (rC.ok) {
                     const tumCevaplar = await rC.json();
                     console.log('[DEBUG ogrenci veriCek] tumCevaplar count:', tumCevaplar.length, 'for study:', atan.calisma);
-                    const benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
+                    benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
                     console.log('[DEBUG ogrenci veriCek] benimKaydim:', benimKaydim ? `found, cevaplar: ${(benimKaydim.cevaplar || []).length}` : 'NOT FOUND');
 
                     if (benimKaydim) {
@@ -896,7 +897,14 @@ Aranan Sınıf: '${sess.sinif}'
             document.getElementById('p_ozet').style.display = "block";
             const canEdit = atan && atan.yapma;
 
-            let h = `<table><thead><tr><th>#</th><th>Soru ve Cevaplar</th>${canEdit ? '<th>İşlem</th>' : ''}</tr></thead><tbody>`;
+            let h = "";
+            if (benimKaydim && benimKaydim.degerlendirme && benimKaydim.degerlendirme.bitti) {
+                h += `<div style="padding:15px; border-radius:10px; background:#e8f5e9; border:1px solid #c8e6c9; color:#2e7d32; text-align:center; margin-bottom:20px; font-weight:bold; font-size:1.15em; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                        🏆 Bu çalışmadan <span style="font-size:1.3em; margin:0 5px;">${benimKaydim.degerlendirme.toplam}</span> Puan aldınız.
+                      </div>`;
+            }
+
+            h += `<table><thead><tr><th>#</th><th>Soru ve Cevaplar</th>${canEdit ? '<th>İşlem</th>' : ''}</tr></thead><tbody>`;
             sorular.forEach((s, i) => {
                 const k = cevaplar.find(c => c.soruIndex === i);
 
