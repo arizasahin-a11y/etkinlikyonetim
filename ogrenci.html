@@ -896,8 +896,15 @@ Aranan Sınıf: '${sess.sinif}'
             if (btn1) { btn1.disabled = true; btn1.textContent = "Yönlendiriliyor..."; }
             if (btn2) { btn2.disabled = true; btn2.textContent = "Yönlendiriliyor..."; }
 
-            await kaydet();
-            window.location.href = `degerlendirme?sinif=${sess.sinif}&ogrenci=${sess.no}&calisma=${atan.calisma}`;
+            try {
+                await kaydet();
+            } catch (e) {
+                console.error('[DEBUG] kaydet() hatası ama yine de yönlendiriliyor:', e);
+            }
+
+            const url = `degerlendirme?sinif=${encodeURIComponent(sess.sinif)}&ogrenci=${encodeURIComponent(sess.no)}&calisma=${encodeURIComponent(atan.calisma)}`;
+            console.log('[DEBUG] Redirecting to:', url);
+            window.location.href = url;
         }
         async function cevapTemizle(idx) { if (confirm("Sil?")) { const i = cevaplar.findIndex(c => c.soruIndex === idx); if (i > -1) cevaplar[i].cevaplar = []; await kaydet(); ozetCiz(); } }
         function cikisYap() { if (confirm("Çıkış?")) { localStorage.clear(); location.reload(); } }
