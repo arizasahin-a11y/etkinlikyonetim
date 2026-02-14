@@ -908,8 +908,18 @@ Aranan Sınıf: '${sess.sinif}'
             sorular.forEach((s, i) => {
                 const k = cevaplar.find(c => c.soruIndex === i);
 
-                // LİNK DÖNÜŞTÜRME (ÖZET EKRANI)
-                const cvs = (k && k.cevaplar.length > 0) ? k.cevaplar.map(x => `<span class="cevap-alt">${linkleriDonustur(x)}</span>`).join('') : '<span style="color:red; font-style:italic;">Boş</span>';
+                // LİNK DÖNÜŞTÜRME (ÖZET EKRANI) + RENKLENDİRME
+                const puanlarSoru = (benimKaydim && benimKaydim.puanlar) ? benimKaydim.puanlar[i] : null;
+
+                const cvs = (k && k.cevaplar.length > 0) ? k.cevaplar.map((x, j) => {
+                    let s_grade = "";
+                    if (puanlarSoru && (puanlarSoru[j] !== undefined)) {
+                        const p = Number(puanlarSoru[j]);
+                        if (p === 1) s_grade = "background:#e8f5e9; color:#1b5e20; border-color:#81c784;"; // Doğru (Yeşil)
+                        else if (p === 0) s_grade = "background:#ffebee; color:#b71c1c; border-color:#ef9a9a;"; // Yanlış (Kırmızı)
+                    }
+                    return `<span class="cevap-alt" style="${s_grade}">${linkleriDonustur(x)}</span>`;
+                }).join('') : '<span style="color:#999; font-style:italic; font-weight:bold; font-size:1.1em; margin-left:10px;">BOŞ</span>';
                 const soruMetni = (typeof s === 'object' ? s.soru : s);
 
                 h += `<tr><td>${i + 1}</td><td><span class="soru-ust">${linkleriDonustur(soruMetni)}</span>${cvs}</td>
