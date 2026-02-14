@@ -122,8 +122,8 @@
     </div>
 
     <div class="kutu">
-        <h3>📂 Veritabanındaki Dosyalar <button onclick="listele()" class="btn btn-blue"
-                style="float:right">Yenile</button></h3>
+        <h3>📂 Veritabanındaki Dosyalar <button onclick="sunucuyuYenidenBaslat()" class="btn btn-red"
+                style="float:right">Sunucuyu Yeniden Başlat</button></h3>
         <table>
             <thead>
                 <tr>
@@ -238,6 +238,16 @@
                 body: JSON.stringify({ dosyaIsmi: isim, durum: durum })
             });
             listele();
+        }
+        async function sunucuyuYenidenBaslat() {
+            if (!confirm("Sunucu yeniden başlatılacak. Emin misiniz?")) return;
+            try {
+                await fetch('/restart', { method: 'POST' });
+                alert("Sunucu yeniden başlatılıyor... Lütfen 5-10 saniye bekleyip sayfayı yenileyin.");
+                setTimeout(() => location.reload(), 5000);
+            } catch (e) {
+                alert("Hata: " + e.message);
+            }
         }
     </script>
 </body>

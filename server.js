@@ -346,6 +346,25 @@ app.post("/kaydet", async (req, res) => {
   }
 });
 
+
+// SUNUCUYU YENİDEN BAŞLAT
+app.post("/restart", (req, res) => {
+  res.json({ status: "ok", message: "Sunucu yeniden başlatılıyor..." });
+
+  // Spawn a new instance of the server
+  const { spawn } = require("child_process");
+  const subprocess = spawn(process.argv[0], process.argv.slice(1), {
+    detached: true,
+    stdio: "ignore"
+  });
+  subprocess.unref();
+
+  // Kill the current instance
+  setTimeout(() => {
+    process.exit();
+  }, 1000);
+});
+
 app.post("/calismaSil", async (req, res) => {
   try {
     let { calismaIsmi } = req.body;
