@@ -450,10 +450,25 @@
                 guncelleToplamPuan();
                 App.renderSoru();
 
-                await fetch("/puanKaydet", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ dosyaAdi: `www_${State.pCalisma}`, ogrenciNo: State.activeVeri.ogrenciNo, sinif: State.pSinif, soruIndex: State.sIdx, cevapIndex: cIdx, puan: p })
-                });
+                // Determine all target members (group or single)
+                let targetNos = [State.activeVeri.ogrenciNo];
+                if (State.grupCalismasi && State.grupUyeleri) {
+                    targetNos = State.grupUyeleri.map(u => String(u["Okul Numaranız"]).trim());
+                } else if (isTeacher && State.kuyruk.length > 0) {
+                    const currentItem = State.kuyruk[State.kuyrukIdx];
+                    if (currentItem.members && currentItem.members.length > 0) {
+                        targetNos = currentItem.members;
+                    }
+                }
+
+                // Send score to ALL group members in parallel
+                const promises = targetNos.map(no =>
+                    fetch("/puanKaydet", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ dosyaAdi: `www_${State.pCalisma}`, ogrenciNo: no, sinif: State.pSinif, soruIndex: State.sIdx, cevapIndex: cIdx, puan: p })
+                    })
+                );
+                await Promise.all(promises);
             },
             nav: (n) => {
                 let yeni = State.sIdx + n;
