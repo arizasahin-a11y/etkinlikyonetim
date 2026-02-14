@@ -820,6 +820,10 @@ Aranan Sınıf: '${sess.sinif}'
                 else cevaplar.push({ soruIndex: sIdx, cevaplar: vals });
             }
 
+            // Fix: Do NOT send empty array if we have no answers locally.
+            // Sending undefined causes server NOT to update the 'answers' column, preserving existing data.
+            const answersPayload = (cevaplar && cevaplar.length > 0) ? cevaplar : undefined;
+
             let p;
             if (atan.yontem === "Grup" && grupUyeleri.length > 0) {
                 // Group members - keep structure
@@ -827,7 +831,7 @@ Aranan Sınıf: '${sess.sinif}'
                     ogrenciNo: String(u["Okul Numaranız"]).trim(),
                     adSoyad: u["Adınız Soyadınız"],
                     sinif: sess.sinif,
-                    cevaplar: cevaplar,
+                    cevaplar: answersPayload,
                     girisSayisi: girisSayisi,
                     tarih: new Date().toLocaleString()
                 }));
@@ -835,7 +839,14 @@ Aranan Sınıf: '${sess.sinif}'
                 // Actually server.js handles array or object in `kaydet`: `const items = Array.isArray(veri) ? veri : [veri];`
                 // So array is fine!
             } else {
-                p = { ogrenciNo: sess.no, adSoyad: sess.ad, sinif: sess.sinif, cevaplar: cevaplar, girisSayisi: girisSayisi, tarih: new Date().toLocaleString() };
+                p = {
+                    ogrenciNo: sess.no,
+                    adSoyad: sess.ad,
+                    sinif: sess.sinif,
+                    cevaplar: answersPayload,
+                    girisSayisi: girisSayisi,
+                    tarih: new Date().toLocaleString()
+                };
             }
 
             // Use simplified dosyaAdi for SQL backend
