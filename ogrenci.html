@@ -707,9 +707,12 @@ Aranan Sınıf: '${sess.sinif}'
 
             const aktif = (atan.yapma && !sureBitti);
 
-            // Permissions (Legacy: gorme enables both)
-            const permAciklama = (atan.aciklamaIzni === true || atan.gorme === true);
-            const permSoru = (atan.soruIzni === true || atan.gorme === true);
+            // Permissions Logic
+            // If granular permissions exist (are boolean), use them. Otherwise fall back to legacy 'gorme'.
+            const hasGranular = (typeof atan.aciklamaIzni === 'boolean' || typeof atan.soruIzni === 'boolean');
+
+            const permAciklama = hasGranular ? (atan.aciklamaIzni === true) : (atan.gorme === true);
+            const permSoru = hasGranular ? (atan.soruIzni === true) : (atan.gorme === true);
 
             const goster = (aktif || permAciklama || permSoru);
 

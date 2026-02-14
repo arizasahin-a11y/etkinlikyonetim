@@ -970,6 +970,9 @@
             const a = aktifAtamalar.find(x => x.id === id);
             if (a) {
                 a[k] = v;
+                // If setting granular permissions, clear legacy 'gorme' to avoid override
+                if (k === 'aciklamaIzni' || k === 'soruIzni') a.gorme = false;
+
                 try {
                     const res = await fetch("/calismaKaydet", {
                         method: "POST",
