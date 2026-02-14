@@ -725,8 +725,9 @@ app.get("/calismaGetir", async (req, res) => {
         let toplamKatilimci = 0;
         try {
           // Calculate total students expected in this class
-          const sRes = await query("SELECT COUNT(*) FROM students WHERE sinif = $1", [found.class_name]);
+          const sRes = await query("SELECT COUNT(*) FROM students WHERE TRIM(sinif) = TRIM($1)", [found.class_name]);
           toplamKatilimci = parseInt(sRes.rows[0].count);
+          logToFile(`[GET qqq_] Class: ${found.class_name}, toplamKatilimci: ${toplamKatilimci}`);
         } catch (err) {
           console.error(`[GET qqq_] Error counting students for ${found.class_name}:`, err);
         }

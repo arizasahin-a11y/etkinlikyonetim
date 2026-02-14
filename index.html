@@ -1061,11 +1061,13 @@
                 for (let f of atananlar) {
                     const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json", "")}`)).json();
                     if (data.sinif) {
-                        const buSinifinTumCevaplari = wwwData.filter(r => r.sinif === data.sinif);
+                        const buSinifinTumCevaplari = wwwData.filter(r => String(r.sinif).trim() === String(data.sinif).trim());
                         const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && r.degerlendirme.bitti === true);
 
                         // Completion Check: compare finished records with total class size from server
                         let hepsiBittiMi = (data.toplamKatilimci > 0 && buSinifinBitmisCevaplari.length >= data.toplamKatilimci);
+
+                        console.log(`[DEBUG Bitti Kontrol] Sinif: ${data.sinif}, Toplam: ${data.toplamKatilimci}, Bitmis: ${buSinifinBitmisCevaplari.length}, Sonuc: ${hepsiBittiMi}`);
 
                         sinifSel.appendChild(new Option(data.sinif + (hepsiBittiMi ? " (Bitti)" : ""), data.sinif));
                     }
