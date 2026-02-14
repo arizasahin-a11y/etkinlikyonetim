@@ -435,6 +435,7 @@
         let sess = null, atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false, grupUyeleri = [];
         let otoKayitYapildi = false, girisSayisi = 0, girisIslandi = false;
         let grupSorgusuYapildi = false;
+        let lastSaveTime = 0;
 
         // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
         function linkleriDonustur(text) {
@@ -681,7 +682,8 @@ Aranan Sınıf: '${sess.sinif}'
                     const benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
 
                     if (benimKaydim) {
-                        if (!isTyping) cevaplar = benimKaydim.cevaplar || [];
+                        // Prevent stale overwrite if recently saved (5s grace period)
+                        if (!isTyping && (Date.now() - lastSaveTime > 5000)) cevaplar = benimKaydim.cevaplar || [];
                         girisSayisi = benimKaydim.girisSayisi || 0;
                     }
 
@@ -825,6 +827,7 @@ Aranan Sınıf: '${sess.sinif}'
             // Use simplified dosyaAdi for SQL backend
             await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${atan.calisma}`, veri: p }) });
             document.getElementById('s_durum').textContent = "Buluta Kaydedildi ✔️";
+            lastSaveTime = Date.now();
         }
 
         async function soruGit(n) { await kaydet(); sIdx += n; soruYukle(); }
@@ -851,7 +854,16 @@ Aranan Sınıf: '${sess.sinif}'
             document.getElementById('ozet_don_btn').style.display = canEdit ? "block" : "none";
         }
 
-        function degerlendirmeyeGec() { window.location.href = `degerlendirme?sinif=${sess.sinif}&ogrenci=${sess.no}&calisma=${atan.calisma}`; }
+        async function degerlendirmeyeGec() {
+            // Save before navigating to ensure data persistence
+            const btn1 = document.getElementById('btn_degerlendirme');
+            const btn2 = document.getElementById('btn_degerlendirme_ana');
+            if (btn1) { btn1.disabled = true; btn1.textContent = "Yönlendiriliyor..."; }
+            if (btn2) { btn2.disabled = true; btn2.textContent = "Yönlendiriliyor..."; }
+
+            await kaydet();
+            window.location.href = `degerlendirme?sinif=${sess.sinif}&ogrenci=${sess.no}&calisma=${atan.calisma}`;
+        }
         async function cevapTemizle(idx) { if (confirm("Sil?")) { const i = cevaplar.findIndex(c => c.soruIndex === idx); if (i > -1) cevaplar[i].cevaplar = []; await kaydet(); ozetCiz(); } }
         function cikisYap() { if (confirm("Çıkış?")) { localStorage.clear(); location.reload(); } }
     </script>
