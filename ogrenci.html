@@ -857,9 +857,12 @@ Aranan Sınıf: '${sess.sinif}'
             const saveRes = await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
             if (saveRes.ok) {
                 document.getElementById('s_durum').textContent = "Buluta Kaydedildi ✔️";
+                document.getElementById('s_durum').style.color = "";
             } else {
-                console.error('[DEBUG ogrenci kaydet] SAVE FAILED! Status:', saveRes.status);
-                document.getElementById('s_durum').textContent = "❌ KAYIT HATASI!";
+                const errData = await saveRes.json().catch(() => ({}));
+                const errMsg = errData.message || `HTTP ${saveRes.status}`;
+                console.error('[DEBUG ogrenci kaydet] SAVE FAILED!', errMsg);
+                document.getElementById('s_durum').textContent = `❌ HATA: ${errMsg}`;
                 document.getElementById('s_durum').style.color = "red";
             }
             lastSaveTime = Date.now();

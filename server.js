@@ -642,7 +642,11 @@ app.post("/kaydet", async (req, res) => {
           return res.json({ status: "ok" });
         }
       }
-    } catch (e) { console.error(e); return res.status(500).json({ status: "error" }); }
+    } catch (e) {
+      console.error('❌ [KAYDET] SQL HATASI:', e.message);
+      logToFile(`[SAVE ERROR] ${e.message}`);
+      return res.status(500).json({ status: "error", message: e.message });
+    }
   }
   res.status(400).json({ status: "eksik" });
 });
