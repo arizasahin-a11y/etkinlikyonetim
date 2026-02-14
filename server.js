@@ -298,21 +298,48 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
 // Grupları Kaydet
 app.post("/kaydet", async (req, res) => {
   try {
-    const { sinif, gruplar } = req.body;
-    if (!sinif || !gruplar) return res.status(400).json({ status: "hata", message: "Eksik bilgi" });
+    // Case 1: Groups (from index.html)
+    if (req.body.sinif && req.body.gruplar) {
+      const { sinif, gruplar } = req.body;
+      const groupsJson = JSON.stringify(gruplar);
+      await query(`
+                INSERT INTO class_groups (class_name, groups_data)
+                VALUES ($1, $2::jsonb)
+                ON CONFLICT (class_name) 
+                DO UPDATE SET groups_data = $2::jsonb
+            `, [sinif, groupsJson]);
 
-    // JSON.stringify for PostgreSQL JSONB
-    const groupsJson = JSON.stringify(gruplar);
+      console.log(`✅ [Gruplar Kaydet] Sınıf: ${sinif}, Grup Sayısı: ${gruplar.length}`);
+      return res.json({ status: "ok" });
+    }
 
-    await query(`
-            INSERT INTO class_groups (class_name, groups_data)
-            VALUES ($1, $2::jsonb)
-            ON CONFLICT (class_name) 
-            DO UPDATE SET groups_data = $2::jsonb
-        `, [sinif, groupsJson]);
+    // Case 2: Admin File Upload (e.g., studies)
+    if (req.body.dosyaAdi && req.body.veri) {
+      const { dosyaAdi, veri } = req.body;
+      console.log(`[Admin Upload] ${dosyaAdi}`);
 
-    console.log(`✅ [Gruplar Kaydet] Sınıf: ${sinif}, Grup Sayısı: ${gruplar.length}`);
-    res.json({ status: "ok" });
+      // If it's a study file (starts with qwx or just handled as study)
+      // Check if it matches study naming convention? 
+      // Admin usually uploads study files (qwx....json)
+
+      if (dosyaAdi.startsWith('qwx') || dosyaAdi.endsWith('.json')) {
+        const name = dosyaAdi.replace(/^qwx/, "").replace(".json", "");
+        const contentJson = JSON.stringify(veri);
+
+        await query(`
+                INSERT INTO studies (name, content)
+                VALUES ($1, $2::jsonb)
+                ON CONFLICT (name) 
+                DO UPDATE SET content = $2::jsonb
+            `, [name, contentJson]);
+
+        console.log(`✅ [Admin Upload] Study saved/updated: ${name}`);
+        return res.json({ status: "ok" });
+      }
+    }
+
+    return res.status(400).json({ status: "hata", message: "Geçersiz veri veya format." });
+
   } catch (e) {
     console.error("Grup kaydet hatası:", e);
     res.status(500).json({ status: "hata", message: e.message });
