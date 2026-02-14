@@ -954,9 +954,9 @@
             aktifAtamalar.sort((a, b) => a.id.localeCompare(b.id)).forEach(a => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `<td>${a.sinif}</td><td>${a.calisma}</td><td><b>${a.yontem}</b></td>
-                <td style="font-size:0.9em;">
-                    <label><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açıklama</label><br>
-                    <label><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
+                <td style="font-size:0.9em; white-space:nowrap;">
+                    <label style="margin-right:10px; cursor:pointer;"><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açıklama</label>
+                    <label style="cursor:pointer;"><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
                 </td>
                 <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
                 <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>

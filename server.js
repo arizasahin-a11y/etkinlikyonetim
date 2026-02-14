@@ -248,6 +248,8 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
 
       const settings = {
         gorme: assignment.gorme,
+        aciklamaIzni: assignment.aciklamaIzni, // NEW
+        soruIzni: assignment.soruIzni,         // NEW
         yapma: assignment.yapma,
         degerl: assignment.degerl,
         sure: assignment.sure,
