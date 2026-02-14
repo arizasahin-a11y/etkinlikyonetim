@@ -762,8 +762,28 @@ Aranan Sınıf: '${sess.sinif}'
             // "İnceleyebilirsiniz" mesajı: Soru görebiliyorsa ve aktif değilse
             document.getElementById('c_incele').style.display = (soruGorebilir) ? "block" : "none";
 
-            document.getElementById('btn_degerlendirme_ana').style.display = atan.degerl ? "block" : "none";
-            if (document.getElementById('btn_degerlendirme')) document.getElementById('btn_degerlendirme').style.display = atan.degerl ? "block" : "none";
+            const evaluationFinished = (benimKaydim && benimKaydim.degerlendirme && benimKaydim.degerlendirme.bitti === true);
+            const degBtnAna = document.getElementById('btn_degerlendirme_ana');
+            const degBtnSub = document.getElementById('btn_degerlendirme');
+
+            if (degBtnAna) {
+                degBtnAna.style.display = atan.degerl ? "block" : "none";
+                if (evaluationFinished) {
+                    degBtnAna.textContent = "DEĞERLENDİRME TAMAMLANDI ✔️";
+                    degBtnAna.style.background = "#4caf50";
+                } else {
+                    degBtnAna.textContent = "DEĞERLENDİRMEYE GEÇ";
+                    degBtnAna.style.background = "var(--ana)";
+                }
+            }
+            if (degBtnSub) {
+                degBtnSub.style.display = atan.degerl ? "block" : "none";
+                if (evaluationFinished) {
+                    degBtnSub.textContent = "DEĞERLENDİRME TAMAMLANDI ✔️";
+                } else {
+                    degBtnSub.textContent = "DEĞERLENDİRMEYE GEÇ";
+                }
+            }
         }
 
         function ekranDegis(id) {

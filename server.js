@@ -171,7 +171,7 @@ app.post("/puanKaydet", async (req, res) => {
 
 // Değerlendirme Bitir
 app.post("/degerlendirmeBitir", async (req, res) => {
-  const { dosyaAdi, ogrenciNo, sinif } = req.body;
+  const { dosyaAdi, ogrenciNo, sinif, toplam } = req.body;
   const studyName = dosyaAdi.replace("www_", "");
 
   try {
@@ -179,32 +179,21 @@ app.post("/degerlendirmeBitir", async (req, res) => {
     if (studyRes.rows.length === 0) return res.status(404).send();
     const studyId = studyRes.rows[0].id;
 
-    const evalRes = await query(
-      "SELECT scores FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
-      [studyId, String(ogrenciNo)]
-    );
-
-    if (evalRes.rows.length === 0) return res.status(404).send();
-
-    const scores = evalRes.rows[0].scores || {};
-    let toplam = 0;
-    Object.values(scores).forEach((soruDizisi) => {
-      if (Array.isArray(soruDizisi)) {
-        soruDizisi.forEach((p) => { if (p) toplam += parseInt(p); });
-      }
-    });
-
-    const evaluation = { toplam: toplam, bitti: true };
-
-    // JSON.stringify for PostgreSQL JSONB
+    const evaluation = { toplam: toplam || 0, bitti: true };
     const evaluationJson = JSON.stringify(evaluation);
 
-    await query(
-      "UPDATE student_evaluations SET evaluation = $1::jsonb WHERE study_id = $2 AND student_school_no = $3",
-      [evaluationJson, studyId, String(ogrenciNo)]
-    );
+    // AUTO-CREATE student entry if it doesn't exist (UPSERT)
+    // First ensure the student exists in the students table
+    await query(`INSERT INTO students (school_no, name, class_name) VALUES ($1, $2, $3) ON CONFLICT (school_no) DO NOTHING`, [String(ogrenciNo), 'Bilinmiyor', sinif || '']);
 
-    res.json({ status: "ok", toplam });
+    await query(`
+      INSERT INTO student_evaluations (study_id, student_school_no, class_name, evaluation, last_updated)
+      VALUES ($1, $2, $3, $4::jsonb, NOW())
+      ON CONFLICT (study_id, student_school_no) 
+      DO UPDATE SET evaluation = $4::jsonb, last_updated = NOW()
+    `, [studyId, String(ogrenciNo), sinif, evaluationJson]);
+
+    res.json({ status: "ok", toplam: toplam || 0 });
   } catch (e) { console.error(e); res.status(500).send(); }
 });
 
