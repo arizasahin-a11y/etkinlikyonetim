@@ -882,7 +882,16 @@
 
         document.getElementById("sinifSec").onchange = function () {
             secilenSinif = this.value;
-            if (secilenSinif) fetch(secilenSinif + "Grupları.json").then(r => r.json()).then(g => gruplariGoster(g)).catch(() => document.getElementById("tablo").innerHTML = "");
+            if (secilenSinif) {
+                // Use the correct endpoint for DB-backed groups
+                fetch(`/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}`)
+                    .then(r => r.json())
+                    .then(g => {
+                        if (Array.isArray(g) && g.length > 0) gruplariGoster(g);
+                        else document.getElementById("tablo").innerHTML = "";
+                    })
+                    .catch(() => document.getElementById("tablo").innerHTML = "");
+            }
         };
         function gruplariGoster(gruplar) {
             const container = document.getElementById("tablo"); container.innerHTML = "";

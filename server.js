@@ -295,6 +295,30 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
   } catch (err) { console.error(err); res.status(500).json({ status: "error" }); }
 });
 
+// Grupları Kaydet
+app.post("/kaydet", async (req, res) => {
+  try {
+    const { sinif, gruplar } = req.body;
+    if (!sinif || !gruplar) return res.status(400).json({ status: "hata", message: "Eksik bilgi" });
+
+    // JSON.stringify for PostgreSQL JSONB
+    const groupsJson = JSON.stringify(gruplar);
+
+    await query(`
+            INSERT INTO class_groups (class_name, groups_data)
+            VALUES ($1, $2::jsonb)
+            ON CONFLICT (class_name) 
+            DO UPDATE SET groups_data = $2::jsonb
+        `, [sinif, groupsJson]);
+
+    console.log(`✅ [Gruplar Kaydet] Sınıf: ${sinif}, Grup Sayısı: ${gruplar.length}`);
+    res.json({ status: "ok" });
+  } catch (e) {
+    console.error("Grup kaydet hatası:", e);
+    res.status(500).json({ status: "hata", message: e.message });
+  }
+});
+
 app.post("/calismaSil", async (req, res) => {
   try {
     let { calismaIsmi } = req.body;
