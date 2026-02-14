@@ -24,7 +24,8 @@ app.use(express.static(__dirname, { index: false }));
 // --- 3. SAYFA YÖNLENDİRMELERİ ---
 app.get("/21012012", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/giris", (req, res) => res.sendFile(path.join(__dirname, "ogrenci.html")));
-app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "admin.html")));
+// GÜVENLİK: Admin paneli gizli url
+app.get("/727812", (req, res) => res.sendFile(path.join(__dirname, "admin.html")));
 
 // Değerlendirme Sayfası
 app.get("/degerlendirme", (req, res) => {
