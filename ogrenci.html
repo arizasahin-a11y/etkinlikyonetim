@@ -776,7 +776,7 @@ Aranan Sınıf: '${sess.sinif}'
         function renderInputs(full) {
             const cont = document.getElementById('s_inputs');
             if (full) cont.innerHTML = "";
-            const kayit = cevaplar.find(c => c.soruIndex === sIdx);
+            const kayit = cevaplar.find(c => Number(c.soruIndex) === Number(sIdx));
             const satirlar = (kayit && kayit.cevaplar.length > 0) ? kayit.cevaplar : [""];
             if (full) {
                 satirlar.forEach(v => yeniSatirEkle(v));

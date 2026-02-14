@@ -727,13 +727,23 @@ app.get("/calismaGetir", async (req, res) => {
 
         // Robust handling for answers
         let cevaplarListesi = [];
-        if (row.answers) {
-          if (Array.isArray(row.answers)) {
-            cevaplarListesi = row.answers;
-          } else if (row.answers.cevaplar && Array.isArray(row.answers.cevaplar)) {
-            cevaplarListesi = row.answers.cevaplar;
+        let answersData = row.answers;
+
+        // Double check if answersData is a string (double-serialized JSON)
+        if (typeof answersData === 'string') {
+          try { answersData = JSON.parse(answersData); } catch (e) { }
+        }
+
+        if (answersData) {
+          if (Array.isArray(answersData)) {
+            cevaplarListesi = answersData;
+          } else if (answersData.cevaplar && Array.isArray(answersData.cevaplar)) {
+            cevaplarListesi = answersData.cevaplar;
+          } else if (answersData.answers && Array.isArray(answersData.answers)) {
+            // Fallback for some legacy structures
+            cevaplarListesi = answersData.answers;
           } else {
-            console.warn(`[www_ Getir] Beklenmeyen answers formatı (Öğrenci: ${row.student_school_no}):`, typeof row.answers);
+            console.warn(`[www_ Getir] Beklenmeyen answers formatı (Öğrenci: ${row.student_school_no}):`, typeof answersData);
           }
         }
 

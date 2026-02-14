@@ -408,7 +408,8 @@
             renderSoru: () => {
                 document.getElementById('s_no').textContent = State.sIdx + 1;
                 document.getElementById('s_metin').textContent = State.sorular[State.sIdx];
-                const cObj = (State.activeVeri.cevaplar || []).find(c => c.soruIndex === State.sIdx);
+                // Fix: Robust match for soruIndex (string vs number)
+                const cObj = (State.activeVeri.cevaplar || []).find(c => Number(c.soruIndex) === Number(State.sIdx));
                 const liste = cObj ? cObj.cevaplar : [];
                 const puanlar = State.anlikPuanlar[State.sIdx] || [];
 
