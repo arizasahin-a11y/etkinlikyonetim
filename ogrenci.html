@@ -382,6 +382,9 @@
                 <div id="c_incele"
                     style="text-align:center; color:#1976D2; display:none; padding:15px; font-weight:bold; background:#e3f2fd; border-radius:8px; margin-bottom:10px;">
                     ℹ️ Çalışma henüz başlamadı/bitti. Soruları/cevaplarınızı İnceleyebilirsiniz.</div>
+                <div id="c_sadece_aciklama_msg"
+                    style="text-align:center; color:#1976D2; display:none; padding:15px; font-weight:bold; background:#e3f2fd; border-radius:8px; margin-bottom:10px;">
+                    ℹ️ Şu an Sadece açıklamaları okuyabilirsiniz.</div>
                 <div id="c_yok"
                     style="text-align:center; color:#E65100; display:none; padding:15px; font-weight:bold; background:#FFF3E0; border-radius:8px; margin-bottom:10px; border:1px solid #FFE0B2;">
                     ⚠️ Aktif çalışma bulunmamaktadır.</div>
@@ -561,7 +564,7 @@
                 for (const dosya of adaylar) {
                     const r = await fetch(`/calismaGetir?isim=${dosya}`);
                     const veri = await r.json();
-                    if (veri.yapma === true || veri.gorme === true || veri.degerl === true) {
+                    if (veri.yapma === true || veri.gorme === true || veri.degerl === true || veri.aciklamaIzni === true || veri.soruIzni === true) {
                         atan = veri;
                         break;
                     }
@@ -703,21 +706,34 @@ Aranan Sınıf: '${sess.sinif}'
             if ((sureBitti || !atan.yapma) && !otoKayitYapildi) { kaydet(); otoKayitYapildi = true; }
 
             const aktif = (atan.yapma && !sureBitti);
-            const gorme = atan.gorme;
 
-            const goster = (aktif || gorme);
+            // Permissions (Legacy: gorme enables both)
+            const permAciklama = (atan.aciklamaIzni === true || atan.gorme === true);
+            const permSoru = (atan.soruIzni === true || atan.gorme === true);
+
+            const goster = (aktif || permAciklama || permSoru);
 
             document.getElementById('c_baslik').style.display = goster ? "block" : "none";
-            document.getElementById('c_yonerge').style.display = goster ? "block" : "none";
+            document.getElementById('c_yonerge').style.display = (aktif || permAciklama) ? "block" : "none";
 
             document.getElementById('btn_basla').style.display = aktif ? "block" : "none";
-            document.getElementById('btn_ozet_ana').style.display = goster ? "block" : "none";
-            document.getElementById('nav_ozet_btn').style.display = goster ? "inline-block" : "none";
 
-            document.getElementById('c_bekle').style.display = (!aktif && !gorme) ? "block" : "none";
-            document.getElementById('c_baslamadi_msg').style.display = (!aktif && !sureBitti && !gorme) ? "block" : "none";
-            document.getElementById('c_sure_bitti_msg').style.display = (sureBitti && !gorme) ? "block" : "none";
-            document.getElementById('c_incele').style.display = (gorme && sureBitti) ? "block" : "none";
+            // Soru Görme (Aktif değilse ama izin varsa)
+            const soruGorebilir = (!aktif && permSoru);
+            document.getElementById('btn_ozet_ana').style.display = soruGorebilir ? "block" : "none";
+            document.getElementById('nav_ozet_btn').style.display = soruGorebilir ? "inline-block" : "none";
+
+            // Messages
+            // Hiçbir izin yoksa BEKLE
+            document.getElementById('c_bekle').style.display = (!aktif && !permAciklama && !permSoru) ? "block" : "none";
+
+            // Sadece Açıklama İzni Varsa
+            const sadeceAciklama = (!aktif && permAciklama && !permSoru);
+            document.getElementById('c_sadece_aciklama_msg').style.display = sadeceAciklama ? "block" : "none";
+
+            document.getElementById('c_baslamadi_msg').style.display = "none"; // Deprecated or handled by specific messages
+            document.getElementById('c_sure_bitti_msg').style.display = (sureBitti && !permAciklama && !permSoru) ? "block" : "none";
+            document.getElementById('c_incele').style.display = (permSoru && sureBitti) ? "block" : "none";
 
             document.getElementById('btn_degerlendirme_ana').style.display = atan.degerl ? "block" : "none";
             if (document.getElementById('btn_degerlendirme')) document.getElementById('btn_degerlendirme').style.display = atan.degerl ? "block" : "none";

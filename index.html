@@ -945,7 +945,8 @@
             const sn = document.getElementById("s3SinifSec").value, cl = document.getElementById("s3CalismaSec").value, yn = document.getElementById("s3YontemSec").value;
             if (!sn || !cl || !yn) return alert("Eksik seçim!");
             const dId = "qqq" + sn.replace(/\s/g, '') + cl.replace("qwx", "");
-            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, yapma: false, degerl: false, sure: 0, bitis: null };
+            // Initializing new permissions
+            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, aciklamaIzni: false, soruIzni: false, yapma: false, degerl: false, sure: 0, bitis: null };
             fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: dId, sorular: obj }) }).then(() => setTimeout(s3AtamalariCek, 300));
         };
         function s3TabloCiz() {
@@ -953,7 +954,10 @@
             aktifAtamalar.sort((a, b) => a.id.localeCompare(b.id)).forEach(a => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `<td>${a.sinif}</td><td>${a.calisma}</td><td><b>${a.yontem}</b></td>
-                <td><input type="checkbox" ${a.gorme ? 'checked' : ''} onchange="s3Upd('${a.id}','gorme',this.checked)"></td>
+                <td style="font-size:0.9em;">
+                    <label><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açıklama</label><br>
+                    <label><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
+                </td>
                 <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
                 <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>
                 <td><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px;">OK</button></td>
