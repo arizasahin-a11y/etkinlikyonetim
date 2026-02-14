@@ -547,6 +547,8 @@
                 State.sorular = qwxData.sorular || [];
 
                 const tum = await rD.json();
+                console.log('[DEBUG degerlendirme] tum data:', JSON.stringify(tum).substring(0, 500));
+                console.log('[DEBUG degerlendirme] pOgrenci:', State.pOgrenci, 'pCalisma:', State.pCalisma);
                 const db = await rV.json().catch(() => ({}));
 
                 // SQL'den gelen veri zaten doğru formatta
@@ -580,9 +582,15 @@
                 if (!State.activeVeri) {
                     if (!State.grupCalismasi) {
                         State.activeVeri = tum.find(x => String(x.ogrenciNo) === String(State.pOgrenci));
+                        console.log('[DEBUG degerlendirme] Direct match result:', State.activeVeri ? 'FOUND' : 'NOT FOUND');
+                        if (!State.activeVeri && tum.length > 0) {
+                            console.log('[DEBUG degerlendirme] Available ogrenciNo values:', tum.map(x => x.ogrenciNo));
+                            console.log('[DEBUG degerlendirme] Looking for:', State.pOgrenci);
+                        }
                     }
 
                     if (!State.activeVeri) {
+                        console.log('[DEBUG degerlendirme] FALLBACK: Creating empty activeVeri (NO ANSWERS!)');
                         const ogrenciBilgi = tumOgrenciler.find(x => String(x["Okul Numaranız"]) === String(State.pOgrenci));
                         const adSoyad = ogrenciBilgi ? ogrenciBilgi["Adınız Soyadınız"] : "Öğrenci";
 
@@ -590,6 +598,7 @@
                             ogrenciNo: State.pOgrenci,
                             adSoyad: adSoyad,
                             sinif: State.pSinif,
+                            cevaplar: [],
                             puanlar: {},
                             degerlendirme: { bitti: false }
                         };

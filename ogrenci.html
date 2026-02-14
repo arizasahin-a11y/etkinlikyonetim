@@ -679,7 +679,9 @@ Aranan Sınıf: '${sess.sinif}'
                 const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
                 if (rC.ok) {
                     const tumCevaplar = await rC.json();
+                    console.log('[DEBUG ogrenci veriCek] tumCevaplar count:', tumCevaplar.length, 'for study:', atan.calisma);
                     const benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
+                    console.log('[DEBUG ogrenci veriCek] benimKaydim:', benimKaydim ? `found, cevaplar: ${(benimKaydim.cevaplar || []).length}` : 'NOT FOUND');
 
                     if (benimKaydim) {
                         // Prevent stale overwrite if recently saved (5s grace period)
@@ -850,7 +852,9 @@ Aranan Sınıf: '${sess.sinif}'
             }
 
             // Use simplified dosyaAdi for SQL backend
-            await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${atan.calisma}`, veri: p }) });
+            const payload = { dosyaAdi: `www_${atan.calisma}`, veri: p };
+            console.log('[DEBUG ogrenci kaydet] Saving:', JSON.stringify({ dosyaAdi: payload.dosyaAdi, ogrenciNo: p.ogrenciNo || (p[0] && p[0].ogrenciNo), cevaplarLength: answersPayload ? answersPayload.length : 'undefined(preserved)' }));
+            await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
             document.getElementById('s_durum').textContent = "Buluta Kaydedildi ✔️";
             lastSaveTime = Date.now();
         }
