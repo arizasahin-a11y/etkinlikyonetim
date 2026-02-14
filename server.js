@@ -1046,5 +1046,6 @@ async function autoMigrate() {
 // --- SUNUCUYU BAŞLAT ---
 app.listen(PORT, "0.0.0.0", async () => {
   console.log(`Sunucu ${PORT} portunda hazır! (SQL Modu)`);
+  logToFile("SERVER RESTARTED - LOGGING INITIALIZED");
   await autoMigrate();
 });
