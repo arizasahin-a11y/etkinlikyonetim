@@ -246,27 +246,31 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
       if (studyRes.rows.length === 0) return res.status(404).json({ status: "calisma_yok" });
       const studyId = studyRes.rows[0].id;
 
+      console.log(`[calismaKaydet] Request for assignment: ${calismaIsmi}`);
+      console.log(`[calismaKaydet] Setup: aciklama=${assignment.aciklamaIzni}, soru=${assignment.soruIzni}`);
+
       const settings = {
-        gorme: assignment.gorme,
-        aciklamaIzni: assignment.aciklamaIzni, // NEW
-        soruIzni: assignment.soruIzni,         // NEW
-        yapma: assignment.yapma,
-        degerl: assignment.degerl,
-        sure: assignment.sure,
-        bitis: assignment.bitis
+        gorme: assignment.gorme || false,
+        aciklamaIzni: assignment.aciklamaIzni || false, // Explicit false
+        soruIzni: assignment.soruIzni || false,         // Explicit false
+        yapma: assignment.yapma || false,
+        degerl: assignment.degerl || false,
+        sure: assignment.sure || 0,
+        bitis: assignment.bitis || null
       };
 
       // JSON.stringify for PostgreSQL JSONB
       const settingsJson = JSON.stringify(settings);
 
-      await query(`
+      const qRes = await query(`
             INSERT INTO study_assignments (study_id, class_name, method, settings)
             VALUES ($1, $2, $3, $4::jsonb)
             ON CONFLICT (study_id, class_name) 
             DO UPDATE SET method = $3, settings = $4::jsonb
+            RETURNING *
         `, [studyId, assignment.sinif, assignment.yontem, settingsJson]);
 
-      console.log(`✅ [qqq Kaydet] Assignment kaydedildi: ${calismaIsmi}`);
+      console.log(`✅ [qqq Kaydet] DB Update Result ID: ${qRes.rows[0].id}`);
 
     } else {
       // It's a study definition (qwx prefixed in legacy, just name here)
