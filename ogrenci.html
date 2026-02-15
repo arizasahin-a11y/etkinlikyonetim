@@ -736,33 +736,155 @@
                         <div class="accordion-arrow" style="${arrowRot}">▼</div>
                     </div>
                     <div class="accordion-content">
-                        <p style="margin-bottom:15px; color:#555;">İncelemek, soruları görmek veya yanıtlamak için aşağıdaki butonu kullanınız:</p>
-                        <button class="btn-mavi" onclick="calismaSec('${a.id}')" style="width:100%;">
-                            📄 Açıklama ve Soruları Gör / İşlem Yap
-                        </button>
+                        <!-- Content Loads Here -->
                     </div>
                 </div>`;
             });
             container.innerHTML = h;
+
+            // Restore content if open
+            if (openAccordionId) {
+                loadStudyInAccordion(openAccordionId);
+            }
         }
 
-        function accordionToggle(id) {
+        async function accordionToggle(id) {
             const item = document.getElementById(`item_${id}`);
             if (!item) return;
+
             const wasOpen = item.classList.contains('open');
-            // Close others (One open at a time policy, though user said "don't close on refresh", not "allow multiple open")
+
+            // Close others 
             document.querySelectorAll('.accordion-item').forEach(x => {
-                x.classList.remove('open');
-                x.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
+                if (x.id !== `item_${id}`) {
+                    x.classList.remove('open');
+                    x.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
+                }
             });
 
             if (!wasOpen) {
                 item.classList.add('open');
                 item.querySelector('.accordion-arrow').style.transform = "rotate(180deg)";
                 openAccordionId = id;
+                await loadStudyInAccordion(id);
             } else {
+                item.classList.remove('open');
+                item.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
                 openAccordionId = null;
             }
+        }
+
+        async function loadStudyInAccordion(id) {
+            const container = document.querySelector(`#item_${id} .accordion-content`);
+            if (!container) return;
+
+            const a = atanlar.find(x => x.id === id);
+            if (!a) return;
+
+            // Loading state
+            if (container.innerHTML.trim() === "") container.innerHTML = '<div style="padding:10px; color:#666;">Veriler yükleniyor...</div>';
+
+            try {
+                // 1. Fetch Content
+                const rQ = await fetch(`/calismaGetir?isim=qwx${a.calisma}`);
+                const icerik = await rQ.json();
+                const sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
+                const desc = icerik.aciklama || "";
+
+                // 2. Fetch Answers
+                let myAnswers = [];
+                const rA = await fetch(`/calismaGetir?isim=www_${a.calisma}`);
+                if (rA.ok) {
+                    const allAnswers = await rA.json();
+                    const studentRec = allAnswers.find(x => String(x.ogrenciNo) === String(sess.no));
+                    if (studentRec && studentRec.cevaplar) myAnswers = studentRec.cevaplar;
+                }
+
+                // 3. Permission Logic (Legacy)
+                const hasGranular = (typeof a.aciklamaIzni === 'boolean' || typeof a.soruIzni === 'boolean');
+                const permAciklama = hasGranular ? (a.aciklamaIzni === true) : (a.gorme === true);
+                const permSoru = hasGranular ? (a.soruIzni === true) : (a.gorme === true);
+
+                // Active status
+                const isFinished = (a.sure > 0 && a.bitis && (a.bitis - Date.now() <= 0));
+                // Note: a.sure>0 check in simple listing logic usually implies finished if we rely on server 'bitis'. 
+                // But let's trust 'a.yapma' mostly.
+                const isActive = (a.yapma === true);
+
+                let html = "";
+
+                // SECTION: Description
+                if (permAciklama) {
+                    html += `<div style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:15px; border-left:4px solid var(--mavi);">
+                                <h4 style="margin:0 0 5px 0; color:var(--ana);">Açıklama</h4>
+                                <div class="yonerge-box" style="font-size:0.95em;">${linkleriDonustur(desc)}</div>
+                             </div>`;
+                }
+
+                // SECTION: Questions
+                if (permSoru) {
+                    html += `<div style="margin-bottom:15px;">
+                                <h4 style="margin:0 0 10px 0; color:#333;">Sorular</h4>
+                                <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+                                    <thead><tr style="background:#eee;"><th style="padding:5px; border:1px solid #ddd; width:30px;">#</th><th style="padding:5px; border:1px solid #ddd;">Soru / Cevap</th></tr></thead>
+                                    <tbody>`;
+
+                    sorular.forEach((s, i) => {
+                        const sText = (typeof s === 'object') ? s.soru : s;
+                        const ansObj = myAnswers.find(x => Number(x.soruIndex) === i);
+                        let ansHtml = "";
+                        if (ansObj && ansObj.cevaplar && ansObj.cevaplar.length > 0) {
+                            ansHtml = ansObj.cevaplar.map(c => `<div style="color:#2e7d32; margin-top:5px;">• ${linkleriDonustur(c)}</div>`).join('');
+                        } else {
+                            ansHtml = `<div style="color:#999; font-style:italic; margin-top:5px;">(Cevap yok)</div>`;
+                        }
+
+                        html += `<tr>
+                                    <td style="padding:8px; border:1px solid #ddd; text-align:center;">${i + 1}</td>
+                                    <td style="padding:8px; border:1px solid #ddd;">
+                                        <div style="font-weight:600;">${linkleriDonustur(sText)}</div>
+                                        ${ansHtml}
+                                    </td>
+                                  </tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                }
+
+                // SECTION: Action Buttons
+                html += `<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">`;
+
+                if (isActive) {
+                    const btnTxt = (myAnswers.length > 0) ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
+                    // When clicking Start, we go to 'p_soru'. calismaBaslat helper needed or reuse calismaSec.
+                    // We must update global 'atan' and switch screen.
+                    html += `<button class="btn-mavi" onclick="ozelCalismaBaslat('${id}')" style="flex:1;">${btnTxt}</button>`;
+                }
+
+                if (a.degerl) {
+                    html += `<button class="btn-mor" onclick="ozelDegerlendirme('${id}')" style="flex:1;">DEĞERLENDİRME</button>`;
+                }
+
+                html += `</div>`;
+
+                if (html === "") {
+                    html = `<div style="padding:10px; color:#e65100; background:#fff3e0; border-radius:5px;">⚠️ Bu içerik için görüntüleme izniniz bulunmamaktadır.</div>`;
+                }
+
+                container.innerHTML = html;
+
+            } catch (e) {
+                container.innerHTML = `<div style="color:red;">Hata oluştu: ${e.message}</div>`;
+            }
+        }
+
+        async function ozelCalismaBaslat(id) {
+            await calismaSec(id); // Sets globals, fetches details again (cached by browser usually), switches to p_yonerge
+            ekranDegis('p_soru'); // Force switch to questions input
+        }
+
+        async function ozelDegerlendirme(id) {
+            await calismaSec(id);
+            degerlendirmeyeGec();
         }
 
         async function calismaSec(id) {
