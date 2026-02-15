@@ -775,25 +775,34 @@
         }
 
         async function loadStudyInAccordion(id) {
-            const container = document.querySelector(`#item_${id} .accordion-content`);
-            if (!container) return;
+            // Robust selection using getElementById
+            const item = document.getElementById(`item_${id}`);
+            if (!item) { console.warn(`Item item_${id} not found`); return; }
+
+            const container = item.querySelector('.accordion-content');
+            if (!container) { console.warn(`Content container for item_${id} not found`); return; }
 
             const a = atanlar.find(x => x.id === id);
-            if (!a) return;
+            if (!a) { console.error(`Study with id ${id} not found in atanlar`); return; }
 
             // Loading state
-            if (container.innerHTML.trim() === "") container.innerHTML = '<div style="padding:10px; color:#666;">Veriler yükleniyor...</div>';
+            if (container.innerHTML.trim() === "" || container.innerHTML.includes("<!--")) {
+                container.innerHTML = '<div style="padding:10px; color:#666;">Veriler yükleniyor...</div>';
+            }
 
             try {
                 // 1. Fetch Content
-                const rQ = await fetch(`/calismaGetir?isim=qwx${a.calisma}`);
+                // Use encodeURIComponent for safety
+                const rQ = await fetch(`/calismaGetir?isim=qwx${encodeURIComponent(a.calisma)}`);
+                if (!rQ.ok) throw new Error("Soru dosyası bulunamadı");
+
                 const icerik = await rQ.json();
                 const sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
                 const desc = icerik.aciklama || "";
 
                 // 2. Fetch Answers
                 let myAnswers = [];
-                const rA = await fetch(`/calismaGetir?isim=www_${a.calisma}`);
+                const rA = await fetch(`/calismaGetir?isim=www_${encodeURIComponent(a.calisma)}`);
                 if (rA.ok) {
                     const allAnswers = await rA.json();
                     const studentRec = allAnswers.find(x => String(x.ogrenciNo) === String(sess.no));
@@ -807,8 +816,6 @@
 
                 // Active status
                 const isFinished = (a.sure > 0 && a.bitis && (a.bitis - Date.now() <= 0));
-                // Note: a.sure>0 check in simple listing logic usually implies finished if we rely on server 'bitis'. 
-                // But let's trust 'a.yapma' mostly.
                 const isActive = (a.yapma === true);
 
                 let html = "";
@@ -957,6 +964,14 @@
                     const r = await fetch(`/calismaGetir?isim=${dosya}`);
                     const veri = await r.json();
                     if (veri.yapma === true || veri.gorme === true || veri.degerl === true || veri.aciklamaIzni === true || veri.soruIzni === true) {
+                        // FIX: Ensure ID exists and is safe for HTML IDs
+                        if (!veri.id) {
+                            // Create a safe ID from filename (remove spaces, dots, special chars)
+                            veri.id = dosya.replace(/[^a-zA-Z0-9]/g, '_');
+                        }
+                        // Also store original filename for fetching
+                        veri.dosyaIsmi = dosya;
+
                         yeniAtanlar.push(veri);
                     }
                 }
