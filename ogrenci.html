@@ -405,6 +405,28 @@
             border-bottom: 1px solid #d1c4e9;
         }
 
+        /* STATUS COLORS */
+        .status-header-active {
+            background: #e8f5e9 !important;
+            border-left: 5px solid #2e7d32;
+        }
+
+        .status-header-wait {
+            background: #fff3e0 !important;
+            border-left: 5px solid #e65100;
+        }
+
+        .status-header-closed {
+            background: #ffebee !important;
+            border-left: 5px solid #c62828;
+        }
+
+        .accordion-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.05rem;
+        }
+
         .accordion-title {
             font-weight: bold;
             color: #333;
@@ -480,7 +502,9 @@
     <div class="header">
         <div id="h_ad" class="header-left">Giriş Gerekli</div>
         <h1>Öğrenci Paneli</h1>
-        <div class="header-nav" id="h_nav" style="display:none;">
+        <div class="header-nav" id="h_nav" style="display:none; align-items:center;">
+            <div style="display:none; margin-right:15px; background:rgba(255,255,255,0.2); padding:5px 10px; border-radius:5px;"
+                id="h_sure_panel"><span id="h_sure" style="font-weight:bold;"></span></div>
             <button onclick="cikisYap()" class="nav-btn-small" style="border-color:#ff8a80;">Çıkış</button>
         </div>
     </div>
@@ -720,8 +744,21 @@
                     }
                 }
 
-                atanlar = yeniAtanlar;
-                listeCiz();
+                // Avoid re-render if data identical
+                if (JSON.stringify(yeniAtanlar) !== JSON.stringify(atanlar)) {
+                    atanlar = yeniAtanlar;
+                    listeCiz();
+                } else {
+                    // Check persistent open state
+                    if (openAccordionId) {
+                        const el = document.getElementById(`item_${openAccordionId}`);
+                        if (el && !el.classList.contains('open')) {
+                            el.classList.add('open');
+                            const arrow = el.querySelector('.accordion-arrow');
+                            if (arrow) arrow.style.transform = "rotate(180deg)";
+                        }
+                    }
+                }
 
                 if (atan) {
                     const current = atanlar.find(a => a.id === atan.id);
@@ -741,33 +778,64 @@
 
             let h = "";
             atanlar.forEach((a) => {
-                let status = "Beklemede";
-                let statusCls = "status-waiting";
-                if (a.yapma) { status = "Aktif"; statusCls = "status-active"; }
-                else if (a.degerl || a.soruIzni || a.aciklamaIzni) { status = "İncelenebilir"; statusCls = "status-active"; }
-                else if (a.sure > 0) { status = "Tamamlandı / Kapalı"; statusCls = "status-closed"; }
+                let statusText = "Beklemede";
+                let headerClass = "status-header-wait";
+
+                if (a.yapma) {
+                    statusText = "DEVAM EDİYOR";
+                    headerClass = "status-header-active";
+                }
+                else if (a.sure > 0) {
+                    statusText = "BİTTİ / KAPANDI";
+                    headerClass = "status-header-closed";
+                }
+                else if (a.aciklamaIzni || a.soruIzni) {
+                    statusText = "İNCELEME";
+                    headerClass = "status-header-wait";
+                }
+
+                const isOpen = (openAccordionId === a.id) ? "open" : "";
+                const arrowRot = (openAccordionId === a.id) ? "transform:rotate(180deg);" : "";
 
                 h += `
-                <div class="accordion-item" id="item_${a.id}">
-                    <div class="accordion-header" onclick="accordionToggle('${a.id}')">
+                <div class="accordion-item ${isOpen}" id="item_${a.id}">
+                    <div class="accordion-header ${headerClass}" onclick="accordionToggle('${a.id}')">
                         <div>
                             <div class="accordion-title">${a.calisma}</div>
-                            <div class="status-badge ${statusCls}">${status}</div>
+                            <div style="font-size:0.8rem; opacity:0.8;">${statusText}</div>
                         </div>
-                        <div class="accordion-arrow">▼</div>
+                        <div class="accordion-arrow" style="${arrowRot}">▼</div>
                     </div>
                     <div class="accordion-content">
-                        <p style="margin:0 0 10px 0; color:#666; font-size:0.9em;">İncelemek için tıklayınız.</p>
-                        <button class="btn-incele" onclick="calismaSec('${a.id}')">Açıklama ve soruları görmek için tıklayınız</button>
+                        <p style="margin:0 0 15px 0; color:#333; font-weight:bold;">İncelemek için aşağıdaki butonu kullanınız:</p>
+                        <button class="btn-incele" onclick="calismaSec('${a.id}')">
+                           📄 Açıklama ve Soruları Gör / İşlem Yap
+                        </button>
                     </div>
                 </div>`;
             });
             container.innerHTML = h;
         }
 
+        let openAccordionId = null;
+
         function accordionToggle(id) {
-            const el = document.getElementById(`item_${id}`);
-            if (el) el.classList.toggle('open');
+            const item = document.getElementById(`item_${id}`);
+            if (!item) return;
+            const wasOpen = item.classList.contains('open');
+            // Close all
+            document.querySelectorAll('.accordion-item').forEach(x => {
+                x.classList.remove('open');
+                x.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
+            });
+            // Toggle clicked
+            if (!wasOpen) {
+                item.classList.add('open');
+                item.querySelector('.accordion-arrow').style.transform = "rotate(180deg)";
+                openAccordionId = id;
+            } else {
+                openAccordionId = null;
+            }
         }
 
         async function calismaSec(id) {
@@ -784,6 +852,29 @@
                     if (benimKaydim) { cevaplar = benimKaydim.cevaplar || []; girisSayisi = benimKaydim.girisSayisi || 0; }
                     else { cevaplar = []; girisSayisi = 0; }
                 }
+
+                // Group Logic Fetch
+                if (atan.yontem === "Grup") {
+                    try {
+                        const rG = await fetch(`/grupListesiGetir?isim=${encodeURIComponent(atan.calisma)}`);
+                        if (rG.ok) {
+                            grupUyeleri = await rG.json();
+                            window.cachedGrupAd = `GRUP ÇALIŞMASI (${grupUyeleri.length} Kişi)`;
+                            // Update UI immediately if possible
+                            const el = document.getElementById('grup_baslik_metni');
+                            if (el) el.textContent = window.cachedGrupAd;
+
+                            // Build member list
+                            let gh = "";
+                            grupUyeleri.forEach(u => { gh += `<li>${u["Adınız Soyadınız"]} (${u["Okul Numaranız"]})</li>`; });
+                            document.getElementById('g_liste').innerHTML = gh;
+                            document.getElementById('c_grup').style.display = "block";
+                        }
+                    } catch (e) { console.error("Grup verisi alınamadı", e); }
+                } else {
+                    document.getElementById('c_grup').style.display = "none";
+                    window.cachedGrupAd = null;
+                }
                 const desc = icerik.aciklama || "";
                 document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
                 document.getElementById('c_baslik').textContent = atan.calisma;
@@ -796,12 +887,27 @@
             const hSure = document.getElementById('h_sure');
             let sureBitti = false;
 
-            if (atan.bitis) {
+            const panel = document.getElementById('h_sure_panel') || hSure.parentElement;
+            if (atan && atan.bitis) {
                 const fark = atan.bitis - Date.now();
                 if (fark > 0) {
                     hSure.textContent = Math.floor(fark / 60000) + ":" + Math.floor((fark % 60000) / 1000).toString().padStart(2, '0');
-                    hSure.parentElement.style.display = "flex";
+                    panel.style.display = "block";
                 } else { hSure.textContent = "BİTTİ"; sureBitti = true; }
+            } else {
+                if (atan && atan.yapma) {
+                    hSure.textContent = "SÜRESİZ";
+                    panel.style.display = "block";
+                } else {
+                    panel.style.display = "none";
+                }
+            }
+
+            // Group Name support
+            if (atan && atan.yontem === "Grup" && window.cachedGrupAd) {
+                document.getElementById('h_ad').textContent = window.cachedGrupAd;
+            } else if (sess && (!atan || atan.yontem !== "Grup")) {
+                document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
             }
 
             if ((sureBitti || !atan.yapma) && !otoKayitYapildi) { kaydet(); otoKayitYapildi = true; }
