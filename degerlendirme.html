@@ -509,31 +509,58 @@
                     location.reload();
                 }
             },
-            bitisGoster: async () => {
-                const detayDiv = document.getElementById('sonuc_detay');
-                let infoHtml = `<div style="margin-bottom:10px; border-bottom:1px solid #ddd; padding-bottom:5px;">
-                                <strong>SINIF:</strong> ${State.pSinif || 'Belirsiz'}
-                            </div>`;
+            bitisGoster: () => {
+                document.getElementById('main_content').style.display = "none";
+                document.getElementById('controls_area').style.display = "none";
+                const res = document.getElementById("sonuc_ekrani");
+                res.style.display = "block";
+                res.innerHTML = `
+                    <div style="background:#e8f5e9; border:2px solid #a5d6a7; border-radius:12px; padding:25px; text-align:center; color:#2e7d32; margin-bottom:20px; box-shadow:0 4px 10px rgba(46,125,50,0.1);">
+                        <div style="font-size:2.5em; margin-bottom:10px;">🎉</div>
+                        <h2 style="margin:0; font-size:1.8em;">BU ÇALIŞMA BİTTİ</h2>
+                        <p style="margin:5px 0 0 0; opacity:0.8; font-weight:bold;">Değerlendirme sonucun ve puanın aşağıdadır.</p>
+                    </div>
+                `;
 
+                let infoHtml = "";
                 if (State.grupCalismasi && State.grupUyeleri) {
-                    // Show group number prominently
-                    infoHtml += `<div style="margin-bottom:10px; padding:8px; background:#f0f4ff; border-radius:8px; text-align:center;">
-                        <strong style="font-size:1.2em; color:var(--ana);">${State.grupAdi || 'GRUP'}</strong>
+                    // Group view
+                    infoHtml += `<div style="padding:15px; background:#fff8e1; border:1px solid #ffecb3; border-radius:10px; margin-bottom:20px; border-left:6px solid #ffc107;">
+                        <span style="color:#e65100; font-weight:bold; font-size:0.9em; display:block; margin-bottom:4px;">GRUP ÇALIŞMASI</span>
+                        <strong style="font-size:1.2em; color:#333;">SINIF: ${State.activeVeri.sinif} - ${State.grupAdi}</strong>
                     </div>`;
-                    let l = "<strong>GRUP ÜYELERİ:</strong><ul style='margin:5px 0; padding-left:20px; font-size:0.9em;'>";
+
+                    let l = "<strong>GRUP ÜYELERİ:</strong><ul style='margin:10px 0; padding-left:22px; font-size:1.05em; line-height:1.7;'>";
                     State.grupUyeleri.forEach(u => {
                         const isMe = String(u["Okul Numaranız"]).trim() === String(State.pOgrenci).trim();
-                        l += `<li${isMe ? ' style="font-weight:bold; color:var(--ana);"' : ''}>${u["Okul Numaranız"]} - ${u["Adınız Soyadınız"]}${isMe ? ' (Sen)' : ''}</li>`;
+                        l += `<li${isMe ? ' style="font-weight:bold; color:var(--ana);"' : ''}>${u["Okul Numaranız"]} - ${u["Adınız Soyadınız"]}${isMe ? ' (Siz)' : ''}</li>`;
                     });
                     infoHtml += l + "</ul>";
                 } else {
-                    infoHtml += `<strong>ÖĞRENCİ:</strong><br>${State.activeVeri.ogrenciNo} - ${State.activeVeri.adSoyad}`;
+                    infoHtml += `<div style="padding:15px; background:#f9f9f9; border-radius:10px; margin-bottom:20px;">
+                            <strong>ÖĞRENCİ:</strong><br><span style="font-size:1.1em; font-weight:bold;">${State.activeVeri.ogrenciNo} - ${State.activeVeri.adSoyad}</span>
+                        </div>`;
                 }
 
-                detayDiv.innerHTML = infoHtml;
-                document.getElementById('main_content').style.display = "none";
-                document.getElementById('controls_area').style.display = "none";
-                document.getElementById('sonuc_ekrani').style.display = "block";
+                const det = document.createElement("div");
+                det.className = "bitis-panel";
+                det.innerHTML = infoHtml + `
+                    <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee; text-align:center;">
+                        <div style="font-size:0.9em; color:#666;">TOPLAM PUAN</div>
+                        <div id="bitis_puan" style="font-size:3em; font-weight:bold; color:var(--ana); line-height:1;">0</div>
+                    </div>
+                `;
+                res.appendChild(det);
+
+                const pEl = document.getElementById("bitis_puan");
+                if (pEl) {
+                    let toplam = 0;
+                    Object.values(State.activeVeri.puanlar || {}).forEach(arr => {
+                        if (Array.isArray(arr)) arr.forEach(p => { if (Number(p) === 1) toplam++; });
+                    });
+                    pEl.textContent = toplam;
+                    document.getElementById('sonuc_puan_goster').textContent = toplam;
+                }
             }
         };
 

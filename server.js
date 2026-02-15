@@ -584,31 +584,53 @@ app.post("/kaydet", async (req, res) => {
 
             if (existingRes.rows.length > 0) {
               // UPDATE - Mevcut kayıt var
+              let updateFields = [];
+              let updateParams = [];
+              let pIdx = 1;
+
               if (answersJson !== null) {
-                logToFile(`[SAVE] Updating DB with NEW ANSWERS for ${studentNo}`);
-                // Cevaplar da güncellenecek
-                await query(`
-                  UPDATE student_evaluations 
-                  SET answers = $1::jsonb, scores = $2::jsonb, entry_count = $3, evaluation = $4::jsonb, class_name = $5, last_updated = NOW()
-                  WHERE study_id = $6 AND student_school_no = $7
-                `, [answersJson, scoresJson, item.girisSayisi || 0, evaluationJson, item.sinif, studyId, studentNo]);
-              } else {
-                logToFile(`[SAVE] Updating DB (SCORES ONLY) for ${studentNo}`);
-                // Sadece puanlar ve değerlendirme güncellenecek, cevaplar korunacak
-                await query(`
-                  UPDATE student_evaluations 
-                  SET scores = $1::jsonb, evaluation = $2::jsonb, class_name = $3, last_updated = NOW()
-                  WHERE study_id = $4 AND student_school_no = $5
-                `, [scoresJson, evaluationJson, item.sinif, studyId, studentNo]);
+                updateFields.push(`answers = $${pIdx++}::jsonb`);
+                updateParams.push(answersJson);
+              }
+
+              if (item.puanlar !== undefined) {
+                updateFields.push(`scores = $${pIdx++}::jsonb`);
+                updateParams.push(JSON.stringify(item.puanlar));
+              }
+
+              if (item.degerlendirme !== undefined) {
+                updateFields.push(`evaluation = $${pIdx++}::jsonb`);
+                updateParams.push(JSON.stringify(item.degerlendirme));
+              }
+
+              if (item.girisSayisi !== undefined) {
+                updateFields.push(`entry_count = $${pIdx++}`);
+                updateParams.push(item.girisSayisi);
+              }
+
+              if (item.sinif) {
+                updateFields.push(`class_name = $${pIdx++}`);
+                updateParams.push(item.sinif);
+              }
+
+              if (updateFields.length > 0) {
+                updateFields.push(`last_updated = NOW()`);
+                const queryText = `UPDATE student_evaluations SET ${updateFields.join(", ")} WHERE study_id = $${pIdx++} AND student_school_no = $${pIdx++}`;
+                updateParams.push(studyId, studentNo);
+                await query(queryText, updateParams);
+                logToFile(`[SAVE] Updated student_evaluations for ${studentNo}. Fields: ${updateFields.join(", ")}`);
               }
             } else {
               logToFile(`[SAVE] INSERTING NEW RECORD for ${studentNo}`);
               // INSERT - Yeni kayıt
               const finalAnswersJson = answersJson || JSON.stringify({ cevaplar: [] });
+              const finalScoresJson = JSON.stringify(item.puanlar || {});
+              const finalEvalJson = JSON.stringify(item.degerlendirme || { bitti: false });
+
               await query(`
                 INSERT INTO student_evaluations (study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
                 VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, NOW())
-              `, [studyId, studentNo, item.sinif, finalAnswersJson, scoresJson, item.girisSayisi || 0, evaluationJson]);
+              `, [studyId, studentNo, item.sinif || '', finalAnswersJson, finalScoresJson, item.girisSayisi || 0, finalEvalJson]);
             }
 
             console.log(`✅ [www_ Kaydet] Öğrenci kaydedildi: ${studentNo}${answersJson === null ? ' (sadece puanlar/değerlendirme)' : ''}`);
