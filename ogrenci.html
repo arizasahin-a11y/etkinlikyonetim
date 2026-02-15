@@ -452,7 +452,7 @@
             </div>
 
             <div id="p_ozet" style="display:none;">
-                <h3 style="text-align:center; color:var(--ana); margin-top:0;">Cevap Özetiniz</h3>
+                <h3 style="text-align:center; color:var(--ana); margin-top:0;">Çalışma Özetiniz</h3>
                 <div id="ozet_tablo_alani"></div>
                 <button id="btn_degerlendirme" onclick="degerlendirmeyeGec()" class="btn-mor"
                     style="margin-top:20px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
@@ -961,13 +961,18 @@ Aranan Sınıf: '${sess.sinif}'
             if (btn1) { btn1.disabled = true; btn1.textContent = "Yönlendiriliyor..."; }
             if (btn2) { btn2.disabled = true; btn2.textContent = "Yönlendiriliyor..."; }
 
+            const url = `degerlendirme?sinif=${encodeURIComponent(sess.sinif)}&ogrenci=${encodeURIComponent(sess.no)}&calisma=${encodeURIComponent(atan.calisma)}`;
+
             try {
-                await kaydet();
+                // Timeout logic: wait at most 1.5 seconds for the save to complete
+                await Promise.race([
+                    kaydet(),
+                    new Promise(resolve => setTimeout(resolve, 1500))
+                ]);
             } catch (e) {
                 console.error('[DEBUG] kaydet() hatası ama yine de yönlendiriliyor:', e);
             }
 
-            const url = `degerlendirme?sinif=${encodeURIComponent(sess.sinif)}&ogrenci=${encodeURIComponent(sess.no)}&calisma=${encodeURIComponent(atan.calisma)}`;
             console.log('[DEBUG] Redirecting to:', url);
             window.location.href = url;
         }
