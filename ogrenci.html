@@ -369,114 +369,6 @@
             text-decoration: none;
             font-weight: bold;
         }
-
-        .accordion-item {
-            border: 1px solid #eee;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            overflow: hidden;
-            background: white;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .accordion-header {
-            padding: 15px;
-            background: #f8f9fa;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 500;
-            color: #333;
-            user-select: none;
-        }
-
-        .accordion-header:hover {
-            background: #f1f3f5;
-        }
-
-        /* New Styles */
-        .accordion-item.open .accordion-content {
-            display: block;
-        }
-
-        .accordion-arrow {
-            transition: transform 0.3s ease;
-        }
-
-        .accordion-item.open .accordion-arrow {
-            transform: rotate(180deg);
-        }
-
-        .badge-status {
-            display: inline-block;
-            padding: 3px 8px;
-            font-size: 0.75rem;
-            border-radius: 12px;
-            margin-left: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .bs-active {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .bs-wait {
-            background: #fff3e0;
-            color: #e65100;
-        }
-
-        .bs-done {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .accordion-content {
-            display: none;
-            padding: 15px;
-            border-top: 1px solid #eee;
-            background: #fff;
-        }
-
-        .accordion-item.open .accordion-content {
-            display: block;
-        }
-
-        .accordion-arrow {
-            transition: transform 0.3s ease;
-        }
-
-        .accordion-item.open .accordion-arrow {
-            transform: rotate(180deg);
-        }
-
-        /* Status Badges for Accordion */
-        .badge-status {
-            display: inline-block;
-            padding: 3px 8px;
-            font-size: 0.75rem;
-            border-radius: 12px;
-            margin-left: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .bs-active {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .bs-wait {
-            background: #fff3e0;
-            color: #e65100;
-        }
-
-        .bs-done {
-            background: #ffebee;
-            color: #c62828;
-        }
     </style>
 </head>
 
@@ -560,7 +452,7 @@
             </div>
 
             <div id="p_ozet" style="display:none;">
-                <h3 style="text-align:center; color:var(--ana); margin-top:0;">Çalışma Özetiniz</h3>
+                <h3 style="text-align:center; color:var(--ana); margin-top:0;">Cevap Özetiniz</h3>
                 <div id="ozet_tablo_alani"></div>
                 <button id="btn_degerlendirme" onclick="degerlendirmeyeGec()" class="btn-mor"
                     style="margin-top:20px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
@@ -697,258 +589,9 @@
             document.getElementById('p_giris').style.display = "none";
             document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
             document.getElementById('h_nav').style.display = "flex";
-            ekranDegis('p_liste');
+            ekranDegis('p_yonerge');
             veriCek();
-            setInterval(veriCek, 10000);
-        }
-
-        let atanlar = [];
-        let openAccordionId = null;
-
-        function listeCiz() {
-            const container = document.getElementById('accordion_liste');
-            const yokMsg = document.getElementById('c_yok');
-            if (atanlar.length === 0) {
-                container.innerHTML = "";
-                if (yokMsg) yokMsg.style.display = "block";
-                return;
-            }
-            if (yokMsg) yokMsg.style.display = "none";
-
-            let h = "";
-            atanlar.forEach((a) => {
-                let status = "Beklemede";
-                let badgeClass = "bs-wait";
-
-                if (a.yapma) { status = "AKTİF"; badgeClass = "bs-active"; }
-                else if (a.sure > 0) { status = "BİTTİ"; badgeClass = "bs-done"; }
-
-                const isOpen = (openAccordionId === a.id) ? "open" : "";
-                const arrowRot = (openAccordionId === a.id) ? "transform:rotate(180deg);" : "";
-
-                h += `
-                <div class="accordion-item ${isOpen}" id="item_${a.id}">
-                    <div class="accordion-header" onclick="accordionToggle('${a.id}')">
-                        <div style="display:flex; align-items:center;">
-                            <span style="font-weight:600;">${a.calisma}</span>
-                            <span class="badge-status ${badgeClass}">${status}</span>
-                        </div>
-                        <div class="accordion-arrow" style="${arrowRot}">▼</div>
-                    </div>
-                    <div class="accordion-content">
-                        <!-- Content Loads Here -->
-                    </div>
-                </div>`;
-            });
-            container.innerHTML = h;
-
-            // Restore content if open
-            if (openAccordionId) {
-                loadStudyInAccordion(openAccordionId);
-            }
-        }
-
-        async function accordionToggle(id) {
-            const item = document.getElementById(`item_${id}`);
-            if (!item) return;
-
-            const wasOpen = item.classList.contains('open');
-
-            // Close others 
-            document.querySelectorAll('.accordion-item').forEach(x => {
-                if (x.id !== `item_${id}`) {
-                    x.classList.remove('open');
-                    x.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
-                }
-            });
-
-            if (!wasOpen) {
-                item.classList.add('open');
-                item.querySelector('.accordion-arrow').style.transform = "rotate(180deg)";
-                openAccordionId = id;
-                await loadStudyInAccordion(id);
-            } else {
-                item.classList.remove('open');
-                item.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
-                openAccordionId = null;
-            }
-        }
-
-        async function loadStudyInAccordion(id) {
-            // Robust selection using getElementById
-            const item = document.getElementById(`item_${id}`);
-            if (!item) { console.warn(`Item item_${id} not found`); return; }
-
-            const container = item.querySelector('.accordion-content');
-            if (!container) { console.warn(`Content container for item_${id} not found`); return; }
-
-            const a = atanlar.find(x => x.id === id);
-            if (!a) { console.error(`Study with id ${id} not found in atanlar`); return; }
-
-            // Loading state
-            if (container.innerHTML.trim() === "" || container.innerHTML.includes("<!--")) {
-                container.innerHTML = '<div style="padding:10px; color:#666;">Veriler yükleniyor...</div>';
-            }
-
-            try {
-                // 1. Fetch Content
-                // Use encodeURIComponent for safety
-                const rQ = await fetch(`/calismaGetir?isim=qwx${encodeURIComponent(a.calisma)}`);
-                if (!rQ.ok) throw new Error("Soru dosyası bulunamadı");
-
-                const icerik = await rQ.json();
-                const sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
-                const desc = icerik.aciklama || "";
-
-                // 2. Fetch Answers
-                let myAnswers = [];
-                const rA = await fetch(`/calismaGetir?isim=www_${encodeURIComponent(a.calisma)}`);
-                if (rA.ok) {
-                    const allAnswers = await rA.json();
-                    const studentRec = allAnswers.find(x => String(x.ogrenciNo) === String(sess.no));
-                    if (studentRec && studentRec.cevaplar) myAnswers = studentRec.cevaplar;
-                }
-
-                // 3. Permission Logic (Legacy)
-                const hasGranular = (typeof a.aciklamaIzni === 'boolean' || typeof a.soruIzni === 'boolean');
-                const permAciklama = hasGranular ? (a.aciklamaIzni === true) : (a.gorme === true);
-                const permSoru = hasGranular ? (a.soruIzni === true) : (a.gorme === true);
-
-                // Active status
-                const isFinished = (a.sure > 0 && a.bitis && (a.bitis - Date.now() <= 0));
-                const isActive = (a.yapma === true);
-
-                let html = "";
-
-                // SECTION: Description
-                if (permAciklama) {
-                    html += `<div style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:15px; border-left:4px solid var(--mavi);">
-                                <h4 style="margin:0 0 5px 0; color:var(--ana);">Açıklama</h4>
-                                <div class="yonerge-box" style="font-size:0.95em;">${linkleriDonustur(desc)}</div>
-                             </div>`;
-                }
-
-                // SECTION: Questions
-                if (permSoru) {
-                    html += `<div style="margin-bottom:15px;">
-                                <h4 style="margin:0 0 10px 0; color:#333;">Sorular</h4>
-                                <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
-                                    <thead><tr style="background:#eee;"><th style="padding:5px; border:1px solid #ddd; width:30px;">#</th><th style="padding:5px; border:1px solid #ddd;">Soru / Cevap</th></tr></thead>
-                                    <tbody>`;
-
-                    sorular.forEach((s, i) => {
-                        const sText = (typeof s === 'object') ? s.soru : s;
-                        const ansObj = myAnswers.find(x => Number(x.soruIndex) === i);
-                        let ansHtml = "";
-                        if (ansObj && ansObj.cevaplar && ansObj.cevaplar.length > 0) {
-                            ansHtml = ansObj.cevaplar.map(c => `<div style="color:#2e7d32; margin-top:5px;">• ${linkleriDonustur(c)}</div>`).join('');
-                        } else {
-                            ansHtml = `<div style="color:#999; font-style:italic; margin-top:5px;">(Cevap yok)</div>`;
-                        }
-
-                        html += `<tr>
-                                    <td style="padding:8px; border:1px solid #ddd; text-align:center;">${i + 1}</td>
-                                    <td style="padding:8px; border:1px solid #ddd;">
-                                        <div style="font-weight:600;">${linkleriDonustur(sText)}</div>
-                                        ${ansHtml}
-                                    </td>
-                                  </tr>`;
-                    });
-                    html += `</tbody></table></div>`;
-                }
-
-                // SECTION: Action Buttons
-                html += `<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">`;
-
-                if (isActive) {
-                    const btnTxt = (myAnswers.length > 0) ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
-                    // When clicking Start, we go to 'p_soru'. calismaBaslat helper needed or reuse calismaSec.
-                    // We must update global 'atan' and switch screen.
-                    html += `<button class="btn-mavi" onclick="ozelCalismaBaslat('${id}')" style="flex:1;">${btnTxt}</button>`;
-                }
-
-                if (a.degerl) {
-                    html += `<button class="btn-mor" onclick="ozelDegerlendirme('${id}')" style="flex:1;">DEĞERLENDİRME</button>`;
-                }
-
-                html += `</div>`;
-
-                if (html === "") {
-                    html = `<div style="padding:10px; color:#e65100; background:#fff3e0; border-radius:5px;">⚠️ Bu içerik için görüntüleme izniniz bulunmamaktadır.</div>`;
-                }
-
-                container.innerHTML = html;
-
-            } catch (e) {
-                container.innerHTML = `<div style="color:red;">Hata oluştu: ${e.message}</div>`;
-            }
-        }
-
-        async function ozelCalismaBaslat(id) {
-            await calismaSec(id); // Sets globals, fetches details again (cached by browser usually), switches to p_yonerge
-            ekranDegis('p_soru'); // Force switch to questions input
-        }
-
-        async function ozelDegerlendirme(id) {
-            await calismaSec(id);
-            degerlendirmeyeGec();
-        }
-
-        async function calismaSec(id) {
-            atan = atanlar.find(a => a.id === id);
-            if (!atan) return;
-            ekranDegis('p_yonerge'); // Switch to view
-
-            // Move logic from old veriCek here
-            try {
-                // 1. Fetch Questions if needed
-                if (sorular.length === 0 || atan.id !== (window.lastAtanId || '')) {
-                    window.lastAtanId = atan.id;
-                    const r3 = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
-                    const icerik = await r3.json();
-                    sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
-                    const desc = icerik.aciklama || "";
-                    document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
-                    document.getElementById('c_baslik').textContent = atan.calisma;
-                }
-
-                // 2. Group Logic
-                if (atan.yontem === "Grup") {
-                    document.getElementById('c_grup').style.display = "block";
-                    // Only fetch if not cached or different study
-                    if (!window.cachedGrupAd || window.cachedGrupCalisma !== atan.calisma) {
-                        const rG = await fetch(`/grupListesiGetir?isim=${encodeURIComponent(atan.calisma)}`);
-                        if (rG.ok) {
-                            grupUyeleri = await rG.json();
-                            window.cachedGrupCalisma = atan.calisma;
-                            window.cachedGrupAd = `GRUP (${grupUyeleri.length} Kişi)`;
-                            let gh = "";
-                            grupUyeleri.forEach(u => { gh += `<li>${u["Adınız Soyadınız"]} (${u["Okul Numaranız"]})</li>`; });
-                            document.getElementById('g_liste').innerHTML = gh;
-                            document.getElementById('grup_baslik_metni').textContent = window.cachedGrupAd;
-                        }
-                    }
-                } else {
-                    document.getElementById('c_grup').style.display = "none";
-                }
-
-                // 3. User Answers
-                const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
-                if (rC.ok) {
-                    const tumCevaplar = await rC.json();
-                    benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
-                    if (benimKaydim) { cevaplar = benimKaydim.cevaplar || []; girisSayisi = benimKaydim.girisSayisi || 0; }
-                    else { cevaplar = []; girisSayisi = 0; }
-
-                    const cevapVarmi = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
-                    document.getElementById('btn_basla').textContent = cevapVarmi ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
-                    document.getElementById('btn_ozet_ana').textContent = cevapVarmi ? "CEVAPLARI GÖRÜNTÜLE" : "SORULARI GÖRÜNTÜLE";
-                }
-
-                if (!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
-                durumYonetimi(); // Update buttons/permissions
-
-            } catch (e) { console.error(e); }
+            setInterval(veriCek, 3000);
         }
 
         async function veriCek() {
@@ -956,52 +599,152 @@
                 const r1 = await fetch("/listeCalismalar");
                 const list = await r1.json();
 
+                // FIX: Server strips spaces from class name in filenames (e.g. qqq9A...)
+                // So we must strip spaces from sess.sinif to match
                 const temizSinif = sess.sinif.replace(/\s/g, '');
                 const adaylar = list.filter(f => f.startsWith(`qqq${temizSinif}`));
 
-                let yeniAtanlar = [];
+                atan = null;
                 for (const dosya of adaylar) {
                     const r = await fetch(`/calismaGetir?isim=${dosya}`);
                     const veri = await r.json();
                     if (veri.yapma === true || veri.gorme === true || veri.degerl === true || veri.aciklamaIzni === true || veri.soruIzni === true) {
-                        // FIX: Ensure ID exists and is safe for HTML IDs
-                        if (!veri.id) {
-                            // Create a safe ID from filename (remove spaces, dots, special chars)
-                            veri.id = dosya.replace(/[^a-zA-Z0-9]/g, '_');
-                        }
-                        // Also store original filename for fetching
-                        veri.dosyaIsmi = dosya;
-
-                        yeniAtanlar.push(veri);
+                        atan = veri;
+                        break;
                     }
                 }
 
-                // Optimization: Only update if data changed
-                if (JSON.stringify(yeniAtanlar) !== JSON.stringify(atanlar)) {
-                    atanlar = yeniAtanlar;
-                    listeCiz();
+                if (!atan) {
+                    ['c_yok'].forEach(id => document.getElementById(id).style.display = "block");
+                    ['btn_basla', 'c_baslik', 'c_yonerge', 'c_grup', 'btn_ozet_ana', 'c_bekle'].forEach(id => document.getElementById(id).style.display = "none");
+                    return;
+                }
+                document.getElementById('c_yok').style.display = "none";
+
+                if (sorular.length === 0) {
+                    const r3 = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
+                    const icerik = await r3.json();
+                    // SQL Adaptation: robust check for content format
+                    sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
+                    document.getElementById('c_baslik').textContent = atan.calisma;
+
+                    // LİNK DÖNÜŞTÜRME
+                    // If content is just array of strings, no aciklama property
+                    const desc = icerik.aciklama || "";
+                    document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
+                }
+
+                // Grup and other logic follows...
+                // SQL Adaptation: /grupListesiGetir endpoint is compatible in server.js
+
+                if (atan.yontem === "Grup") {
+                    document.getElementById('c_grup').style.display = "block";
+
+                    // Persistent Group Title Logic
+                    if (window.cachedGrupBaslik) {
+                        document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
+                    }
+
+                    if (grupUyeleri.length === 0 && !grupSorgusuYapildi) {
+                        grupSorgusuYapildi = true;
+                        // server.js expects "sinif" param for group list
+                        fetch(`/grupListesiGetir?sinif=${sess.sinif}`)
+                            .then(r => r.json())
+                            .then(gs => {
+                                // DEBUG TRAP FOR SERVER ERROR
+                                if (gs && gs.debugError) {
+                                    alert(`DEBUG ERROR:\n\nTried to find: ${gs.triedPath}\n\nBut server says file missing.\n\nServer Folder: ${gs.dirName}\n\nFiles in Folder: ${gs.availableFiles.join(", ")}\n\nNormalized Class: ${gs.normalizedClass}`);
+                                    return;
+                                }
+
+                                if (!Array.isArray(gs)) {
+                                    alert("Veri hatası: Grup listesi dizi değil.");
+                                    return;
+                                }
+
+                                // Robust Group Finding: Check by Number ONLY (User Request)
+                                // Matching User's Logic: 
+                                const g = gs.find(x => Array.isArray(x) && x.some(o => {
+                                    return o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim();
+                                }));
+
+                                // DEBUG: Alert if not found
+                                if (!g) {
+                                    alert(`HATA: Grupta bulunamadınız!
+Aranan No: '${sess.no}' (Tip: ${typeof sess.no})
+Aranan Sınıf: '${sess.sinif}'
+İndirilen Grup Sayısı: ${gs.length}
+(Lütfen verileri kontrol edin veya öğretmene bildirin)`);
+                                }
+
+                                if (g) {
+                                    grupUyeleri = g;
+                                    const grupNo = gs.indexOf(g) + 1;
+
+                                    // Store and Set Title
+                                    window.cachedGrupBaslik = `${sess.sinif} - Grup ${grupNo}`;
+                                    document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
+
+                                    document.getElementById('grup_baslik_metni').textContent = `${sess.sinif} - ${grupNo}. GRUP ÜYELERİ:`;
+
+                                    const ul = document.getElementById('g_liste');
+                                    ul.innerHTML = "";
+                                    g.forEach(m => {
+                                        if (m && m["Adınız Soyadınız"]) {
+                                            let li = document.createElement('li');
+                                            let isSiz = String(m["Okul Numaranız"]).trim() === sess.no;
+                                            li.innerHTML = m["Adınız Soyadınız"] + (isSiz ? " <span class='ogrenci-siz'>(Siz)</span>" : "");
+                                            ul.appendChild(li);
+                                        }
+                                    });
+                                } else {
+                                    document.getElementById('grup_baslik_metni').textContent = "GRUP LİSTESİNDE YOKSUNUZ";
+                                }
+                            })
+                            .catch(e => {
+                                console.error(e);
+                                document.getElementById('grup_baslik_metni').textContent = "GRUP BİLGİSİ BULUNAMADI";
+                            });
+                    }
                 } else {
-                    // Even if data is same, ensure persistent open state
-                    if (openAccordionId) {
-                        const el = document.getElementById(`item_${openAccordionId}`);
-                        if (el && !el.classList.contains('open')) {
-                            el.classList.add('open');
-                            const arrow = el.querySelector('.accordion-arrow');
-                            if (arrow) arrow.style.transform = "rotate(180deg)";
+                    document.getElementById('c_grup').style.display = "none";
+                    document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
+                    grupUyeleri = [];
+                    grupSorgusuYapildi = false;
+                }
+
+                const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
+                if (rC.ok) {
+                    const tumCevaplar = await rC.json();
+                    console.log('[DEBUG ogrenci veriCek] tumCevaplar count:', tumCevaplar.length, 'for study:', atan.calisma);
+                    benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
+                    console.log('[DEBUG ogrenci veriCek] benimKaydim:', benimKaydim ? `found, cevaplar: ${(benimKaydim.cevaplar || []).length}` : 'NOT FOUND');
+
+                    if (benimKaydim) {
+                        // Prevent stale overwrite if recently saved (5s grace period)
+                        if (!isTyping && (Date.now() - lastSaveTime > 5000)) {
+                            // Safety: If server returns empty answers but we have local answers, KEEP local.
+                            // Only overwrite if server has actual data.
+                            if (benimKaydim.cevaplar && benimKaydim.cevaplar.length > 0) {
+                                cevaplar = benimKaydim.cevaplar;
+                            } else if (cevaplar.length === 0 && benimKaydim.cevaplar) {
+                                // If we have nothing, accept whatever server has (even empty)
+                                cevaplar = benimKaydim.cevaplar;
+                            }
                         }
+                        girisSayisi = benimKaydim.girisSayisi || 0;
                     }
-                }
 
-                // If we are INSIDE a study (atan is set), update it
-                if (atan) {
-                    const current = atanlar.find(a => a.id === atan.id);
-                    if (current) {
-                        atan = current;
-                        durumYonetimi();
-                    }
-                }
+                    if (!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
+                    document.getElementById('giris_sayaci_badge').textContent = `Giriş: ${girisSayisi}`;
+                    document.getElementById('giris_sayaci_badge').style.display = "inline-block";
 
-            } catch (e) { console.error(e); }
+                    const cevapVarmi = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
+                    document.getElementById('btn_basla').textContent = cevapVarmi ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
+                    document.getElementById('btn_ozet_ana').textContent = cevapVarmi ? "CEVAPLARI GÖRÜNTÜLE" : "SORULARI GÖRÜNTÜLE";
+                }
+                durumYonetimi();
+            } catch (e) { }
         }
 
         function durumYonetimi() {
@@ -1027,21 +770,20 @@
             const permAciklama = hasGranular ? (atan.aciklamaIzni === true) : (atan.gorme === true);
             const permSoru = hasGranular ? (atan.soruIzni === true) : (atan.gorme === true);
 
-            // User Request: Strictly follow permissions for visibility
-            document.getElementById('c_yonerge').style.display = permAciklama ? "block" : "none";
-            document.getElementById('c_baslik').style.display = (permAciklama || permSoru) ? "block" : "none";
+            const goster = (aktif || permAciklama || permSoru);
 
-            // Soru Alanı ve Başla Butonu (Sadece soru izni VEYA aktif çalışma varsa)
-            const soruGosteIzni = (aktif || permSoru);
-            document.getElementById('btn_basla').style.display = (aktif && permSoru) ? "block" : "none";
+            document.getElementById('c_baslik').style.display = goster ? "block" : "none";
+            document.getElementById('c_yonerge').style.display = (aktif || permAciklama) ? "block" : "none";
+
+            document.getElementById('btn_basla').style.display = aktif ? "block" : "none";
 
             // Soru Görme (Aktif değilse ama izin varsa VEYA ÖĞRENCİNİN CEVABI VARSA)
             const cevapVar = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
-            const soruGorebilir = (!aktif && (permSoru || cevapVar)) || (aktif && permSoru);
+            const soruGorebilir = (!aktif && (permSoru || cevapVar));
 
-            // "Özet" button: Visible strictly if soruIzni is true OR student has answers
-            document.getElementById('nav_ozet_btn').style.display = (permSoru || cevapVar) ? "inline-block" : "none";
-            document.getElementById('btn_ozet_ana').style.display = (permSoru || cevapVar) ? "block" : "none";
+            // "Özet" button: Visible if (Read Only Allowed) OR (Study is Active)
+            document.getElementById('nav_ozet_btn').style.display = (soruGorebilir || aktif) ? "inline-block" : "none";
+            document.getElementById('btn_ozet_ana').style.display = (soruGorebilir) ? "block" : "none"; // Main button usually for read-only entry from start page
 
             // Messages
             // Hiçbir izin yoksa BEKLE
@@ -1051,7 +793,11 @@
             const sadeceAciklama = (!aktif && permAciklama && !soruGorebilir);
             document.getElementById('c_sadece_aciklama_msg').style.display = sadeceAciklama ? "block" : "none";
 
-            document.getElementById('c_incele').style.display = (soruGorebilir && !aktif) ? "block" : "none";
+            document.getElementById('c_baslamadi_msg').style.display = "none"; // Deprecated or handled by specific messages
+            document.getElementById('c_sure_bitti_msg').style.display = (sureBitti && !permAciklama && !permSoru && !cevapVar) ? "block" : "none";
+
+            // "İnceleyebilirsiniz" mesajı: Soru görebiliyorsa ve aktif değilse
+            document.getElementById('c_incele').style.display = (soruGorebilir) ? "block" : "none";
 
             document.getElementById('btn_degerlendirme_ana').style.display = atan.degerl ? "block" : "none";
             if (document.getElementById('btn_degerlendirme')) document.getElementById('btn_degerlendirme').style.display = atan.degerl ? "block" : "none";
@@ -1218,18 +964,13 @@
             if (btn1) { btn1.disabled = true; btn1.textContent = "Yönlendiriliyor..."; }
             if (btn2) { btn2.disabled = true; btn2.textContent = "Yönlendiriliyor..."; }
 
-            const url = `degerlendirme?sinif=${encodeURIComponent(sess.sinif)}&ogrenci=${encodeURIComponent(sess.no)}&calisma=${encodeURIComponent(atan.calisma)}`;
-
             try {
-                // Timeout logic: wait at most 1.5 seconds for the save to complete
-                await Promise.race([
-                    kaydet(),
-                    new Promise(resolve => setTimeout(resolve, 1500))
-                ]);
+                await kaydet();
             } catch (e) {
                 console.error('[DEBUG] kaydet() hatası ama yine de yönlendiriliyor:', e);
             }
 
+            const url = `degerlendirme?sinif=${encodeURIComponent(sess.sinif)}&ogrenci=${encodeURIComponent(sess.no)}&calisma=${encodeURIComponent(atan.calisma)}`;
             console.log('[DEBUG] Redirecting to:', url);
             window.location.href = url;
         }
