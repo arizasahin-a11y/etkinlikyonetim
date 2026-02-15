@@ -369,6 +369,76 @@
             text-decoration: none;
             font-weight: bold;
         }
+
+        /* AKORDİYON STİLLERİ */
+        .accordion-item {
+            border: 1px solid #ddd;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .accordion-header {
+            padding: 15px;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            color: #333;
+            user-select: none;
+        }
+
+        .accordion-header:hover {
+            background: #f1f3f5;
+        }
+
+        .accordion-item.open .accordion-content {
+            display: block;
+        }
+
+        .accordion-arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-item.open .accordion-arrow {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            display: none;
+            padding: 15px;
+            border-top: 1px solid #eee;
+            background: #fff;
+        }
+
+        /* Durum Rozetleri */
+        .badge-status {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .bs-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .bs-wait {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .bs-done {
+            background: #ffebee;
+            color: #c62828;
+        }
     </style>
 </head>
 
@@ -433,6 +503,13 @@
                     style="margin-top:10px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
             </div>
 
+            <div id="p_liste" style="display:none;">
+                <div id="c_yok"
+                    style="text-align:center; color:#E65100; display:none; padding:15px; font-weight:bold; background:#FFF3E0; border-radius:8px; margin-bottom:10px; border:1px solid #FFE0B2;">
+                    ⚠️ Aktif çalışma bulunmamaktadır.</div>
+                <div id="accordion_liste"></div>
+            </div>
+
             <div id="p_soru" style="display:none;">
                 <div
                     style="display:flex; justify-content:space-between; color:#888; font-size:0.8rem; margin-bottom:10px;">
@@ -472,6 +549,8 @@
         let otoKayitYapildi = false, girisSayisi = 0, girisIslandi = false;
         let grupSorgusuYapildi = false;
         let lastSaveTime = 0;
+        let openAccordionId = null;
+        let atanlar = []; // Array to hold all active assignments
         let benimKaydim = null;
 
         // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
@@ -589,7 +668,7 @@
             document.getElementById('p_giris').style.display = "none";
             document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
             document.getElementById('h_nav').style.display = "flex";
-            ekranDegis('p_yonerge');
+            ekranDegis('p_liste');
             veriCek();
             setInterval(veriCek, 3000);
         }
@@ -604,147 +683,244 @@
                 const temizSinif = sess.sinif.replace(/\s/g, '');
                 const adaylar = list.filter(f => f.startsWith(`qqq${temizSinif}`));
 
-                atan = null;
+                // Reset atan if we are in list mode (so we don't hold onto old state)
+                if (document.getElementById('p_liste').style.display === 'block') {
+                    atan = null;
+                }
+
+                const yeniAtanlar = [];
                 for (const dosya of adaylar) {
-                    const r = await fetch(`/calismaGetir?isim=${dosya}`);
-                    const veri = await r.json();
-                    if (veri.yapma === true || veri.gorme === true || veri.degerl === true || veri.aciklamaIzni === true || veri.soruIzni === true) {
-                        atan = veri;
-                        break;
-                    }
-                }
-
-                if (!atan) {
-                    ['c_yok'].forEach(id => document.getElementById(id).style.display = "block");
-                    ['btn_basla', 'c_baslik', 'c_yonerge', 'c_grup', 'btn_ozet_ana', 'c_bekle'].forEach(id => document.getElementById(id).style.display = "none");
-                    return;
-                }
-                document.getElementById('c_yok').style.display = "none";
-
-                if (sorular.length === 0) {
-                    const r3 = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
-                    const icerik = await r3.json();
-                    // SQL Adaptation: robust check for content format
-                    sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
-                    document.getElementById('c_baslik').textContent = atan.calisma;
-
-                    // LİNK DÖNÜŞTÜRME
-                    // If content is just array of strings, no aciklama property
-                    const desc = icerik.aciklama || "";
-                    document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
-                }
-
-                // Grup and other logic follows...
-                // SQL Adaptation: /grupListesiGetir endpoint is compatible in server.js
-
-                if (atan.yontem === "Grup") {
-                    document.getElementById('c_grup').style.display = "block";
-
-                    // Persistent Group Title Logic
-                    if (window.cachedGrupBaslik) {
-                        document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
-                    }
-
-                    if (grupUyeleri.length === 0 && !grupSorgusuYapildi) {
-                        grupSorgusuYapildi = true;
-                        // server.js expects "sinif" param for group list
-                        fetch(`/grupListesiGetir?sinif=${sess.sinif}`)
-                            .then(r => r.json())
-                            .then(gs => {
-                                // DEBUG TRAP FOR SERVER ERROR
-                                if (gs && gs.debugError) {
-                                    alert(`DEBUG ERROR:\n\nTried to find: ${gs.triedPath}\n\nBut server says file missing.\n\nServer Folder: ${gs.dirName}\n\nFiles in Folder: ${gs.availableFiles.join(", ")}\n\nNormalized Class: ${gs.normalizedClass}`);
-                                    return;
-                                }
-
-                                if (!Array.isArray(gs)) {
-                                    alert("Veri hatası: Grup listesi dizi değil.");
-                                    return;
-                                }
-
-                                // Robust Group Finding: Check by Number ONLY (User Request)
-                                // Matching User's Logic: 
-                                const g = gs.find(x => Array.isArray(x) && x.some(o => {
-                                    return o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim();
-                                }));
-
-                                // DEBUG: Alert if not found
-                                if (!g) {
-                                    alert(`HATA: Grupta bulunamadınız!
-Aranan No: '${sess.no}' (Tip: ${typeof sess.no})
-Aranan Sınıf: '${sess.sinif}'
-İndirilen Grup Sayısı: ${gs.length}
-(Lütfen verileri kontrol edin veya öğretmene bildirin)`);
-                                }
-
-                                if (g) {
-                                    grupUyeleri = g;
-                                    const grupNo = gs.indexOf(g) + 1;
-
-                                    // Store and Set Title
-                                    window.cachedGrupBaslik = `${sess.sinif} - Grup ${grupNo}`;
-                                    document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
-
-                                    document.getElementById('grup_baslik_metni').textContent = `${sess.sinif} - ${grupNo}. GRUP ÜYELERİ:`;
-
-                                    const ul = document.getElementById('g_liste');
-                                    ul.innerHTML = "";
-                                    g.forEach(m => {
-                                        if (m && m["Adınız Soyadınız"]) {
-                                            let li = document.createElement('li');
-                                            let isSiz = String(m["Okul Numaranız"]).trim() === sess.no;
-                                            li.innerHTML = m["Adınız Soyadınız"] + (isSiz ? " <span class='ogrenci-siz'>(Siz)</span>" : "");
-                                            ul.appendChild(li);
-                                        }
-                                    });
-                                } else {
-                                    document.getElementById('grup_baslik_metni').textContent = "GRUP LİSTESİNDE YOKSUNUZ";
-                                }
-                            })
-                            .catch(e => {
-                                console.error(e);
-                                document.getElementById('grup_baslik_metni').textContent = "GRUP BİLGİSİ BULUNAMADI";
-                            });
-                    }
-                } else {
-                    document.getElementById('c_grup').style.display = "none";
-                    document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
-                    grupUyeleri = [];
-                    grupSorgusuYapildi = false;
-                }
-
-                const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
-                if (rC.ok) {
-                    const tumCevaplar = await rC.json();
-                    console.log('[DEBUG ogrenci veriCek] tumCevaplar count:', tumCevaplar.length, 'for study:', atan.calisma);
-                    benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
-                    console.log('[DEBUG ogrenci veriCek] benimKaydim:', benimKaydim ? `found, cevaplar: ${(benimKaydim.cevaplar || []).length}` : 'NOT FOUND');
-
-                    if (benimKaydim) {
-                        // Prevent stale overwrite if recently saved (5s grace period)
-                        if (!isTyping && (Date.now() - lastSaveTime > 5000)) {
-                            // Safety: If server returns empty answers but we have local answers, KEEP local.
-                            // Only overwrite if server has actual data.
-                            if (benimKaydim.cevaplar && benimKaydim.cevaplar.length > 0) {
-                                cevaplar = benimKaydim.cevaplar;
-                            } else if (cevaplar.length === 0 && benimKaydim.cevaplar) {
-                                // If we have nothing, accept whatever server has (even empty)
-                                cevaplar = benimKaydim.cevaplar;
-                            }
+                    try {
+                        const r = await fetch(`/calismaGetir?isim=${dosya}`);
+                        if (!r.ok) continue;
+                        const veri = await r.json();
+                        // Check if valid/active
+                        // Logic: Show if Active OR (Visible Permission) OR (Evaluation)
+                        // Actually, show everything that is assigned to this class?
+                        // Old logic: `if (veri.yapma === true || veri.gorme === true || veri.degerl === true || veri.aciklamaIzni === true || veri.soruIzni === true)`
+                        if (veri) {
+                            // Add ID for accordion key
+                            veri.id = dosya.replace('.json', '');
+                            yeniAtanlar.push(veri);
                         }
-                        girisSayisi = benimKaydim.girisSayisi || 0;
-                    }
-
-                    if (!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
-                    document.getElementById('giris_sayaci_badge').textContent = `Giriş: ${girisSayisi}`;
-                    document.getElementById('giris_sayaci_badge').style.display = "inline-block";
-
-                    const cevapVarmi = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
-                    document.getElementById('btn_basla').textContent = cevapVarmi ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
-                    document.getElementById('btn_ozet_ana').textContent = cevapVarmi ? "CEVAPLARI GÖRÜNTÜLE" : "SORULARI GÖRÜNTÜLE";
+                    } catch (e) { console.error(dosya, e); }
                 }
-                durumYonetimi();
-            } catch (e) { }
+
+                // Update global list
+                atanlar = yeniAtanlar;
+
+                // Sync UI
+                if (document.getElementById('p_liste').style.display === 'block') {
+                    listeCiz();
+                } else if (atan && openAccordionId === atan.id) {
+                    // Update current study status live?
+                    // Find current in new list
+                    const updated = atanlar.find(x => x.id === atan.id);
+                    if (updated) {
+                        atan = updated;
+                        durumYonetimi();
+                    } else {
+                        // Study removed? Go back to list
+                        ekranDegis('p_liste');
+                    }
+                }
+
+            } catch (e) { console.error("veriCek Error:", e); }
+        }
+
+        // Helper Functions for Accordion
+        function listeCiz() {
+            const container = document.getElementById('accordion_liste');
+            const yokMsg = document.getElementById('c_yok');
+
+            if (atanlar.length === 0) {
+                if (container) container.innerHTML = "";
+                if (yokMsg) yokMsg.style.display = "block";
+                return;
+            }
+            if (yokMsg) yokMsg.style.display = "none";
+
+            let h = "";
+            atanlar.forEach((a) => {
+                let status = "Beklemede";
+                let badgeClass = "bs-wait";
+
+                if (a.yapma) { status = "AKTİF"; badgeClass = "bs-active"; }
+                else if (a.sure > 0) { status = "BİTTİ"; badgeClass = "bs-done"; }
+
+                const isOpen = (openAccordionId === a.id) ? "open" : "";
+                const arrowRot = (openAccordionId === a.id) ? "transform:rotate(180deg);" : "";
+
+                h += `
+                <div class="accordion-item ${isOpen}" id="item_${a.id}">
+                    <div class="accordion-header" onclick="accordionToggle('${a.id}')">
+                        <div style="display:flex; align-items:center;">
+                            <span style="font-weight:600;">${a.calisma}</span>
+                            <span class="badge-status ${badgeClass}">${status}</span>
+                        </div>
+                        <div class="accordion-arrow" style="${arrowRot}">▼</div>
+                    </div>
+                    <div class="accordion-content">
+                        <!-- Content Loads Here -->
+                        <div class="loading-placeholder" style="padding:10px; color:#666;">Veriler yükleniyor...</div>
+                    </div>
+                </div>`;
+            });
+
+            if (container) container.innerHTML = h;
+
+            // Restore content if open
+            if (openAccordionId) {
+                loadStudyInAccordion(openAccordionId);
+            }
+        }
+
+        async function accordionToggle(id) {
+            const item = document.getElementById(`item_${id}`);
+            if (!item) return;
+
+            const wasOpen = item.classList.contains('open');
+
+            // Close others 
+            document.querySelectorAll('.accordion-item').forEach(x => {
+                if (x.id !== `item_${id}`) {
+                    x.classList.remove('open');
+                    const arrow = x.querySelector('.accordion-arrow');
+                    if (arrow) arrow.style.transform = "rotate(0deg)";
+                }
+            });
+
+            if (!wasOpen) {
+                item.classList.add('open');
+                const arrow = item.querySelector('.accordion-arrow');
+                if (arrow) arrow.style.transform = "rotate(180deg)";
+                openAccordionId = id;
+                await loadStudyInAccordion(id);
+            } else {
+                item.classList.remove('open');
+                const arrow = item.querySelector('.accordion-arrow');
+                if (arrow) arrow.style.transform = "rotate(0deg)";
+                openAccordionId = null;
+            }
+        }
+
+        async function loadStudyInAccordion(id) {
+            const item = document.getElementById(`item_${id}`);
+            if (!item) return;
+            const container = item.querySelector('.accordion-content');
+            if (!container) return;
+
+            const a = atanlar.find(x => x.id === id);
+            if (!a) return;
+
+            // Set global 'atan' for legacy compatibility (saving, etc.)
+            // But be careful: 'atan' assumes only ONE active study.
+            // When we open an accordion, we effectively "select" that study.
+            atan = a;
+
+            // Fetch Content
+            try {
+                const rQ = await fetch(`/calismaGetir?isim=qwx${encodeURIComponent(a.calisma)}`);
+                let icerik = {};
+                if (rQ.ok) icerik = await rQ.json();
+
+                // Set global 'sorular' for 'kaydet' and 'ozetCiz' to work?
+                // Yes, legacy functions rely on global 'sorular'.
+                sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
+                const desc = icerik.aciklama || "";
+
+                // Fetch Answers
+                let myAnswers = [];
+                let myScore = null;
+                const rA = await fetch(`/calismaGetir?isim=www_${encodeURIComponent(a.calisma)}`);
+                if (rA.ok) {
+                    const allAnswers = await rA.json();
+                    const studentRec = allAnswers.find(x => String(x.ogrenciNo) === String(sess.no));
+                    if (studentRec) {
+                        benimKaydim = studentRec; // Global update
+                        if (studentRec.cevaplar) myAnswers = studentRec.cevaplar;
+                        cevaplar = myAnswers; // Global update
+                        girisSayisi = studentRec.girisSayisi || 0;
+                    } else {
+                        cevaplar = []; // Reset if no record
+                        benimKaydim = null;
+                    }
+                }
+
+                // Render Inside Accordion
+                // We need to render: Description, "Start" button (which opens p_soru), or "Summary" if done.
+                // Re-using logic from 'durumYonetimi' but generating local HTML.
+
+                const hasGranular = (typeof a.aciklamaIzni === 'boolean' || typeof a.soruIzni === 'boolean');
+                const permAciklama = hasGranular ? (a.aciklamaIzni === true) : (a.gorme === true);
+                const permSoru = hasGranular ? (a.soruIzni === true) : (a.gorme === true);
+                const isActive = (a.yapma === true);
+
+                // Check completion
+                let isFinished = false;
+                // Legacy: 'sure' > 0 and 'bitis' time passed.
+                if (a.bitis && (a.bitis - Date.now() < 0)) isFinished = true;
+
+                let html = "";
+
+                // Description
+                if (permAciklama || isActive) {
+                    html += `<div style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:10px; border-left:4px solid var(--mavi);">
+                        <h4 style="margin:0 0 5px 0; color:var(--ana);">Açıklama</h4>
+                        <div style="font-size:0.9rem;">${linkleriDonustur(desc)}</div>
+                     </div>`;
+                }
+
+                // Group Info (If Group)
+                if (a.yontem === "Grup") {
+                    // We might need to fetch group info here if not loaded.
+                    // For now, simple placeholder or button to load group info?
+                    // Let's just say "Grup Çalışması"
+                    html += `<div style="margin-bottom:10px; font-size:0.85rem; color:#E65100;">👥 Bu bir grup çalışmasıdır.</div>`;
+                }
+
+                // Actions
+                html += `<div style="display:flex; gap:10px; flex-wrap:wrap;">`;
+
+                if (isActive && !isFinished) {
+                    html += `<button onclick="baslaAccordion('${id}')" class="btn-mavi" style="flex:1;">ÇALIŞMAYA BAŞLA / DEVAM ET</button>`;
+                }
+
+                if (permSoru || (myAnswers.length > 0)) {
+                    html += `<button onclick="ozetAccordion('${id}')" class="btn-yesil" style="flex:1;">CEVAPLARI / SORULARI GÖR</button>`;
+                }
+
+                if (isFinished) {
+                    html += `<div style="width:100%; text-align:center; color:red; font-weight:bold; margin-top:5px;">⛔ Süre doldu.</div>`;
+                }
+
+                html += `</div>`;
+
+                container.innerHTML = html;
+
+            } catch (e) {
+                container.innerHTML = `<div style="color:red;">Hata oluştu: ${e.message}</div>`;
+            }
+        }
+
+        function baslaAccordion(id) {
+            // Set global state -> Switch to p_soru
+            const a = atanlar.find(x => x.id === id);
+            if (a) {
+                atan = a;
+                // Re-fetch content/answers (or verify global state is set from loadStudyInAccordion)
+                // loadStudyInAccordion already set 'sorular' and 'cevaplar'. 
+                // So we just go.
+                ekranDegis('p_soru');
+            }
+        }
+
+        function ozetAccordion(id) {
+            const a = atanlar.find(x => x.id === id);
+            if (a) {
+                atan = a;
+                ozetCiz(); // This switches to p_ozet
+            }
         }
 
         function durumYonetimi() {
