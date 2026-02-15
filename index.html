@@ -490,26 +490,13 @@
     <h1>Etkinlik Yönetim Paneli</h1>
     <div class="tab-container">
         <div class="tab-buttons">
-            <button onclick="openTab(event,'sekme1')">Çalışma Şekli</button>
-            <button onclick="openTab(event,'sekme2')">Çalışma İçeriği</button>
+            <button onclick="openTab(event,'sekme1')">Çalışma İçeriği</button>
+            <button onclick="openTab(event,'sekme2')">Çalışma Şekli</button>
             <button class="active" onclick="openTab(event,'sekme3')">Çalışma Süreci</button>
             <button onclick="openTab(event,'sekme4')">Değerlendirme</button>
         </div>
 
         <div id="sekme1" class="tab-content">
-            <div style="text-align: center;">
-                <select id="sinifSec" style="width: 250px;">
-                    <option value="">-- Sınıf Seçin --</option>
-                </select>
-                <div class="button-group">
-                    <button id="btnGrupla" class="action">Sınıfı Gruplara Böl</button>
-                    <button id="btnSil" class="action red">Mevcut Grupları Sil</button>
-                </div>
-            </div>
-            <div id="tablo" class="grup-container"></div>
-        </div>
-
-        <div id="sekme2" class="tab-content">
             <div id="listeEkrani">
                 <div class="button-group">
                     <button onclick="arsivModalAc()" class="action orange">📂 Arşivden Çalışma Ekle</button>
@@ -532,6 +519,23 @@
                     <button onclick="location.reload()" class="action red">İptal</button>
                 </div>
             </div>
+        </div>
+
+        <div id="sekme2" class="tab-content">
+            <div style="text-align: center;">
+                <select id="sinifSec" style="width: 250px;">
+                    <option value="">-- Sınıf Seçin --</option>
+                </select>
+                <!-- NEW: Study Selector for Groups -->
+                <select id="grupCalismaSec" style="width: 250px; margin-left: 10px;">
+                    <option value="">-- Çalışma Seçin --</option>
+                </select>
+                <div class="button-group">
+                    <button id="btnGrupla" class="action">Sınıfı Gruplara Böl</button>
+                    <button id="btnSil" class="action red">Mevcut Grupları Sil</button>
+                </div>
+            </div>
+            <div id="tablo" class="grup-container"></div>
         </div>
 
         <div id="sekme3" class="tab-content active">
@@ -818,11 +822,21 @@
         function listeyiYukle() {
             fetch("/listeCalismalar").then(res => res.json()).then(dosyalar => {
                 const liste = document.getElementById("calismaListesi"); liste.innerHTML = "";
+                // Populate Dropdown too
+                const drop = document.getElementById("grupCalismaSec");
+                drop.innerHTML = '<option value="">-- Çalışma Seçin --</option>';
+
                 dosyalar.filter(d => d.startsWith("qwx")).forEach(d => {
+                    const cleanName = d.replace("qwx", "").replace(".json", "");
+
+                    // List Item
                     const li = document.createElement("li");
-                    li.innerHTML = `<span>${d.replace("qwx", "").replace(".json", "")}</span><button onclick="calismaArsivle('${d}')" class="btn-archive-small">Arşivle</button>`;
+                    li.innerHTML = `<span>${cleanName}</span><button onclick="calismaArsivle('${d}')" class="btn-archive-small">Arşivle</button>`;
                     li.onclick = () => { document.querySelectorAll("#calismaListesi li").forEach(x => x.classList.remove("selected")); li.classList.add("selected"); seciliDosyaAdi = d; };
                     liste.appendChild(li);
+
+                    // Dropdown Option
+                    drop.appendChild(new Option(cleanName, cleanName));
                 });
             });
         }
@@ -880,19 +894,24 @@
         };
         document.getElementById("btnSilDosya").onclick = () => { if (seciliDosyaAdi && confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: seciliDosyaAdi.replace(".json", "") }) }).then(() => listeyiYukle()); };
 
-        document.getElementById("sinifSec").onchange = function () {
-            secilenSinif = this.value;
-            if (secilenSinif) {
-                // Use the correct endpoint for DB-backed groups
-                fetch(`/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}`)
+        function gruplariGetir() {
+            const s = document.getElementById("sinifSec").value;
+            const c = document.getElementById("grupCalismaSec").value;
+            if (s && c) {
+                fetch(`/grupListesiGetir?sinif=${encodeURIComponent(s)}&calisma=${encodeURIComponent(c)}`)
                     .then(r => r.json())
                     .then(g => {
                         if (Array.isArray(g) && g.length > 0) gruplariGoster(g);
-                        else document.getElementById("tablo").innerHTML = "";
+                        else document.getElementById("tablo").innerHTML = "<div style='padding:20px; color:gray;'>Bu çalışma ve sınıf için grup bulunamadı.</div>";
                     })
                     .catch(() => document.getElementById("tablo").innerHTML = "");
+            } else {
+                document.getElementById("tablo").innerHTML = "";
             }
-        };
+        }
+
+        document.getElementById("sinifSec").onchange = function () { secilenSinif = this.value; gruplariGetir(); };
+        document.getElementById("grupCalismaSec").onchange = function () { gruplariGetir(); };
         function gruplariGoster(gruplar) {
             const container = document.getElementById("tablo"); container.innerHTML = "";
             gruplar.forEach((grup, idx) => {
@@ -907,10 +926,14 @@
         }
 
         document.getElementById("btnGrupla").onclick = () => {
-            if (!secilenSinif) return alert("Sınıf seçin!");
+            const s = document.getElementById("sinifSec").value;
+            const c = document.getElementById("grupCalismaSec").value;
+
+            if (!s || !c) return alert("Lütfen Sınıf ve Çalışma seçin!");
+
             const n = prompt("Grup sayısı?"); if (!n) return;
 
-            const ogrenciler = globalData.filter(k => k["Sınıfınız"] === secilenSinif);
+            const ogrenciler = globalData.filter(k => k["Sınıfınız"] === s);
             ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
 
             const gruplar = [];
@@ -928,7 +951,7 @@
             fetch("/kaydet", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sinif: secilenSinif, gruplar })
+                body: JSON.stringify({ sinif: s, calisma: c, gruplar })
             }).then(() => alert("Gruplar oluşturuldu ve otomatik kaydedildi!"));
         };
 

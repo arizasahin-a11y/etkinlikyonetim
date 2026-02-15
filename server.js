@@ -60,20 +60,50 @@ function logToFile(msg) {
 
 app.get("/grupListesiGetir", async (req, res) => {
   const rawSinif = req.query.sinif;
+  const rawCalisma = req.query.calisma || ""; // New parameter
   const normalizedSinif = sinifIsmiTemizle(rawSinif);
+  const normalizedCalisma = dosyaIsmiTemizle(rawCalisma);
 
   // Helper to check File System
   const checkFileSystem = () => {
-    console.log(`[grupListesiGetir] Checking File System for ${normalizedSinif}...`);
-    const strictPath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
-    if (require("fs").existsSync(strictPath)) {
-      console.log(`[grupListesiGetir] Found FILE: ${strictPath}`);
-      try {
-        const content = JSON.parse(require("fs").readFileSync(strictPath, 'utf-8'));
-        // Fire-and-forget lazy migration attempt
-        query(`INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2) ON CONFLICT (class_name) DO UPDATE SET groups_data = $2`, [rawSinif, content]).catch(err => console.error("Lazy Migration Fail:", err.message));
-        return content;
-      } catch (e) { console.error("FS Parse Error:", e); return []; }
+    // New Format: ggg[Study][Class].json
+    // Legacy Format: [Class]Grupları.json
+
+    let pathsToCheck = [];
+    if (normalizedCalisma) {
+      pathsToCheck.push({
+        path: path.join(__dirname, `ggg${normalizedCalisma}${normalizedSinif}.json`),
+        type: "study-specific"
+      });
+    }
+    // Always check legacy as fallback if specific not found? 
+    // Or only if calisma is empty?
+    // User wants SPECIFIC groups for study. If not found, maybe empty?
+    // But let's keep legacy for backward compat if calisma not provided.
+    pathsToCheck.push({
+      path: path.join(__dirname, `${normalizedSinif}Grupları.json`),
+      type: "legacy"
+    });
+
+    for (const p of pathsToCheck) {
+      console.log(`[grupListesiGetir] Checking FS: ${p.path} (${p.type})`);
+      if (require("fs").existsSync(p.path)) {
+        console.log(`[grupListesiGetir] Found FILE: ${p.path}`);
+        try {
+          const content = JSON.parse(require("fs").readFileSync(p.path, 'utf-8'));
+
+          // Fire-and-forget lazy migration
+          const studyVal = (p.type === "study-specific" && rawCalisma) ? rawCalisma : "GENEL";
+          query(`
+            INSERT INTO class_groups (class_name, study_name, groups_data) 
+            VALUES ($1, $2, $3) 
+            ON CONFLICT (class_name, study_name) 
+            DO UPDATE SET groups_data = $3
+          `, [rawSinif, studyVal, content]).catch(err => console.error("Lazy Migration Fail:", err.message));
+
+          return content;
+        } catch (e) { console.error("FS Parse Error:", e); }
+      }
     }
     return [];
   };
@@ -82,9 +112,27 @@ app.get("/grupListesiGetir", async (req, res) => {
     // 1. Try DB
     let rows = [];
     try {
-      let resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [rawSinif]);
-      if (resDb.rows.length === 0) resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [normalizedSinif]);
-      if (resDb.rows.length > 0) rows = resDb.rows[0].groups_data || [];
+      // If calisma provided, try to find specific group
+      if (rawCalisma) {
+        const resSpecific = await query("SELECT groups_data FROM class_groups WHERE class_name = $1 AND study_name = $2", [rawSinif, rawCalisma]);
+        if (resSpecific.rows.length > 0) {
+          rows = resSpecific.rows[0].groups_data || [];
+        }
+      }
+
+      // If not found specific (or no calisma), try GENEL (Legacy in DB)
+      if (rows.length === 0) {
+        const resGenel = await query("SELECT groups_data FROM class_groups WHERE class_name = $1 AND study_name = 'GENEL'", [rawSinif]);
+        if (resGenel.rows.length > 0 && !rawCalisma) {
+          // Only return GENEL if no specific study was requested, OR if we decide to fallback.
+          // Requirement says: "artık hangi çalışma için olduğunu da belirlemek gerekiyor"
+          // So if study is requested but not found, we should probably return empty or handle explicitly.
+          // But for now, let's strictly return empty if study was requested but not found in DB.
+          // Wait, checkFileSystem might find it.
+          rows = resGenel.rows[0].groups_data || [];
+        }
+      }
+
     } catch (dbErr) {
       console.error("DB Error (Ignored for fallback):", dbErr.message);
     }
@@ -296,17 +344,31 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
 app.post("/kaydet", async (req, res, next) => {
   try {
     // Case 1: Groups (from index.html)
+    // Case 1: Groups (from index.html)
     if (req.body.sinif && req.body.gruplar) {
-      const { sinif, gruplar } = req.body;
+      const { sinif, gruplar, calisma } = req.body;
       const groupsJson = JSON.stringify(gruplar);
-      await query(`
-                INSERT INTO class_groups (class_name, groups_data)
-                VALUES ($1, $2::jsonb)
-                ON CONFLICT (class_name) 
-                DO UPDATE SET groups_data = $2::jsonb
-            `, [sinif, groupsJson]);
+      const studyName = calisma || "GENEL";
 
-      console.log(`✅ [Gruplar Kaydet] Sınıf: ${sinif}, Grup Sayısı: ${gruplar.length}`);
+      await query(`
+                INSERT INTO class_groups (class_name, study_name, groups_data)
+                VALUES ($1, $2, $3::jsonb)
+                ON CONFLICT (class_name, study_name) 
+                DO UPDATE SET groups_data = $3::jsonb
+            `, [sinif, studyName, groupsJson]);
+
+      // File System Backup
+      // Format: ggg[Study][Class].json
+      if (calisma) {
+        const fn = `ggg${dosyaIsmiTemizle(calisma)}${sinifIsmiTemizle(sinif)}.json`;
+        fs.writeFileSync(path.join(__dirname, fn), JSON.stringify(gruplar, null, 2));
+      } else {
+        // Legacy
+        const fn = `${sinifIsmiTemizle(sinif)}Grupları.json`;
+        fs.writeFileSync(path.join(__dirname, fn), JSON.stringify(gruplar, null, 2));
+      }
+
+      console.log(`✅ [Gruplar Kaydet] Sınıf: ${sinif}, Çalışma: ${studyName}, Grup Sayısı: ${gruplar.length}`);
       return res.json({ status: "ok" });
     }
 

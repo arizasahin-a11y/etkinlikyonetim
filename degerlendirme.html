@@ -588,7 +588,7 @@
 
                 if (State.grupCalismasi && State.pSinif) {
                     try {
-                        const grupUrl = `/grupListesiGetir?sinif=${encodeURIComponent(State.pSinif)}`;
+                        const grupUrl = `/grupListesiGetir?sinif=${encodeURIComponent(State.pSinif)}&calisma=${encodeURIComponent(State.pCalisma)}`;
                         console.log('[DEBUG degerlendirme] Fetching groups from:', grupUrl);
                         const rG = await fetch(grupUrl);
                         const gruplar = await rG.json();
@@ -803,7 +803,7 @@
                 let grupListesi = [];
                 if (State.grupCalismasi) {
                     try {
-                        const rG = await fetch(`/grupListesiGetir?sinif=${State.pSinif}`);
+                        const rG = await fetch(`/grupListesiGetir?sinif=${encodeURIComponent(State.pSinif)}&calisma=${encodeURIComponent(State.pCalisma)}`);
                         grupListesi = await rG.json();
                     } catch (e) { }
                 }

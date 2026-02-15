@@ -1,0 +1,99 @@
+[dotenv@17.3.1] injecting env (1) from .env -- tip: ÔÜÖ´©Å  override existing env vars with { override: true }
+Bulunan Grup Dosyalar─▒: 3
+Processing: 9AGruplar─▒.json -> Class: 9A
+ÔØî Error processing 9AGruplar─▒.json:
+Processing: 9BGruplar─▒.json -> Class: 9B
+AggregateError [ECONNREFUSED]: 
+    at A:\TOOLS\kodlama\km\src - Kopya\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async migrateGroups (A:\TOOLS\kodlama\km\src - Kopya\migrate_groups_data.js:28:17) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:5432
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 5432
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:5432
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 5432
+    }
+  ]
+}
+Processing: 9CGruplar─▒.json -> Class: 9C
+AggregateError [ECONNREFUSED]: 
+    at A:\TOOLS\kodlama\km\src - Kopya\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async migrateGroups (A:\TOOLS\kodlama\km\src - Kopya\migrate_groups_data.js:28:17)
+ÔØî Error processing 9BGruplar─▒.json:
+AggregateError [ECONNREFUSED]: 
+    at A:\TOOLS\kodlama\km\src - Kopya\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async migrateGroups (A:\TOOLS\kodlama\km\src - Kopya\migrate_groups_data.js:28:17) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:5432
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 5432
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:5432
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 5432
+    }
+  ]
+}
+AggregateError [ECONNREFUSED]: 
+    at A:\TOOLS\kodlama\km\src - Kopya\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async migrateGroups (A:\TOOLS\kodlama\km\src - Kopya\migrate_groups_data.js:28:17)
+ÔØî Error processing 9CGruplar─▒.json:
+AggregateError [ECONNREFUSED]: 
+    at A:\TOOLS\kodlama\km\src - Kopya\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async migrateGroups (A:\TOOLS\kodlama\km\src - Kopya\migrate_groups_data.js:28:17) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:5432
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 5432
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:5432
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 5432
+    }
+  ]
+}
+Migration completed.
+AggregateError [ECONNREFUSED]: 
+    at A:\TOOLS\kodlama\km\src - Kopya\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async migrateGroups (A:\TOOLS\kodlama\km\src - Kopya\migrate_groups_data.js:28:17)

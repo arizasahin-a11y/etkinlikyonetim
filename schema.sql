@@ -21,8 +21,10 @@ CREATE TABLE IF NOT EXISTS studies (
 
 -- Class Groups Table (previously *Grupları.json)
 CREATE TABLE IF NOT EXISTS class_groups (
-    class_name VARCHAR(50) PRIMARY KEY,
-    groups_data JSONB -- [[student1, student2], [student3, ...]]
+    class_name VARCHAR(50),
+    study_name VARCHAR(255) DEFAULT 'GENEL', -- Default for migration
+    groups_data JSONB, -- [[student1, student2], [student3, ...]]
+    PRIMARY KEY (class_name, study_name)
 );
 
 -- Study Assignments Table (previously qqq*.json files)
