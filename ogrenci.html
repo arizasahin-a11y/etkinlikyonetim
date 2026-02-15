@@ -369,6 +369,114 @@
             text-decoration: none;
             font-weight: bold;
         }
+
+        .accordion-item {
+            border: 1px solid #eee;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .accordion-header {
+            padding: 15px;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            color: #333;
+            user-select: none;
+        }
+
+        .accordion-header:hover {
+            background: #f1f3f5;
+        }
+
+        /* New Styles */
+        .accordion-item.open .accordion-content {
+            display: block;
+        }
+
+        .accordion-arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-item.open .accordion-arrow {
+            transform: rotate(180deg);
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .bs-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .bs-wait {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .bs-done {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .accordion-content {
+            display: none;
+            padding: 15px;
+            border-top: 1px solid #eee;
+            background: #fff;
+        }
+
+        .accordion-item.open .accordion-content {
+            display: block;
+        }
+
+        .accordion-arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-item.open .accordion-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* Status Badges for Accordion */
+        .badge-status {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .bs-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .bs-wait {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .bs-done {
+            background: #ffebee;
+            color: #c62828;
+        }
     </style>
 </head>
 
@@ -589,9 +697,129 @@
             document.getElementById('p_giris').style.display = "none";
             document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
             document.getElementById('h_nav').style.display = "flex";
-            ekranDegis('p_yonerge');
+            ekranDegis('p_liste');
             veriCek();
-            setInterval(veriCek, 3000);
+            setInterval(veriCek, 10000);
+        }
+
+        let atanlar = [];
+        let openAccordionId = null;
+
+        function listeCiz() {
+            const container = document.getElementById('accordion_liste');
+            const yokMsg = document.getElementById('c_yok');
+            if (atanlar.length === 0) {
+                container.innerHTML = "";
+                if (yokMsg) yokMsg.style.display = "block";
+                return;
+            }
+            if (yokMsg) yokMsg.style.display = "none";
+
+            let h = "";
+            atanlar.forEach((a) => {
+                let status = "Beklemede";
+                let badgeClass = "bs-wait";
+
+                if (a.yapma) { status = "AKTİF"; badgeClass = "bs-active"; }
+                else if (a.sure > 0) { status = "BİTTİ"; badgeClass = "bs-done"; }
+
+                const isOpen = (openAccordionId === a.id) ? "open" : "";
+                const arrowRot = (openAccordionId === a.id) ? "transform:rotate(180deg);" : "";
+
+                h += `
+                <div class="accordion-item ${isOpen}" id="item_${a.id}">
+                    <div class="accordion-header" onclick="accordionToggle('${a.id}')">
+                        <div style="display:flex; align-items:center;">
+                            <span style="font-weight:600;">${a.calisma}</span>
+                            <span class="badge-status ${badgeClass}">${status}</span>
+                        </div>
+                        <div class="accordion-arrow" style="${arrowRot}">▼</div>
+                    </div>
+                    <div class="accordion-content">
+                        <p style="margin-bottom:15px; color:#555;">İncelemek, soruları görmek veya yanıtlamak için aşağıdaki butonu kullanınız:</p>
+                        <button class="btn-mavi" onclick="calismaSec('${a.id}')" style="width:100%;">
+                            📄 Açıklama ve Soruları Gör / İşlem Yap
+                        </button>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = h;
+        }
+
+        function accordionToggle(id) {
+            const item = document.getElementById(`item_${id}`);
+            if (!item) return;
+            const wasOpen = item.classList.contains('open');
+            // Close others (One open at a time policy, though user said "don't close on refresh", not "allow multiple open")
+            document.querySelectorAll('.accordion-item').forEach(x => {
+                x.classList.remove('open');
+                x.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
+            });
+
+            if (!wasOpen) {
+                item.classList.add('open');
+                item.querySelector('.accordion-arrow').style.transform = "rotate(180deg)";
+                openAccordionId = id;
+            } else {
+                openAccordionId = null;
+            }
+        }
+
+        async function calismaSec(id) {
+            atan = atanlar.find(a => a.id === id);
+            if (!atan) return;
+            ekranDegis('p_yonerge'); // Switch to view
+
+            // Move logic from old veriCek here
+            try {
+                // 1. Fetch Questions if needed
+                if (sorular.length === 0 || atan.id !== (window.lastAtanId || '')) {
+                    window.lastAtanId = atan.id;
+                    const r3 = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
+                    const icerik = await r3.json();
+                    sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
+                    const desc = icerik.aciklama || "";
+                    document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
+                    document.getElementById('c_baslik').textContent = atan.calisma;
+                }
+
+                // 2. Group Logic
+                if (atan.yontem === "Grup") {
+                    document.getElementById('c_grup').style.display = "block";
+                    // Only fetch if not cached or different study
+                    if (!window.cachedGrupAd || window.cachedGrupCalisma !== atan.calisma) {
+                        const rG = await fetch(`/grupListesiGetir?isim=${encodeURIComponent(atan.calisma)}`);
+                        if (rG.ok) {
+                            grupUyeleri = await rG.json();
+                            window.cachedGrupCalisma = atan.calisma;
+                            window.cachedGrupAd = `GRUP (${grupUyeleri.length} Kişi)`;
+                            let gh = "";
+                            grupUyeleri.forEach(u => { gh += `<li>${u["Adınız Soyadınız"]} (${u["Okul Numaranız"]})</li>`; });
+                            document.getElementById('g_liste').innerHTML = gh;
+                            document.getElementById('grup_baslik_metni').textContent = window.cachedGrupAd;
+                        }
+                    }
+                } else {
+                    document.getElementById('c_grup').style.display = "none";
+                }
+
+                // 3. User Answers
+                const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
+                if (rC.ok) {
+                    const tumCevaplar = await rC.json();
+                    benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
+                    if (benimKaydim) { cevaplar = benimKaydim.cevaplar || []; girisSayisi = benimKaydim.girisSayisi || 0; }
+                    else { cevaplar = []; girisSayisi = 0; }
+
+                    const cevapVarmi = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
+                    document.getElementById('btn_basla').textContent = cevapVarmi ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
+                    document.getElementById('btn_ozet_ana').textContent = cevapVarmi ? "CEVAPLARI GÖRÜNTÜLE" : "SORULARI GÖRÜNTÜLE";
+                }
+
+                if (!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
+                durumYonetimi(); // Update buttons/permissions
+
+            } catch (e) { console.error(e); }
         }
 
         async function veriCek() {
@@ -599,152 +827,44 @@
                 const r1 = await fetch("/listeCalismalar");
                 const list = await r1.json();
 
-                // FIX: Server strips spaces from class name in filenames (e.g. qqq9A...)
-                // So we must strip spaces from sess.sinif to match
                 const temizSinif = sess.sinif.replace(/\s/g, '');
                 const adaylar = list.filter(f => f.startsWith(`qqq${temizSinif}`));
 
-                atan = null;
+                let yeniAtanlar = [];
                 for (const dosya of adaylar) {
                     const r = await fetch(`/calismaGetir?isim=${dosya}`);
                     const veri = await r.json();
                     if (veri.yapma === true || veri.gorme === true || veri.degerl === true || veri.aciklamaIzni === true || veri.soruIzni === true) {
-                        atan = veri;
-                        break;
+                        yeniAtanlar.push(veri);
                     }
                 }
 
-                if (!atan) {
-                    ['c_yok'].forEach(id => document.getElementById(id).style.display = "block");
-                    ['btn_basla', 'c_baslik', 'c_yonerge', 'c_grup', 'btn_ozet_ana', 'c_bekle'].forEach(id => document.getElementById(id).style.display = "none");
-                    return;
-                }
-                document.getElementById('c_yok').style.display = "none";
-
-                if (sorular.length === 0) {
-                    const r3 = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
-                    const icerik = await r3.json();
-                    // SQL Adaptation: robust check for content format
-                    sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
-                    document.getElementById('c_baslik').textContent = atan.calisma;
-
-                    // LİNK DÖNÜŞTÜRME
-                    // If content is just array of strings, no aciklama property
-                    const desc = icerik.aciklama || "";
-                    document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
-                }
-
-                // Grup and other logic follows...
-                // SQL Adaptation: /grupListesiGetir endpoint is compatible in server.js
-
-                if (atan.yontem === "Grup") {
-                    document.getElementById('c_grup').style.display = "block";
-
-                    // Persistent Group Title Logic
-                    if (window.cachedGrupBaslik) {
-                        document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
-                    }
-
-                    if (grupUyeleri.length === 0 && !grupSorgusuYapildi) {
-                        grupSorgusuYapildi = true;
-                        // server.js expects "sinif" param for group list
-                        fetch(`/grupListesiGetir?sinif=${sess.sinif}`)
-                            .then(r => r.json())
-                            .then(gs => {
-                                // DEBUG TRAP FOR SERVER ERROR
-                                if (gs && gs.debugError) {
-                                    alert(`DEBUG ERROR:\n\nTried to find: ${gs.triedPath}\n\nBut server says file missing.\n\nServer Folder: ${gs.dirName}\n\nFiles in Folder: ${gs.availableFiles.join(", ")}\n\nNormalized Class: ${gs.normalizedClass}`);
-                                    return;
-                                }
-
-                                if (!Array.isArray(gs)) {
-                                    alert("Veri hatası: Grup listesi dizi değil.");
-                                    return;
-                                }
-
-                                // Robust Group Finding: Check by Number ONLY (User Request)
-                                // Matching User's Logic: 
-                                const g = gs.find(x => Array.isArray(x) && x.some(o => {
-                                    return o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim();
-                                }));
-
-                                // DEBUG: Alert if not found
-                                if (!g) {
-                                    alert(`HATA: Grupta bulunamadınız!
-Aranan No: '${sess.no}' (Tip: ${typeof sess.no})
-Aranan Sınıf: '${sess.sinif}'
-İndirilen Grup Sayısı: ${gs.length}
-(Lütfen verileri kontrol edin veya öğretmene bildirin)`);
-                                }
-
-                                if (g) {
-                                    grupUyeleri = g;
-                                    const grupNo = gs.indexOf(g) + 1;
-
-                                    // Store and Set Title
-                                    window.cachedGrupBaslik = `${sess.sinif} - Grup ${grupNo}`;
-                                    document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
-
-                                    document.getElementById('grup_baslik_metni').textContent = `${sess.sinif} - ${grupNo}. GRUP ÜYELERİ:`;
-
-                                    const ul = document.getElementById('g_liste');
-                                    ul.innerHTML = "";
-                                    g.forEach(m => {
-                                        if (m && m["Adınız Soyadınız"]) {
-                                            let li = document.createElement('li');
-                                            let isSiz = String(m["Okul Numaranız"]).trim() === sess.no;
-                                            li.innerHTML = m["Adınız Soyadınız"] + (isSiz ? " <span class='ogrenci-siz'>(Siz)</span>" : "");
-                                            ul.appendChild(li);
-                                        }
-                                    });
-                                } else {
-                                    document.getElementById('grup_baslik_metni').textContent = "GRUP LİSTESİNDE YOKSUNUZ";
-                                }
-                            })
-                            .catch(e => {
-                                console.error(e);
-                                document.getElementById('grup_baslik_metni').textContent = "GRUP BİLGİSİ BULUNAMADI";
-                            });
-                    }
+                // Optimization: Only update if data changed
+                if (JSON.stringify(yeniAtanlar) !== JSON.stringify(atanlar)) {
+                    atanlar = yeniAtanlar;
+                    listeCiz();
                 } else {
-                    document.getElementById('c_grup').style.display = "none";
-                    document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
-                    grupUyeleri = [];
-                    grupSorgusuYapildi = false;
-                }
-
-                const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
-                if (rC.ok) {
-                    const tumCevaplar = await rC.json();
-                    console.log('[DEBUG ogrenci veriCek] tumCevaplar count:', tumCevaplar.length, 'for study:', atan.calisma);
-                    benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
-                    console.log('[DEBUG ogrenci veriCek] benimKaydim:', benimKaydim ? `found, cevaplar: ${(benimKaydim.cevaplar || []).length}` : 'NOT FOUND');
-
-                    if (benimKaydim) {
-                        // Prevent stale overwrite if recently saved (5s grace period)
-                        if (!isTyping && (Date.now() - lastSaveTime > 5000)) {
-                            // Safety: If server returns empty answers but we have local answers, KEEP local.
-                            // Only overwrite if server has actual data.
-                            if (benimKaydim.cevaplar && benimKaydim.cevaplar.length > 0) {
-                                cevaplar = benimKaydim.cevaplar;
-                            } else if (cevaplar.length === 0 && benimKaydim.cevaplar) {
-                                // If we have nothing, accept whatever server has (even empty)
-                                cevaplar = benimKaydim.cevaplar;
-                            }
+                    // Even if data is same, ensure persistent open state
+                    if (openAccordionId) {
+                        const el = document.getElementById(`item_${openAccordionId}`);
+                        if (el && !el.classList.contains('open')) {
+                            el.classList.add('open');
+                            const arrow = el.querySelector('.accordion-arrow');
+                            if (arrow) arrow.style.transform = "rotate(180deg)";
                         }
-                        girisSayisi = benimKaydim.girisSayisi || 0;
                     }
-
-                    if (!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
-                    document.getElementById('giris_sayaci_badge').textContent = `Giriş: ${girisSayisi}`;
-                    document.getElementById('giris_sayaci_badge').style.display = "inline-block";
-
-                    const cevapVarmi = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
-                    document.getElementById('btn_basla').textContent = cevapVarmi ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
-                    document.getElementById('btn_ozet_ana').textContent = cevapVarmi ? "CEVAPLARI GÖRÜNTÜLE" : "SORULARI GÖRÜNTÜLE";
                 }
-                durumYonetimi();
-            } catch (e) { }
+
+                // If we are INSIDE a study (atan is set), update it
+                if (atan) {
+                    const current = atanlar.find(a => a.id === atan.id);
+                    if (current) {
+                        atan = current;
+                        durumYonetimi();
+                    }
+                }
+
+            } catch (e) { console.error(e); }
         }
 
         function durumYonetimi() {
