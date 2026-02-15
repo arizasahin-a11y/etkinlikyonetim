@@ -369,6 +369,109 @@
             text-decoration: none;
             font-weight: bold;
         }
+
+        /* ACCORDION STYLES */
+        .accordion-container {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .accordion-item {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .accordion-header {
+            padding: 15px;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.2s;
+            border-bottom: 1px solid transparent;
+        }
+
+        .accordion-header:hover {
+            background: #f1f1f1;
+        }
+
+        .accordion-header.active {
+            background: #ede7f6;
+            border-bottom: 1px solid #d1c4e9;
+        }
+
+        .accordion-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.05rem;
+        }
+
+        .accordion-subtitle {
+            font-size: 0.85rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .accordion-content {
+            padding: 20px;
+            display: none;
+            background: #fff;
+            border-top: 1px solid #eee;
+        }
+
+        .accordion-item.open .accordion-content {
+            display: block;
+        }
+
+        .accordion-arrow {
+            font-size: 0.8rem;
+            transition: transform 0.3s;
+        }
+
+        .accordion-item.open .accordion-arrow {
+            transform: rotate(180deg);
+        }
+
+        .btn-incele {
+            background: var(--mavi);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            width: 100%;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .status-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-waiting {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .status-closed {
+            background: #ffebee;
+            color: #c62828;
+        }
     </style>
 </head>
 
@@ -378,11 +481,6 @@
         <div id="h_ad" class="header-left">Giriş Gerekli</div>
         <h1>Öğrenci Paneli</h1>
         <div class="header-nav" id="h_nav" style="display:none;">
-            <span id="giris_sayaci_badge" class="giris-badge">Giriş: 1</span>
-            <span id="h_sure"
-                style="font-family:monospace; background:rgba(0,0,0,0.2); padding:3px 6px; border-radius:4px; font-weight:bold;">--:--</span>
-            <button onclick="ekranDegis('p_yonerge')" class="nav-btn-small">Açıklama</button>
-            <button id="nav_ozet_btn" onclick="ozetCiz()" class="nav-btn-small" style="display:none;">Özet</button>
             <button onclick="cikisYap()" class="nav-btn-small" style="border-color:#ff8a80;">Çıkış</button>
         </div>
     </div>
@@ -395,6 +493,14 @@
                 <input type="number" id="i_no" placeholder="Okul Numaranız">
                 <input type="password" id="i_tel" placeholder="Velinizin Telefonunun Son 4 Rakamı">
                 <button onclick="girisYap()" class="btn-ana">SİSTEME GİR</button>
+            </div>
+
+            <div id="p_liste" style="display:none;">
+                <h2 style="text-align:center; color:var(--ana);">Çalışmalarınız</h2>
+                <div id="c_yok"
+                    style="text-align:center; color:#E65100; display:none; padding:15px; font-weight:bold; background:#FFF3E0; border-radius:8px; margin-bottom:10px; border:1px solid #FFE0B2;">
+                    ⚠️ Atanmış aktif çalışma bulunmamaktadır.</div>
+                <div id="accordion_liste" class="accordion-container"></div>
             </div>
 
             <div id="p_yonerge" style="display:none;">
@@ -443,12 +549,13 @@
                 <button onclick="yeniSatirEkle('')" class="btn-gri" style="width:auto; padding:8px 15px;">+ Yeni Cevap
                     Satırı</button>
                 <div class="nav-btns">
-                    <button id="nav_geri" onclick="soruGit(-1)" class="btn-gri" style="flex:1">❮ GERİ</button>
-                    <button id="nav_ileri" onclick="soruGit(1)" class="btn-mavi" style="flex:2">KAYDET VE İLERİ
-                        ❯</button>
-                    <button id="nav_bitir" onclick="ozetCiz()" class="btn-yesil" style="flex:2; display:none;">KAYDET VE
-                        BİTİR</button>
+                    <button id="nav_geri" onclick="soruGit(-1)" class="btn-gri" style="flex:1">GERİ</button>
+                    <button id="nav_ileri" onclick="soruGit(1)" class="btn-mavi" style="flex:2">İLERİ</button>
+                    <button id="nav_bitir" onclick="ozetCiz()" class="btn-yesil" style="flex:2; display:none;">Özeti
+                        Gör</button>
                 </div>
+                <button onclick="ekranDegis('p_liste')" class="btn-gri"
+                    style="margin-top:15px; border:1px solid #ddd;">Listeye Dön</button>
             </div>
 
             <div id="p_ozet" style="display:none;">
@@ -456,10 +563,11 @@
                 <div id="ozet_tablo_alani"></div>
                 <button id="btn_degerlendirme" onclick="degerlendirmeyeGec()" class="btn-mor"
                     style="margin-top:20px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
-                <button id="ozet_don_btn" onclick="ekranDegis('p_soru')" class="btn-ana"
-                    style="margin-top:10px;">DÜZENLEMEYE DÖN</button>
-                <button onclick="ekranDegis('p_yonerge')" class="btn-gri" style="margin-top:10px;">AÇIKLAMA SAYFASINA
-                    DÖN</button>
+                <div class="nav-btns" style="margin-top:20px;">
+                    <button id="ozet_don_btn" onclick="ekranDegis('p_soru')" class="btn-gri"
+                        style="display:none;">Çalışmaya Dön</button>
+                    <button id="ozet_liste_btn" onclick="ekranDegis('p_liste')" class="btn-mavi">Listeye Dön</button>
+                </div>
             </div>
 
         </div>
@@ -468,11 +576,12 @@
     <div class="footer-info">Kod: <span>Ali Rıza ŞAHİN</span></div>
 
     <script>
-        let sess = null, atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false, grupUyeleri = [];
+        let sess = null, atanlar = [], atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false, grupUyeleri = [];
         let otoKayitYapildi = false, girisSayisi = 0, girisIslandi = false;
         let grupSorgusuYapildi = false;
         let lastSaveTime = 0;
         let benimKaydim = null;
+        let tumUygulamalar = []; // Server'dan gelen ham qqq* listesi
 
         // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
         function linkleriDonustur(text) {
@@ -589,9 +698,9 @@
             document.getElementById('p_giris').style.display = "none";
             document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
             document.getElementById('h_nav').style.display = "flex";
-            ekranDegis('p_yonerge');
+            ekranDegis('p_liste');
             veriCek();
-            setInterval(veriCek, 3000);
+            setInterval(veriCek, 10000); // 10s is enough for list view
         }
 
         async function veriCek() {
@@ -599,152 +708,88 @@
                 const r1 = await fetch("/listeCalismalar");
                 const list = await r1.json();
 
-                // FIX: Server strips spaces from class name in filenames (e.g. qqq9A...)
-                // So we must strip spaces from sess.sinif to match
                 const temizSinif = sess.sinif.replace(/\s/g, '');
                 const adaylar = list.filter(f => f.startsWith(`qqq${temizSinif}`));
 
-                atan = null;
+                let yeniAtanlar = [];
                 for (const dosya of adaylar) {
                     const r = await fetch(`/calismaGetir?isim=${dosya}`);
                     const veri = await r.json();
                     if (veri.yapma === true || veri.gorme === true || veri.degerl === true || veri.aciklamaIzni === true || veri.soruIzni === true) {
-                        atan = veri;
-                        break;
+                        yeniAtanlar.push(veri);
                     }
                 }
 
-                if (!atan) {
-                    ['c_yok'].forEach(id => document.getElementById(id).style.display = "block");
-                    ['btn_basla', 'c_baslik', 'c_yonerge', 'c_grup', 'btn_ozet_ana', 'c_bekle'].forEach(id => document.getElementById(id).style.display = "none");
-                    return;
-                }
-                document.getElementById('c_yok').style.display = "none";
+                atanlar = yeniAtanlar;
+                listeCiz();
 
-                if (sorular.length === 0) {
-                    const r3 = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
-                    const icerik = await r3.json();
-                    // SQL Adaptation: robust check for content format
-                    sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
-                    document.getElementById('c_baslik').textContent = atan.calisma;
-
-                    // LİNK DÖNÜŞTÜRME
-                    // If content is just array of strings, no aciklama property
-                    const desc = icerik.aciklama || "";
-                    document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
-                }
-
-                // Grup and other logic follows...
-                // SQL Adaptation: /grupListesiGetir endpoint is compatible in server.js
-
-                if (atan.yontem === "Grup") {
-                    document.getElementById('c_grup').style.display = "block";
-
-                    // Persistent Group Title Logic
-                    if (window.cachedGrupBaslik) {
-                        document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
+                if (atan) {
+                    const current = atanlar.find(a => a.id === atan.id);
+                    if (current) {
+                        atan = current;
+                        durumYonetimi();
                     }
-
-                    if (grupUyeleri.length === 0 && !grupSorgusuYapildi) {
-                        grupSorgusuYapildi = true;
-                        // server.js expects "sinif" param for group list
-                        fetch(`/grupListesiGetir?sinif=${sess.sinif}`)
-                            .then(r => r.json())
-                            .then(gs => {
-                                // DEBUG TRAP FOR SERVER ERROR
-                                if (gs && gs.debugError) {
-                                    alert(`DEBUG ERROR:\n\nTried to find: ${gs.triedPath}\n\nBut server says file missing.\n\nServer Folder: ${gs.dirName}\n\nFiles in Folder: ${gs.availableFiles.join(", ")}\n\nNormalized Class: ${gs.normalizedClass}`);
-                                    return;
-                                }
-
-                                if (!Array.isArray(gs)) {
-                                    alert("Veri hatası: Grup listesi dizi değil.");
-                                    return;
-                                }
-
-                                // Robust Group Finding: Check by Number ONLY (User Request)
-                                // Matching User's Logic: 
-                                const g = gs.find(x => Array.isArray(x) && x.some(o => {
-                                    return o && String(o["Okul Numaranız"]).trim() === String(sess.no).trim();
-                                }));
-
-                                // DEBUG: Alert if not found
-                                if (!g) {
-                                    alert(`HATA: Grupta bulunamadınız!
-Aranan No: '${sess.no}' (Tip: ${typeof sess.no})
-Aranan Sınıf: '${sess.sinif}'
-İndirilen Grup Sayısı: ${gs.length}
-(Lütfen verileri kontrol edin veya öğretmene bildirin)`);
-                                }
-
-                                if (g) {
-                                    grupUyeleri = g;
-                                    const grupNo = gs.indexOf(g) + 1;
-
-                                    // Store and Set Title
-                                    window.cachedGrupBaslik = `${sess.sinif} - Grup ${grupNo}`;
-                                    document.getElementById('h_ad').textContent = window.cachedGrupBaslik;
-
-                                    document.getElementById('grup_baslik_metni').textContent = `${sess.sinif} - ${grupNo}. GRUP ÜYELERİ:`;
-
-                                    const ul = document.getElementById('g_liste');
-                                    ul.innerHTML = "";
-                                    g.forEach(m => {
-                                        if (m && m["Adınız Soyadınız"]) {
-                                            let li = document.createElement('li');
-                                            let isSiz = String(m["Okul Numaranız"]).trim() === sess.no;
-                                            li.innerHTML = m["Adınız Soyadınız"] + (isSiz ? " <span class='ogrenci-siz'>(Siz)</span>" : "");
-                                            ul.appendChild(li);
-                                        }
-                                    });
-                                } else {
-                                    document.getElementById('grup_baslik_metni').textContent = "GRUP LİSTESİNDE YOKSUNUZ";
-                                }
-                            })
-                            .catch(e => {
-                                console.error(e);
-                                document.getElementById('grup_baslik_metni').textContent = "GRUP BİLGİSİ BULUNAMADI";
-                            });
-                    }
-                } else {
-                    document.getElementById('c_grup').style.display = "none";
-                    document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
-                    grupUyeleri = [];
-                    grupSorgusuYapildi = false;
                 }
+            } catch (e) { console.error("Veri çekme hatası:", e); }
+        }
 
+        function listeCiz() {
+            const container = document.getElementById('accordion_liste');
+            const yokMsg = document.getElementById('c_yok');
+            if (atanlar.length === 0) { container.innerHTML = ""; yokMsg.style.display = "block"; return; }
+            yokMsg.style.display = "none";
+
+            let h = "";
+            atanlar.forEach((a) => {
+                let status = "Beklemede";
+                let statusCls = "status-waiting";
+                if (a.yapma) { status = "Aktif"; statusCls = "status-active"; }
+                else if (a.degerl || a.soruIzni || a.aciklamaIzni) { status = "İncelenebilir"; statusCls = "status-active"; }
+                else if (a.sure > 0) { status = "Tamamlandı / Kapalı"; statusCls = "status-closed"; }
+
+                h += `
+                <div class="accordion-item" id="item_${a.id}">
+                    <div class="accordion-header" onclick="accordionToggle('${a.id}')">
+                        <div>
+                            <div class="accordion-title">${a.calisma}</div>
+                            <div class="status-badge ${statusCls}">${status}</div>
+                        </div>
+                        <div class="accordion-arrow">▼</div>
+                    </div>
+                    <div class="accordion-content">
+                        <p style="margin:0 0 10px 0; color:#666; font-size:0.9em;">İncelemek için tıklayınız.</p>
+                        <button class="btn-incele" onclick="calismaSec('${a.id}')">Açıklama ve soruları görmek için tıklayınız</button>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = h;
+        }
+
+        function accordionToggle(id) {
+            const el = document.getElementById(`item_${id}`);
+            if (el) el.classList.toggle('open');
+        }
+
+        async function calismaSec(id) {
+            atan = atanlar.find(a => a.id === id);
+            if (!atan) return;
+            try {
+                const r = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
+                const icerik = await r.json();
+                sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
                 const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
                 if (rC.ok) {
                     const tumCevaplar = await rC.json();
-                    console.log('[DEBUG ogrenci veriCek] tumCevaplar count:', tumCevaplar.length, 'for study:', atan.calisma);
                     benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
-                    console.log('[DEBUG ogrenci veriCek] benimKaydim:', benimKaydim ? `found, cevaplar: ${(benimKaydim.cevaplar || []).length}` : 'NOT FOUND');
-
-                    if (benimKaydim) {
-                        // Prevent stale overwrite if recently saved (5s grace period)
-                        if (!isTyping && (Date.now() - lastSaveTime > 5000)) {
-                            // Safety: If server returns empty answers but we have local answers, KEEP local.
-                            // Only overwrite if server has actual data.
-                            if (benimKaydim.cevaplar && benimKaydim.cevaplar.length > 0) {
-                                cevaplar = benimKaydim.cevaplar;
-                            } else if (cevaplar.length === 0 && benimKaydim.cevaplar) {
-                                // If we have nothing, accept whatever server has (even empty)
-                                cevaplar = benimKaydim.cevaplar;
-                            }
-                        }
-                        girisSayisi = benimKaydim.girisSayisi || 0;
-                    }
-
-                    if (!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
-                    document.getElementById('giris_sayaci_badge').textContent = `Giriş: ${girisSayisi}`;
-                    document.getElementById('giris_sayaci_badge').style.display = "inline-block";
-
-                    const cevapVarmi = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
-                    document.getElementById('btn_basla').textContent = cevapVarmi ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
-                    document.getElementById('btn_ozet_ana').textContent = cevapVarmi ? "CEVAPLARI GÖRÜNTÜLE" : "SORULARI GÖRÜNTÜLE";
+                    if (benimKaydim) { cevaplar = benimKaydim.cevaplar || []; girisSayisi = benimKaydim.girisSayisi || 0; }
+                    else { cevaplar = []; girisSayisi = 0; }
                 }
-                durumYonetimi();
-            } catch (e) { }
+                const desc = icerik.aciklama || "";
+                document.getElementById('c_yonerge').innerHTML = linkleriDonustur(desc);
+                document.getElementById('c_baslik').textContent = atan.calisma;
+                if (!girisIslandi) { girisSayisi++; girisIslandi = true; kaydet(); }
+                ozetCiz();
+            } catch (e) { alert("Çalışma yüklenirken hata oluştu."); }
         }
 
         function durumYonetimi() {
@@ -801,7 +846,7 @@ Aranan Sınıf: '${sess.sinif}'
         }
 
         function ekranDegis(id) {
-            ['p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
+            ['p_giris', 'p_liste', 'p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
             document.getElementById(id).style.display = "block";
             window.scrollTo(0, 0);
             if (id === 'p_soru') soruYukle();
@@ -906,9 +951,9 @@ Aranan Sınıf: '${sess.sinif}'
 
         function ozetCiz() {
             if (document.getElementById('p_soru').style.display === "block" && atan.yapma) kaydet();
-            ['p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
-            document.getElementById('p_ozet').style.display = "block";
+            ekranDegis('p_ozet');
             const canEdit = atan && atan.yapma;
+            durumYonetimi(); // Refresh permissions
 
             // Puan Gösterimi
             let scoreHtml = "";
@@ -925,6 +970,10 @@ Aranan Sınıf: '${sess.sinif}'
                 </div>`;
             }
 
+            const hasGranular = (typeof atan.aciklamaIzni === 'boolean' || typeof atan.soruIzni === 'boolean');
+            const permSoru = hasGranular ? (atan.soruIzni === true) : (atan.gorme === true);
+            const aktif = (atan.yapma); // Simplified for summary context
+
             let h = scoreHtml + `<table><thead><tr><th>#</th><th>Soru ve Cevaplar</th>${canEdit ? '<th>İşlem</th>' : ''}</tr></thead><tbody>`;
             sorular.forEach((s, i) => {
                 const k = cevaplar.find(c => Number(c.soruIndex) === Number(i));
@@ -932,26 +981,33 @@ Aranan Sınıf: '${sess.sinif}'
 
                 // LİNK DÖNÜŞTÜRMELİ VE RENKLENDİRMELİ CEVAPLAR
                 let cvs = "";
-                if (k && k.cevaplar && k.cevaplar.length > 0) {
-                    cvs = k.cevaplar.map((x, cIdx) => {
-                        let cls = "";
-                        if (degBitti && soruPuanlar && soruPuanlar[cIdx] !== undefined) {
-                            cls = (Number(soruPuanlar[cIdx]) === 1) ? "cevap-dogru" : "cevap-yanlis";
-                        }
-                        return `<span class="cevap-alt ${cls}">${linkleriDonustur(x)}</span>`;
-                    }).join('');
+                // User Request: If No Permission for Questions, hide answers too
+                if (permSoru || aktif) {
+                    if (k && k.cevaplar && k.cevaplar.length > 0) {
+                        cvs = k.cevaplar.map((x, cIdx) => {
+                            let cls = "";
+                            if (degBitti && soruPuanlar && soruPuanlar[cIdx] !== undefined) {
+                                cls = (Number(soruPuanlar[cIdx]) === 1) ? "cevap-dogru" : "cevap-yanlis";
+                            }
+                            return `<span class="cevap-alt ${cls}">${linkleriDonustur(x)}</span>`;
+                        }).join('');
+                    } else {
+                        cvs = `<span class="cevap-alt cevap-bos">BOŞ</span>`;
+                    }
                 } else {
-                    cvs = `<span class="cevap-alt cevap-bos">BOŞ</span>`;
+                    cvs = `<span class="cevap-alt cevap-bos">SORULARA ERİŞİM İZNİ YOK</span>`;
                 }
 
                 const soruMetni = (typeof s === 'object' ? s.soru : s);
+                const soruLinkDonmus = (permSoru || aktif) ? linkleriDonustur(soruMetni) : "<i>(Erişim İzni Bekleniyor)</i>";
 
-                h += `<tr><td>${i + 1}</td><td><span class="soru-ust">${linkleriDonustur(soruMetni)}</span>${cvs}</td>
+                h += `<tr><td>${i + 1}</td><td><span class="soru-ust">${soruLinkDonmus}</span>${cvs}</td>
                 ${canEdit ? `<td><button class="btn-mavi btn-sm" onclick="sIdx=${i};ekranDegis('p_soru')">Düzelt</button> 
                 <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${i})">Sil</button></td>` : ''}</tr>`;
             });
             document.getElementById('ozet_tablo_alani').innerHTML = h + "</tbody></table>";
             document.getElementById('ozet_don_btn').style.display = canEdit ? "block" : "none";
+            document.getElementById('ozet_liste_btn').style.display = "block";
         }
 
         async function degerlendirmeyeGec() {
