@@ -807,10 +807,7 @@
                         <div class="accordion-arrow" style="${arrowRot}">▼</div>
                     </div>
                     <div class="accordion-content">
-                        <p style="margin:0 0 15px 0; color:#333; font-weight:bold;">İncelemek için aşağıdaki butonu kullanınız:</p>
-                        <button class="btn-incele" onclick="calismaSec('${a.id}')">
-                           📄 Açıklama ve Soruları Gör / İşlem Yap
-                        </button>
+                        <!-- Content loaded dynamically on expand -->
                     </div>
                 </div>`;
             });
@@ -819,23 +816,117 @@
 
         let openAccordionId = null;
 
-        function accordionToggle(id) {
+        async function accordionToggle(id) {
             const item = document.getElementById(`item_${id}`);
             if (!item) return;
             const wasOpen = item.classList.contains('open');
-            // Close all
+
+            // Close others
             document.querySelectorAll('.accordion-item').forEach(x => {
-                x.classList.remove('open');
-                x.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
+                if (x.id !== `item_${id}`) {
+                    x.classList.remove('open');
+                    x.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
+                }
             });
-            // Toggle clicked
+
             if (!wasOpen) {
                 item.classList.add('open');
                 item.querySelector('.accordion-arrow').style.transform = "rotate(180deg)";
                 openAccordionId = id;
+                // Lazy Load Content
+                await loadStudyContentInPlace(id);
             } else {
+                item.classList.remove('open');
+                item.querySelector('.accordion-arrow').style.transform = "rotate(0deg)";
                 openAccordionId = null;
             }
+        }
+
+        async function loadStudyContentInPlace(id) {
+            const container = document.querySelector(`#item_${id} .accordion-content`);
+            if (!container) return;
+
+            // Show loading state if empty
+            if (container.innerHTML.trim() === "") container.innerHTML = '<div style="text-align:center; padding:10px; color:#999;">Yükleniyor...</div>';
+
+            // Set global context 'atan' to this study for helper functions
+            atan = atanlar.find(a => a.id === id);
+            if (!atan) return;
+
+            try {
+                // 1. Fetch Content
+                const r = await fetch(`/calismaGetir?isim=qwx${atan.calisma}`);
+                const icerik = await r.json();
+                sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
+
+                // 2. Fetch Answers
+                const rC = await fetch(`/calismaGetir?isim=www_${atan.calisma}`);
+                if (rC.ok) {
+                    const tumCevaplar = await rC.json();
+                    benimKaydim = tumCevaplar.find(x => String(x.ogrenciNo) === String(sess.no));
+                    if (benimKaydim) { cevaplar = benimKaydim.cevaplar || []; girisSayisi = benimKaydim.girisSayisi || 0; }
+                    else { cevaplar = []; girisSayisi = 0; }
+                }
+
+                // 3. Render In-Place
+                // Description
+                const desc = icerik.aciklama || "";
+                let html = `<div style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:15px; border-left:4px solid var(--mavi);">
+                                <h4 style="margin:0 0 5px 0; color:var(--ana);">Açıklama</h4>
+                                <div class="yonerge-box" style="font-size:0.95em;">${linkleriDonustur(desc)}</div>
+                            </div>`;
+
+                // Q&A Summary (Strict Permissions)
+                durumYonetimi(); // Updates permissions based on 'atan'
+                const hasGranular = (typeof atan.aciklamaIzni === 'boolean' || typeof atan.soruIzni === 'boolean');
+                const permSoru = hasGranular ? (atan.soruIzni === true) : (atan.gorme === true);
+
+                if (permSoru) {
+                    html += `<div><h4 style="margin:0 0 10px 0; color:#333;">Sorular ve Cevaplarınız</h4>`;
+                    html += `<table style="width:100%; font-size:0.9em;"><thead><tr><th style="width:30px;">#</th><th>Soru / Cevap</th></tr></thead><tbody>`;
+                    sorular.forEach((s, i) => {
+                        const k = cevaplar.find(c => Number(c.soruIndex) === Number(i));
+                        let cvs = (k && k.cevaplar && k.cevaplar.length > 0)
+                            ? k.cevaplar.map(x => `<div class="cevap-alt">${linkleriDonustur(x)}</div>`).join('')
+                            : `<span style="color:#999; font-style:italic;">Cevap yok</span>`;
+                        const soruTxt = (typeof s === 'object' ? s.soru : s);
+                        html += `<tr><td>${i + 1}</td><td><div style="font-weight:bold; margin-bottom:5px;">${linkleriDonustur(soruTxt)}</div>${cvs}</td></tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                } else {
+                    html += `<div style="padding:10px; background:#fff3e0; color:#e65100; border-radius:5px; margin-bottom:10px;">🔒 Soru ve cevapları görüntüleme izniniz bulunmuyor.</div>`;
+                }
+
+                // Action Buttons
+                html += `<div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">`;
+
+                if (atan.yapma) {
+                    const btnText = (cevaplar.length > 0) ? "ÇALIŞMAYA DEVAM ET" : "ÇALIŞMAYA BAŞLA";
+                    // Note: calismaSec sets global state and switches screen. We use a modified version or just let screen switch happen.
+                    // Actually, 'p_soru' needs to be prepped.
+                    html += `<button class="btn-mavi" onclick="calismaBaslat('${id}')" style="flex:1;">${btnText}</button>`;
+                }
+
+                if (atan.degerl) {
+                    html += `<button class="btn-mor" onclick="degerlendirmeyeGec()" style="flex:1;">DEĞERLENDİRME</button>`;
+                }
+
+                html += `</div>`; // Close button wrapper
+
+                container.innerHTML = html;
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = `<div style="color:red; padding:10px;">Veri yüklenemedi. İnternetinizi kontrol ediniz.</div>`;
+            }
+        }
+
+        async function calismaBaslat(id) {
+            // Similar to old calismaSec but specifically for starting editing
+            atan = atanlar.find(a => a.id === id);
+            if (!atan) return;
+            await calismaSec(id); // Loads data to globals
+            ekranDegis('p_soru'); // Go to editing
         }
 
         async function calismaSec(id) {
@@ -905,7 +996,8 @@
 
             // Group Name support
             if (atan && atan.yontem === "Grup" && window.cachedGrupAd) {
-                document.getElementById('h_ad').textContent = window.cachedGrupAd;
+                // Format: Class - Study (Student Name)
+                document.getElementById('h_ad').textContent = `${sess.sinif} - ${atan.calisma} (${sess.ad})`;
             } else if (sess && (!atan || atan.yontem !== "Grup")) {
                 document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
             }
