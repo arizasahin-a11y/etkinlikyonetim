@@ -526,7 +526,7 @@
             <span id="h_sure"
                 style="font-family:monospace; background:rgba(0,0,0,0.2); padding:3px 6px; border-radius:4px; font-weight:bold;">--:--</span>
             <!-- Açıklama butonu kaldırıldı -->
-            <button id="nav_ozet_btn" onclick="ozetCiz()" class="nav-btn-small" style="display:none;">Özet</button>
+            <!-- Açıklama butonu kaldırıldı -->
             <button onclick="cikisYap()" class="nav-btn-small" style="border-color:#ff8a80;">Çıkış</button>
         </div>
     </div>
@@ -571,8 +571,7 @@
 
                 <button id="btn_basla" onclick="ekranDegis('p_soru')" class="btn-mavi" style="display:none;">ÇALIŞMAYA
                     BAŞLA</button>
-                <button id="btn_ozet_ana" onclick="ozetCiz()" class="btn-yesil"
-                    style="margin-top:10px; display:none;">CEVAPLARI GÖRÜNTÜLE</button>
+
                 <button id="btn_degerlendirme_ana" onclick="degerlendirmeyeGec()" class="btn-mor"
                     style="margin-top:10px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
             </div>
@@ -1215,9 +1214,9 @@
             const cevapVar = cevaplar.some(c => c.cevaplar && c.cevaplar.length > 0);
             const soruGorebilir = (!aktif && (permSoru || cevapVar));
 
-            // "Özet" button: Visible if (Read Only Allowed) OR (Study is Active)
-            document.getElementById('nav_ozet_btn').style.display = (soruGorebilir || aktif) ? "inline-block" : "none";
-            document.getElementById('btn_ozet_ana').style.display = (soruGorebilir) ? "block" : "none"; // Main button usually for read-only entry from start page
+            // "Özet" button removed per request
+            // document.getElementById('nav_ozet_btn').style.display = (soruGorebilir || aktif) ? "inline-block" : "none";
+            // document.getElementById('btn_ozet_ana').style.display = (soruGorebilir) ? "block" : "none";
 
             // Messages
             // Hiçbir izin yoksa BEKLE

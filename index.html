@@ -490,23 +490,10 @@
     <h1>Etkinlik Yönetim Paneli</h1>
     <div class="tab-container">
         <div class="tab-buttons">
-            <button onclick="openTab(event,'sekme1')">Çalışma Şekli</button>
             <button onclick="openTab(event,'sekme2')">Çalışma İçeriği</button>
+            <button onclick="openTab(event,'sekme1')">Çalışma Şekli</button>
             <button class="active" onclick="openTab(event,'sekme3')">Çalışma Süreci</button>
             <button onclick="openTab(event,'sekme4')">Değerlendirme</button>
-        </div>
-
-        <div id="sekme1" class="tab-content">
-            <div style="text-align: center;">
-                <select id="sinifSec" style="width: 250px;">
-                    <option value="">-- Sınıf Seçin --</option>
-                </select>
-                <div class="button-group">
-                    <button id="btnGrupla" class="action">Sınıfı Gruplara Böl</button>
-                    <button id="btnSil" class="action red">Mevcut Grupları Sil</button>
-                </div>
-            </div>
-            <div id="tablo" class="grup-container"></div>
         </div>
 
         <div id="sekme2" class="tab-content">
@@ -532,6 +519,19 @@
                     <button onclick="location.reload()" class="action red">İptal</button>
                 </div>
             </div>
+        </div>
+
+        <div id="sekme1" class="tab-content">
+            <div style="text-align: center;">
+                <select id="sinifSec" style="width: 250px;">
+                    <option value="">-- Sınıf Seçin --</option>
+                </select>
+                <div class="button-group">
+                    <button id="btnGrupla" class="action">Sınıfı Gruplara Böl</button>
+                    <button id="btnSil" class="action red">Mevcut Grupları Sil</button>
+                </div>
+            </div>
+            <div id="tablo" class="grup-container"></div>
         </div>
 
         <div id="sekme3" class="tab-content active">
