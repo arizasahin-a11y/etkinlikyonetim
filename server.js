@@ -1134,7 +1134,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
         sinif: a.class_name,
         yontem: a.method,
         ...settings, // Current settings (yapma, bitis, etc.)
-        degerl: (!!settings.degerl || !!ayar.degerlendirmeIzni), // UNION of both settings
+        degerl: !!settings.degerl, // Strictly from assignment settings (Tab 3)
         izin: !!ayar.izin, // Granular permission from AYARLAR
         myRecord: {
           cevaplar: (myRec.answers ? (Array.isArray(myRec.answers) ? myRec.answers : (myRec.answers.cevaplar || [])) : []),
