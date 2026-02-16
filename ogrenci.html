@@ -815,37 +815,23 @@
 
         async function veriCek() {
             try {
-                const r1 = await fetch("/listeCalismalar");
-                const list = await r1.json();
-
-                // FIX: Server strips spaces from class name in filenames (e.g. qqq9A...)
-                // So we must strip spaces from sess.sinif to match
-                const temizSinif = sess.sinif.replace(/\s/g, '');
-                const adaylar = list.filter(f => f.startsWith(`qqq${temizSinif}`));
+                // Aggregated Fetch (Optimization + Permission Sync)
+                const res = await fetch(`/api/ogrenciPaneli?sinif=${encodeURIComponent(sess.sinif)}&schoolNo=${encodeURIComponent(sess.no)}`);
+                if (!res.ok) throw new Error("API Error");
+                const data = await res.json();
+                const filteredResults = data.assignments || [];
 
                 // Reset atan if we are in list mode (so we don't hold onto old state)
                 if (document.getElementById('p_liste').style.display === 'block') {
                     atan = null;
                 }
 
-                // Parallel Fetching for Speed
-                const promises = adaylar.map(async (dosya) => {
-                    try {
-                        const r = await fetch(`/calismaGetir?isim=${dosya}`);
-                        if (!r.ok) return null;
-                        const veri = await r.json();
-                        if (veri) {
-                            veri.id = dosya.replace('.json', '');
-                            return veri;
-                        }
-                    } catch (e) {
-                        console.error(dosya, e);
+                // Update Group Cache from the aggregated response
+                filteredResults.forEach(a => {
+                    if (a.myGroup) {
+                        studyGroupsCache[a.calisma] = a.myGroup;
                     }
-                    return null;
                 });
-
-                const results = await Promise.all(promises);
-                const filteredResults = results.filter(x => x !== null);
 
                 // FLICKER FIX: Compare structural data to avoid redundant redraws
                 const currentDataJson = JSON.stringify(filteredResults.map(x => ({
@@ -857,41 +843,13 @@
                     aciklamaIzni: x.aciklamaIzni,
                     soruIzni: x.soruIzni,
                     gorme: x.gorme,
+                    degerl: x.degerl, // FIX: Inclusion for immediate permission sync
                     groupNo: (studyGroupsCache[x.calisma] || {}).groupNo
                 })));
 
                 const dataChanged = (currentDataJson !== lastAtanlarJson);
                 atanlar = filteredResults;
                 lastAtanlarJson = currentDataJson;
-
-                // Pre-fetch Group Info for all group studies to show badges in list
-                atanlar.forEach(a => {
-                    if (a.yontem === "Grup" && !studyGroupsCache[a.calisma] && !isFetchingGroups[a.calisma]) {
-                        isFetchingGroups[a.calisma] = true;
-                        fetch(`/grupListesiGetir?sinif=${encodeURIComponent(sess.sinif)}&calisma=${encodeURIComponent(a.calisma)}`)
-                            .then(r => r.json())
-                            .then(gruplar => {
-                                let found = null;
-                                if (Array.isArray(gruplar)) {
-                                    for (let i = 0; i < gruplar.length; i++) {
-                                        const members = gruplar[i];
-                                        if (members.some(m => String(m['Okul Numaranız']) === String(sess.no))) {
-                                            found = { groupNo: i + 1, members: members };
-                                            break;
-                                        }
-                                    }
-                                }
-                                studyGroupsCache[a.calisma] = found || { groupNo: "?", members: [] };
-                                isFetchingGroups[a.calisma] = false;
-                                if (found) {
-                                    // This will trigger a re-draw on NEXT veriCek or we can force it if visibility is changed
-                                    // Actually, let's just force a redraw if this specific info was missing
-                                    // but we need to update lastAtanlarJson to avoid infinite loop or redundant calls
-                                    // Better: let the next 3s cycle handle it OR manually trigger ONLY if dataChanged would be true now
-                                }
-                            }).catch(e => { isFetchingGroups[a.calisma] = false; });
-                    }
-                });
 
                 if (dataChanged && document.getElementById('p_liste').style.display === 'block') {
                     listeCiz();
@@ -1055,22 +1013,25 @@
                 sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
                 const desc = icerik.aciklama || "";
 
-                // Fetch Answers
-                let myAnswers = [];
-                let myScore = null;
-                const rA = await fetch(`/calismaGetir?isim=www_${encodeURIComponent(a.calisma)}`);
-                if (rA.ok) {
-                    const allAnswers = await rA.json();
-                    const studentRec = allAnswers.find(x => String(x.ogrenciNo) === String(sess.no));
-                    if (studentRec) {
-                        benimKaydim = studentRec; // Global update
-                        if (studentRec.cevaplar) myAnswers = studentRec.cevaplar;
-                        cevaplar = myAnswers; // Global update
-                        girisSayisi = studentRec.girisSayisi || 0;
-                    } else {
-                        cevaplar = []; // Reset if no record
-                        benimKaydim = null;
-                    }
+                // NEW: Use record data already provided by aggregated veriCek
+                if (a.myRecord) {
+                    benimKaydim = a.myRecord;
+                    cevaplar = a.myRecord.cevaplar || [];
+                    girisSayisi = a.myRecord.entry_count || 0;
+                } else {
+                    // Fallback for safety
+                    try {
+                        const rA = await fetch(`/calismaGetir?isim=www_${encodeURIComponent(a.calisma)}`);
+                        if (rA.ok) {
+                            const allAnswers = await rA.json();
+                            const studentRec = allAnswers.find(x => String(x.ogrenciNo) === String(sess.no));
+                            if (studentRec) {
+                                benimKaydim = studentRec;
+                                cevaplar = studentRec.cevaplar || [];
+                                girisSayisi = studentRec.girisSayisi || 0;
+                            }
+                        }
+                    } catch (e) { console.error("Record fetch error:", e); }
                 }
 
                 // Render Inside Accordion

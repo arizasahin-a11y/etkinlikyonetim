@@ -1191,7 +1191,11 @@
         function izinKaydet() {
             const val = document.getElementById("s4DosyaSec").value; if (!val) return;
             const ayar = { ogrenciNo: "AYARLAR", sinif: "SISTEM", degerlendirmeIzni: document.getElementById("chkDegerlendirmeIzin").checked, izin: document.getElementById("chkIzin").checked, tarih: new Date().toLocaleString() };
-            fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: "www_" + val, veri: ayar }) });
+            fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: "www_" + val, veri: ayar }) })
+                .then(() => {
+                    // Refresh assignment list in Tab 3 to keep in sync
+                    setTimeout(s3AtamalariCek, 200);
+                });
         }
 
         document.getElementById("btnDegerlendirmeBaslat").onclick = () => {

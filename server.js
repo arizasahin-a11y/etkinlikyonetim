@@ -1051,6 +1051,109 @@ app.get("/calismaGetir", async (req, res) => {
   } catch (e) { console.error(e); res.status(404).send(); }
 });
 
+app.get("/api/ogrenciPaneli", async (req, res) => {
+  const { sinif, schoolNo } = req.query;
+  if (!sinif || !schoolNo) return res.status(400).json({ error: "Missing params" });
+
+  try {
+    // 1. Get Assignments for this class
+    const assignmentsRes = await query(`
+      SELECT a.*, s.name as study_name 
+      FROM study_assignments a 
+      JOIN studies s ON a.study_id = s.id 
+      WHERE a.class_name = $1
+    `, [sinif]);
+
+    const assignments = assignmentsRes.rows;
+    if (assignments.length === 0) return res.json({ assignments: [] });
+
+    const studyIds = assignments.map(a => a.study_id);
+
+    // 2. Get Permissions (AYARLAR) for these studies
+    const permsRes = await query(`
+      SELECT study_id, answers 
+      FROM student_evaluations 
+      WHERE student_school_no = 'AYARLAR' AND study_id = ANY($1)
+    `, [studyIds]);
+
+    const permsMap = {};
+    permsRes.rows.forEach(r => {
+      permsMap[r.study_id] = r.answers;
+    });
+
+    // 3. Get Student's own records
+    const myRecordsRes = await query(`
+      SELECT study_id, answers, scores, evaluation, entry_count
+      FROM student_evaluations
+      WHERE student_school_no = $1 AND study_id = ANY($2)
+    `, [schoolNo, studyIds]);
+
+    const recordsMap = {};
+    myRecordsRes.rows.forEach(r => {
+      recordsMap[r.study_id] = r;
+    });
+
+    // 4. Get Groups for this class
+    const groupsRes = await query(`
+        SELECT study_name, groups_data
+        FROM study_groups
+        WHERE class_name = $1
+    `, [sinif]);
+
+    const groupsByStudy = {};
+    groupsRes.rows.forEach(r => {
+      groupsByStudy[r.study_name] = r.groups_data;
+    });
+
+    // 5. Assemble final data
+    const results = assignments.map(a => {
+      const settings = a.settings || {};
+      const ayar = permsMap[a.study_id] || {};
+      const myRec = recordsMap[a.study_id] || {};
+
+      // Find my group if it's a group study
+      let myGroup = null;
+      if (a.method === "Grup") {
+        const studyGroups = groupsByStudy[a.study_name];
+        if (Array.isArray(studyGroups)) {
+          const groupIdx = studyGroups.findIndex(members =>
+            members.some(m => String(m['Okul Numaranız']) === String(schoolNo))
+          );
+          if (groupIdx !== -1) {
+            myGroup = {
+              groupNo: groupIdx + 1,
+              members: studyGroups[groupIdx]
+            };
+          }
+        }
+      }
+
+      return {
+        id: "qqq" + a.class_name.replace(/\s/g, '') + a.study_name,
+        calisma: a.study_name,
+        sinif: a.class_name,
+        yontem: a.method,
+        ...settings, // Current settings (yapma, bitis, etc.)
+        degerl: (!!settings.degerl || !!ayar.degerlendirmeIzni), // UNION of both settings
+        izin: !!ayar.izin, // Granular permission from AYARLAR
+        myRecord: {
+          cevaplar: myRec.answers || [],
+          puanlar: myRec.scores || {},
+          evaluation: myRec.evaluation || {},
+          entry_count: myRec.entry_count || 0
+        },
+        myGroup: myGroup
+      };
+    });
+
+    res.json({ assignments: results });
+
+  } catch (e) {
+    console.error("error in /api/ogrenciPaneli:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/arsivListesi", async (req, res) => {
   try {
     const resDb = await query("SELECT name FROM studies WHERE is_archived = TRUE");
