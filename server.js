@@ -1137,7 +1137,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
         degerl: (!!settings.degerl || !!ayar.degerlendirmeIzni), // UNION of both settings
         izin: !!ayar.izin, // Granular permission from AYARLAR
         myRecord: {
-          cevaplar: myRec.answers || [],
+          cevaplar: (myRec.answers ? (Array.isArray(myRec.answers) ? myRec.answers : (myRec.answers.cevaplar || [])) : []),
           puanlar: myRec.scores || {},
           evaluation: myRec.evaluation || {},
           entry_count: myRec.entry_count || 0

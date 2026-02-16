@@ -1016,7 +1016,7 @@
                 // NEW: Use record data already provided by aggregated veriCek
                 if (a.myRecord) {
                     benimKaydim = a.myRecord;
-                    cevaplar = a.myRecord.cevaplar || [];
+                    cevaplar = Array.isArray(a.myRecord.cevaplar) ? a.myRecord.cevaplar : []; // ENSURE ARRAY
                     girisSayisi = a.myRecord.entry_count || 0;
                 } else {
                     // Fallback for safety
@@ -1027,8 +1027,12 @@
                             const studentRec = allAnswers.find(x => String(x.ogrenciNo) === String(sess.no));
                             if (studentRec) {
                                 benimKaydim = studentRec;
-                                cevaplar = studentRec.cevaplar || [];
+                                cevaplar = Array.isArray(studentRec.cevaplar) ? studentRec.cevaplar : []; // ENSURE ARRAY
                                 girisSayisi = studentRec.girisSayisi || 0;
+                            } else {
+                                cevaplar = []; // Reset if no record
+                                benimKaydim = null;
+                                girisSayisi = 0;
                             }
                         }
                     } catch (e) { console.error("Record fetch error:", e); }
@@ -1154,7 +1158,7 @@
                 }
 
                 // Questions / Answers List (Mini View)
-                const canSeeQuestions = (permSoru || isActive || (myAnswers.length > 0));
+                const canSeeQuestions = (permSoru || isActive || (cevaplar.length > 0));
 
                 if (canSeeQuestions) {
                     let qListHtml = `<div style="display:flex; flex-direction:column; gap:10px;">`;
