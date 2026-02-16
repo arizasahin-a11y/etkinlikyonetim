@@ -1000,7 +1000,10 @@
 
                     html += `<div class="grup"><h3>${i + 1}. GRUP</h3><ul>`;
                     grup.forEach(ogr => {
-                        html += `<li><span class="no">${ogr['Okul Numaranız']}</span> <span class="ad">${ogr['Adınız Soyadınız']}</span> <span onclick="s3OAGiris('${ogr['Okul Numaranız']}')" style="cursor:pointer; margin-left:5px;" title="Not Girmek İçin Tıklayın">📝</span></li>`;
+                        const hasOA = oaMap[String(ogr['Okul Numaranız'])];
+                        const style = hasOA ? 'background-color: #ffebee;' : '';
+
+                        html += `<li style="${style}"><span class="no">${ogr['Okul Numaranız']}</span> <span class="ad">${ogr['Adınız Soyadınız']}</span> <span onclick="s3OAGiris('${ogr['Okul Numaranız']}')" style="cursor:pointer; margin-left:5px;" title="Not Girmek İçin Tıklayın">📝</span></li>`;
                     });
                     html += "</ul></div>";
                 });
