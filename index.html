@@ -1123,7 +1123,7 @@
                 <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
                 <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>
                 <td><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px" min="0"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px;">OK</button></td>
-                <td><span class="timer-text" id="t_${a.id}">${!a.yapma ? "BİTTİ" : "--:--"}</span></td>
+                <td><span class="timer-text" id="t_${a.id}">${(!a.yapma && a.sure > 0) ? "BİTTİ" : "--:--"}</span></td>
                 <td><button onclick="s3Del('${a.id}')" class="action red" style="min-width:auto; padding:5px;">Sil</button></td>`;
                 b.appendChild(tr);
             });
@@ -1138,7 +1138,7 @@
                 // Immediate UI update for 'yapma'
                 if (k === 'yapma') {
                     const el = document.getElementById("t_" + id);
-                    if (el) el.textContent = v ? "--:--" : "BİTTİ";
+                    if (el) el.textContent = v ? "--:--" : (a.sure > 0 ? "BİTTİ" : "--:--");
                 }
 
                 try {
@@ -1190,9 +1190,9 @@
                 const el = document.getElementById("t_" + a.id);
                 if (!el) return;
 
-                // Priority: If yapma is false -> SBitti
+                // Priority: If yapma is false -> BİTTİ (only if duration > 0)
                 if (!a.yapma) {
-                    el.textContent = "BİTTİ";
+                    el.textContent = (a.sure > 0) ? "BİTTİ" : "--:--";
                     return;
                 }
 
