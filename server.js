@@ -1471,7 +1471,141 @@ async function autoMigrate() {
   } catch (e) {
     console.warn("Auto-migration failed (likely due to no DB connection locally):", e.message);
   }
+
+  // 3. SPECIAL ONE-TIME MIGRATION: Sıvı Basıncı
+  // User requested to replace DB groups with local file content for this study.
+  try {
+    const siviClasses = ["9A", "9B", "9C"];
+    const siviStudy = "Sıvı Basıncı";
+    const fs = require('fs');
+
+    for (const cls of siviClasses) {
+      const fName = `${cls}Grupları.json`;
+      const fPath = path.join(__dirname, fName);
+
+      if (fs.existsSync(fPath)) {
+        console.log(`[SPECIAL IMPORT] Found ${fName} for ${siviStudy}. Importing...`);
+        try {
+          const content = JSON.parse(fs.readFileSync(fPath, 'utf-8'));
+          const jsonStr = JSON.stringify(content);
+
+          // Insert into study_groups
+          await query(`
+                      INSERT INTO study_groups (study_name, class_name, groups_data)
+                      VALUES ($1, $2, $3::jsonb)
+                      ON CONFLICT (study_name, class_name) 
+                      DO UPDATE SET groups_data = $3::jsonb
+                  `, [siviStudy, cls, jsonStr]);
+
+          console.log(`✅ [SPECIAL IMPORT] Imported ${cls} into ${siviStudy}.`);
+
+          // Rename to prevent overwrite on next restart
+          // We append ".imported"
+          const newPath = fPath + ".imported";
+          if (fs.existsSync(newPath)) fs.unlinkSync(newPath); // Remove old imported if exists
+          fs.renameSync(fPath, newPath);
+          console.log(`   -> Renamed file to ${fName}.imported`);
+
+        } catch (err) {
+          console.error(`❌ [SPECIAL IMPORT] Error importing ${cls}:`, err.message);
+        }
+      }
+    }
+  } catch (e) { console.error("Special Migration Error:", e); }
+
 }
+
+
+// FORCE IMPORT ENDPOINT (Added for manual triggering)
+// FORCE IMPORT ENDPOINT (Added for manual triggering)
+app.get("/force-import-sivi-basinci", async (req, res) => {
+  let logs = [];
+  try {
+    // 1. Test DB Connection
+    let dbConnected = false;
+    try {
+      await query("SELECT 1");
+      logs.push("✅ DB Connection OK");
+      dbConnected = true;
+    } catch (dbErr) {
+      logs.push(`⚠️ DB Connection FAILED: ${dbErr.message || dbErr}. Will use File System fallback.`);
+    }
+
+    const siviClasses = ["9A", "9B", "9C"];
+    const siviStudy = "Sıvı Basıncı";
+    const fs = require('fs');
+    const path = require('path');
+
+    for (const cls of siviClasses) {
+      let fName = `${cls}Grupları.json`;
+      let fPath = path.join(__dirname, fName);
+
+      if (!fs.existsSync(fPath)) {
+        if (fs.existsSync(fPath + ".imported")) {
+          logs.push(`Original ${fName} not found, but found .imported. Using it.`);
+          fPath = fPath + ".imported";
+        } else {
+          logs.push(`Skipping ${cls}: File not found.`);
+          continue;
+        }
+      }
+
+      logs.push(`Importing ${cls} from ${fPath}...`);
+      try {
+        const content = JSON.parse(fs.readFileSync(fPath, 'utf-8'));
+        const jsonStr = JSON.stringify(content);
+
+        let imported = false;
+
+        // A. Try DB Insert
+        if (dbConnected) {
+          try {
+            await query(`
+                          INSERT INTO study_groups (study_name, class_name, groups_data)
+                          VALUES ($1, $2, $3::jsonb)
+                          ON CONFLICT (study_name, class_name) 
+                          DO UPDATE SET groups_data = $3::jsonb
+                      `, [siviStudy, cls, jsonStr]);
+            logs.push(`✅ DB Insert Success for ${cls}.`);
+            imported = true;
+          } catch (sqlErr) {
+            logs.push(`❌ DB Insert Failed for ${cls}: ${sqlErr.message}`);
+          }
+        }
+
+        // B. File System Fallback (gggSıvı Basıncı9A.json)
+        try {
+          const targetFileName = `ggg${siviStudy}${cls}.json`;
+          const targetPath = path.join(__dirname, targetFileName);
+          fs.writeFileSync(targetPath, jsonStr);
+          logs.push(`✅ FS Write Success: ${targetFileName}`);
+          imported = true;
+        } catch (fsErr) {
+          logs.push(`❌ FS Write Failed for ${cls}: ${fsErr.message}`);
+        }
+
+        // Renaming Logic
+        if (imported) {
+          if (!fPath.endsWith(".imported")) {
+            const newPath = fPath + ".imported";
+            if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
+            fs.renameSync(fPath, newPath);
+            logs.push(`Renamed source file to .imported`);
+          }
+        }
+
+      } catch (err) {
+        const util = require('util');
+        logs.push(`❌ Critical Error ${cls}: ${err.message}`);
+        logs.push(`   -> Details: ${util.format(err)}`);
+      }
+    }
+    res.json({ status: "ok", logs });
+  } catch (e) {
+    const util = require('util');
+    res.status(500).json({ status: "error", error: e.message, logs, internal: util.format(e) });
+  }
+});
 
 // --- YEDEKLEME ENDPOINT (Global) ---
 const AdmZip = require('adm-zip');
