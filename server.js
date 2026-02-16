@@ -58,27 +58,32 @@ function logToFile(msg) {
 
 // ... (Other endpoints) ...
 
+
 app.get("/grupListesiGetir", async (req, res) => {
   const rawSinif = req.query.sinif;
+  const calisma = req.query.calisma; // Optional
   const normalizedSinif = sinifIsmiTemizle(rawSinif);
 
-  // Helper to check File System
-  const checkFileSystem = () => {
-    console.log(`[grupListesiGetir] Checking File System for ${normalizedSinif}...`);
-    const strictPath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
-    if (require("fs").existsSync(strictPath)) {
-      console.log(`[grupListesiGetir] Found FILE: ${strictPath}`);
-      try {
-        const content = JSON.parse(require("fs").readFileSync(strictPath, 'utf-8'));
-        // Fire-and-forget lazy migration attempt
-        query(`INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2) ON CONFLICT (class_name) DO UPDATE SET groups_data = $2`, [rawSinif, content]).catch(err => console.error("Lazy Migration Fail:", err.message));
-        return content;
-      } catch (e) { console.error("FS Parse Error:", e); return []; }
-    }
-    return [];
-  };
-
   try {
+    if (calisma) {
+      // FETCH STUDY-SPECIFIC GROUPS
+      const resDb = await query("SELECT groups_data FROM study_groups WHERE study_name = $1 AND class_name = $2", [calisma, rawSinif]);
+
+      if (resDb.rows.length > 0) {
+        return res.json(resDb.rows[0].groups_data || []);
+      } else {
+        // Fallback to checking file system for ggg[Study][Class].json?
+        // Only if we want robust fallback. 
+        // File name: ggg[Study][Class].json (Assuming no spaces in filename usually, but here 'calisma' might have spaces?)
+        // Server strips extension usually?
+        // Let's assume 'calisma' is the name matching DB 'name'.
+
+        // If not in DB, return empty array for study-specific request
+        return res.json([]);
+      }
+    }
+
+    // LEGACY: Class Groups
     // 1. Try DB
     let rows = [];
     try {
@@ -90,12 +95,19 @@ app.get("/grupListesiGetir", async (req, res) => {
     }
 
     if (rows.length > 0) {
-      console.log(`[grupListesiGetir] Found in DB.`);
+      // console.log(`[grupListesiGetir] Found in DB.`);
       res.json(rows);
     } else {
       // 2. Fallback to FS
-      const fileData = checkFileSystem();
-      res.json(fileData);
+      const strictPath = path.join(__dirname, `${normalizedSinif}Grupları.json`);
+      if (require("fs").existsSync(strictPath)) {
+        try {
+          const content = JSON.parse(require("fs").readFileSync(strictPath, 'utf-8'));
+          res.json(content);
+        } catch (e) { res.json([]); }
+      } else {
+        res.json([]);
+      }
     }
   } catch (e) {
     console.error("General Error:", e);
@@ -303,21 +315,42 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
   } catch (err) { console.error(err); res.status(500).json({ status: "error" }); }
 });
 
-// Grupları Kaydet
+
+// Grupları Kaydet (Study-Specific)
 app.post("/kaydet", async (req, res, next) => {
   try {
-    // Case 1: Groups (from index.html)
+    // Case 1: Groups (from index.html - now with optional 'calisma' param)
     if (req.body.sinif && req.body.gruplar) {
-      const { sinif, gruplar } = req.body;
+      const { sinif, gruplar, calisma } = req.body;
       const groupsJson = JSON.stringify(gruplar);
-      await query(`
+
+      if (calisma) {
+        // NEW: Save to study_groups table
+        await query(`
+            INSERT INTO study_groups (study_name, class_name, groups_data)
+            VALUES ($1, $2, $3::jsonb)
+            ON CONFLICT (study_name, class_name) 
+            DO UPDATE SET groups_data = $3::jsonb
+         `, [calisma, sinif, groupsJson]);
+        console.log(`✅ [Gruplar Kaydet] Çalışma: ${calisma}, Sınıf: ${sinif}, Grup Sayısı: ${gruplar.length}`);
+
+        // Fallback to legacy behavior if needed? No, user wants strict separation.
+        // But maybe save to class_groups too for backward compatibility? 
+        // User said "From now on...". Let's stick to study_groups mostly, but...
+        // Actually, let's KEEP saving to class_groups if no study is provided (legacy mode),
+        // BUT if study is provided, ONLY save to study_groups.
+
+      } else {
+        // OLD: Save to class_groups (Legacy)
+        await query(`
                 INSERT INTO class_groups (class_name, groups_data)
                 VALUES ($1, $2::jsonb)
                 ON CONFLICT (class_name) 
                 DO UPDATE SET groups_data = $2::jsonb
             `, [sinif, groupsJson]);
+        console.log(`✅ [Gruplar Kaydet] Legacy - Sınıf: ${sinif}, Grup Sayısı: ${gruplar.length}`);
+      }
 
-      console.log(`✅ [Gruplar Kaydet] Sınıf: ${sinif}, Grup Sayısı: ${gruplar.length}`);
       return res.json({ status: "ok" });
     }
 
@@ -428,7 +461,7 @@ app.post("/calismaSil", async (req, res) => {
       }
 
     } else if (cleanIsim.endsWith("Grupları")) {
-      // 4. DELETE CLASS GROUPS
+      // 4. DELETE CLASS GROUPS (Legacy)
       const className = cleanIsim.replace("Grupları", "");
       await query("DELETE FROM class_groups WHERE class_name = $1", [className]);
 
@@ -439,6 +472,23 @@ app.post("/calismaSil", async (req, res) => {
       if (fs.existsSync(filePath)) {
         try { fs.unlinkSync(filePath); } catch (e) { console.error("FS Delete Error:", e); }
       }
+
+    } else if (cleanIsim.startsWith("ggg")) {
+      // 5. DELETE STUDY groups
+      // Name format: ggg[Study][Class]
+      // We need to parse or use LIKE?
+      // Actually we receive the full name e.g. "gggMatematik9-A" (without .json)
+
+      // Try to delete from study_groups table using loose matching or constructed check?
+      // Since we don't have separator, we can't easily split study/class.
+      // BUT for deletion, maybe we just search by the constructed ID similarity?
+      // Or we accept that we can't delete easily from DB without proper ID.
+
+      // Actually, in index.html we construct the name: `ggg${study}${class}.json`
+      // So cleanIsim = `ggg${study}${class}`.
+
+      // We can search in DB: WHERE 'ggg' || study_name || class_name = $1
+      await query("DELETE FROM study_groups WHERE 'ggg' || study_name || class_name = $1", [cleanIsim]);
 
     } else {
       await query("DELETE FROM studies WHERE name = $1", [cleanIsim]);
@@ -835,26 +885,65 @@ app.get("/calismaGetir", async (req, res) => {
       res.json(mapped);
 
     } else if (isim.endsWith("Grupları.json")) {
-      // Fetch Class Groups (e.g. 9AGrupları.json)
-      const className = isim.replace("Grupları.json", "");
+      // Fetch Groups (ggg[Study][Class].json OR [Class]Grupları.json)
+      // Request format: ggg[Study][Class].json  OR  [Class]Grupları.json
 
-      // Try DB first
-      const resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [className]);
-      if (resDb.rows.length > 0) {
-        res.json(resDb.rows[0].groups_data);
-      } else {
-        // Fallback to file system
-        const filePath = path.join(__dirname, isim);
-        if (fs.existsSync(filePath)) {
-          try {
-            const fileData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-            res.json(fileData);
-          } catch (e) {
-            console.error("File parse error:", e);
+      let className, studyName;
+
+      if (isim.startsWith("ggg")) {
+        // New Format: ggg[Study][Class].json
+        // Need to parse Study and Class. 
+        // Regex approach? or Logic? 
+        // User said: ggg[Study][Class].json
+        // We can't easily parse without separator if Study/Class has variable length.
+        // BUT, usually the client requests this.
+        // Let's assume the CLIENT sends the correctly formatted name.
+        // Server side just needs to match it to DB.
+
+        // Actually, we can pass query params to a GET, but here we are using a file-like route /DosyaAdi
+        // So we need to reverse-engineer or...
+
+        // Wait, if I change the DB structure, I should also change how I query it.
+        // If the requester asks for "gggMatematik9-A.json", I need to find study="Matematik" class="9-A".
+        // This is hard to parse if names overlap.
+        // Better approach: Client sends "ggg[Study]__[Class].json" with a separator?
+        // OR, strict naming: ggg + Study + Class + .json
+
+        // Let's assume for now the client is smart enough OR we use a different endpoint for groups?
+        // No, existing structure uses /calismaGetir?isim=...
+
+        // Let's try to find a match in the DB using LIKE if we can't parse exactly?
+        // Or just store the "file name" logic in the client.
+        // For now, let's implement the DB fetch assuming we can get Study and Class.
+
+        // Actually, let's modify the ROUTE logic to be smarter.
+        // If it starts with ggg, we try to find a match in study_groups table where concatenation matches?
+        // SELECT * FROM study_groups WHERE 'ggg' || study_name || class_name || '.json' = $1
+
+        const resDb = await query("SELECT groups_data FROM study_groups WHERE 'ggg' || study_name || class_name || '.json' = $1", [isim]);
+        if (resDb.rows.length > 0) {
+          res.json(resDb.rows[0].groups_data);
+        } else {
+          // Fallback to file system
+          const filePath = path.join(__dirname, isim);
+          if (fs.existsSync(filePath)) {
+            try { res.json(JSON.parse(fs.readFileSync(filePath, 'utf-8'))); } catch (e) { res.status(404).send(); }
+          } else {
             res.status(404).send();
           }
+        }
+
+      } else {
+        // Legacy: [Class]Grupları.json
+        className = isim.replace("Grupları.json", "");
+        const resDb = await query("SELECT groups_data FROM class_groups WHERE class_name = $1", [className]);
+        if (resDb.rows.length > 0) {
+          res.json(resDb.rows[0].groups_data);
         } else {
-          res.status(404).send();
+          const filePath = path.join(__dirname, isim);
+          if (fs.existsSync(filePath)) {
+            try { res.json(JSON.parse(fs.readFileSync(filePath, 'utf-8'))); } catch (e) { res.status(404).send(); }
+          } else { res.status(404).send(); }
         }
       }
 
@@ -1059,11 +1148,20 @@ async function autoMigrate() {
     const fs = require('fs'); // Ensure fs is available if not global
     const files = fs.readdirSync(__dirname);
 
-    // 0. Ensure Table Exists (Robustness)
+    // 0. Ensure Tables Exists (Robustness)
     await query(`
         CREATE TABLE IF NOT EXISTS class_groups (
             class_name VARCHAR(255) PRIMARY KEY,
             groups_data JSONB
+        );
+    `);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS study_groups (
+            study_name VARCHAR(255),
+            class_name VARCHAR(255),
+            groups_data JSONB,
+            PRIMARY KEY (study_name, class_name)
         );
     `);
 

@@ -523,9 +523,20 @@
 
         <div id="sekme1" class="tab-content">
             <div style="text-align: center;">
-                <select id="sinifSec" style="width: 250px;">
-                    <option value="">-- Sınıf Seçin --</option>
-                </select>
+                <div style="display:inline-block; text-align:left; margin-bottom:10px;">
+                    <div><strong>1. Sınıf Seçin:</strong></div>
+                    <select id="sinifSec" style="width: 250px;">
+                        <option value="">-- Sınıf Seçin --</option>
+                    </select>
+                </div>
+
+                <div style="display:inline-block; text-align:left; margin-left:20px; margin-bottom:10px;">
+                    <div><strong>2. Çalışma Seçin:</strong></div>
+                    <select id="sinifCalismaSec" style="width: 250px;">
+                        <option value="">-- Çalışma Seçin --</option>
+                    </select>
+                </div>
+
                 <div class="button-group">
                     <button id="btnGrupla" class="action">Sınıfı Gruplara Böl</button>
                     <button id="btnSil" class="action red">Mevcut Grupları Sil</button>
@@ -882,58 +893,127 @@
 
         document.getElementById("sinifSec").onchange = function () {
             secilenSinif = this.value;
-            if (secilenSinif) {
-                // Use the correct endpoint for DB-backed groups
-                fetch(`/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}`)
-                    .then(r => r.json())
-                    .then(g => {
-                        if (Array.isArray(g) && g.length > 0) gruplariGoster(g);
-                        else document.getElementById("tablo").innerHTML = "";
-                    })
-                    .catch(() => document.getElementById("tablo").innerHTML = "");
-            }
+            tabloCiz();
         };
-        function gruplariGoster(gruplar) {
-            const container = document.getElementById("tablo"); container.innerHTML = "";
-            gruplar.forEach((grup, idx) => {
-                const div = document.createElement("div"); div.className = "grup";
-                div.innerHTML = `<h3>Grup ${idx + 1}</h3>`;
-                const table = document.createElement("table");
-                // Explicitly select the desired columns
-                const keys = ["Okul Numaranız", "Adınız Soyadınız"];
-                table.innerHTML = `<thead><tr>${keys.map(k => `<th>${k}</th>`).join("")}</tr></thead><tbody>${grup.map(r => `<tr>${keys.map(k => `<td>${r[k] || ""}</td>`).join("")}</tr>`).join("")}</tbody>`;
-                div.appendChild(table); container.appendChild(div);
-            });
+
+        document.getElementById("sinifCalismaSec").onchange = function () {
+            secilenCalismaGrupIcin = this.value;
+            tabloCiz();
+        };
+
+        async function tabloCiz() {
+            if (!secilenSinif) {
+                document.getElementById('tablo').innerHTML = "";
+                return;
+            }
+
+            try {
+                let gruplar = [];
+                if (secilenCalismaGrupIcin) {
+                    // Try fetching ggg[Study][Class].json
+                    // Name format: ggg[Study][Class].json
+                    // We can use /calismaGetir?isim=...
+                    const fName = `ggg${secilenCalismaGrupIcin}${secilenSinif}`; // .json will be added by server if needed
+                    const res = await fetch(`/calismaGetir?isim=${encodeURIComponent(fName)}`);
+                    if (res.ok) gruplar = await res.json();
+                    else gruplar = []; // No groups for this study yet
+                } else {
+                    // Fallback to legacy class groups
+                    const res = await fetch(`/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}`);
+                    if (res.ok) gruplar = await res.json();
+                }
+
+                if (!gruplar || gruplar.length === 0) {
+                    document.getElementById('tablo').innerHTML = `<div style="text-align:center; padding:20px; color:#666;">
+                        ${secilenCalismaGrupIcin ? `"${secilenCalismaGrupIcin}" çalışması için ${secilenSinif} sınıfına ait grup bulunamadı.` : `"${secilenSinif}" sınıfı için genel grup bulunamadı.`}
+                        <br>Gruba ayırmak için yukarıdaki butonu kullanın.
+                    </div>`;
+                    return;
+                }
+
+                let html = "";
+                gruplar.forEach((grup, i) => {
+                    html += `<div class="grup-kutu"><h3>${i + 1}. Grup</h3><ul>`;
+                    grup.forEach(ogr => {
+                        html += `<li>${ogr['Okul Numaranız']} - ${ogr['Adınız Soyadınız']}</li>`;
+                    });
+                    html += "</ul></div>";
+                });
+                document.getElementById('tablo').innerHTML = html;
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('tablo').innerHTML = "Gruplar yüklenemedi.";
+            }
         }
 
-        document.getElementById("btnGrupla").onclick = () => {
+        document.getElementById('btnGrupla').onclick = async function () {
             if (!secilenSinif) return alert("Sınıf seçin!");
-            const n = prompt("Grup sayısı?"); if (!n) return;
-
-            const ogrenciler = globalData.filter(k => k["Sınıfınız"] === secilenSinif);
-            ogrenciler.sort((a, b) => parseInt(a["Okul Numaranız"]) - parseInt(b["Okul Numaranız"]));
-
-            const gruplar = [];
-            const perGroup = Math.ceil(ogrenciler.length / n);
-
-            for (let i = 0; i < n; i++) {
-                const start = i * perGroup;
-                const end = start + perGroup;
-                const dilim = ogrenciler.slice(start, end);
-                if (dilim.length) gruplar.push(dilim);
+            if (!secilenCalismaGrupIcin) {
+                if (!confirm("Bir çalışma seçmediniz. Gruplar GENEL sınıf grupları olarak kaydedilecek. Devam etmek istiyor musunuz?")) return;
             }
 
-            gruplariGoster(gruplar);
+            const kisiSayisi = prompt("Grup başına kişi sayısı kaç olsun?", "4");
+            if (!kisiSayisi) return;
 
-            fetch("/kaydet", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sinif: secilenSinif, gruplar })
-            }).then(() => alert("Gruplar oluşturuldu ve otomatik kaydedildi!"));
+            const n = parseInt(kisiSayisi);
+            if (isNaN(n) || n < 1) return alert("Geçersiz sayı!");
+
+            // 1. Sınıf listesini çek (veritabani.json veya DB)
+            const sinifListesi = globalData.filter(x => x['Sınıfınız'] === secilenSinif);
+            if (sinifListesi.length === 0) return alert("Sınıf boş!");
+
+            // Karıştır
+            const karisik = sinifListesi.sort(() => 0.5 - Math.random());
+            const gruplar = [];
+            for (let i = 0; i < karisik.length; i += n) {
+                gruplar.push(karisik.slice(i, i + n));
+            }
+
+            // Kaydet
+            // Send 'calisma' param if selected
+            const payload = { sinif: secilenSinif, gruplar: gruplar };
+            if (secilenCalismaGrupIcin) payload.calisma = secilenCalismaGrupIcin;
+
+            try {
+                const res = await fetch('/kaydet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const json = await res.json();
+                if (json.status === "ok") {
+                    alert(`${gruplar.length} grup oluşturuldu ve kaydedildi!`);
+                    tabloCiz();
+                } else {
+                    alert("Hata: " + json.message);
+                }
+            } catch (e) { alert("Hata: " + e); }
         };
 
-        document.getElementById("btnSil").onclick = () => { if (secilenSinif && confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: secilenSinif + "Grupları" }) }).then(() => document.getElementById("tablo").innerHTML = ""); };
+        document.getElementById('btnSil').onclick = async function () {
+            if (!secilenSinif) return alert("Sınıf seçin!");
 
+            let dosyaIsmi = "";
+            let msg = "";
+            if (secilenCalismaGrupIcin) {
+                dosyaIsmi = `ggg${secilenCalismaGrupIcin}${secilenSinif}`; // .json added in server or here? server strips it.
+                msg = `"${secilenCalismaGrupIcin}" çalışması için "${secilenSinif}" grupları silinecek. Emin misiniz?`;
+            } else {
+                dosyaIsmi = `${secilenSinif}Grupları`;
+                msg = `"${secilenSinif}" için GENEL gruplar silinecek. Emin misiniz?`;
+            }
+
+            if (!confirm(msg)) return;
+
+            await fetch('/calismaSil', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ calismaIsmi: dosyaIsmi })
+            });
+            alert("Silindi (Sunucu destekliyorsa).");
+            tabloCiz();
+        };
         function s3DropdownYukle() {
             const cS = document.getElementById("s3CalismaSec");
             fetch("/listeCalismalar").then(r => r.json()).then(dosyalar => {
@@ -1013,8 +1093,23 @@
 
         function s4DosyaListesiYukle() {
             fetch("/listeCalismalar").then(r => r.json()).then(dosyalar => {
-                const sel = document.getElementById("s4DosyaSec"); sel.innerHTML = '<option value="">-- Seç --</option>';
-                dosyalar.filter(d => d.startsWith("qwx")).forEach(d => { const n = d.replace("qwx", "").replace(".json", ""); sel.appendChild(new Option(n, n)); });
+                // Populate Study Selects
+                document.getElementById("s3CalismaSec").innerHTML = '<option value="">-- Seçin --</option>';
+                document.getElementById("s4DosyaSec").innerHTML = '<option value="">-- Seç --</option>';
+                document.getElementById("sinifCalismaSec").innerHTML = '<option value="">-- Genel (Çalışmasız) --</option>';
+
+                dosyalar.filter(d => d.startsWith("qwx")).forEach(d => {
+                    const name = d.replace("qwx", "").replace(".json", "");
+                    // S3
+                    const opt3 = document.createElement("option"); opt3.value = name; opt3.textContent = name;
+                    document.getElementById("s3CalismaSec").appendChild(opt3);
+                    // S4
+                    const opt4 = document.createElement("option"); opt4.value = name; opt4.textContent = name;
+                    document.getElementById("s4DosyaSec").appendChild(opt4);
+                    // Group Creation
+                    const optG = document.createElement("option"); optG.value = name; optG.textContent = name;
+                    document.getElementById("sinifCalismaSec").appendChild(optG);
+                });
             });
         }
 

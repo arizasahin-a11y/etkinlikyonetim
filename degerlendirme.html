@@ -599,7 +599,8 @@
 
                 if (State.grupCalismasi && State.pSinif) {
                     try {
-                        const grupUrl = `/grupListesiGetir?sinif=${encodeURIComponent(State.pSinif)}`;
+                        // FIX: Fetch study-specific groups
+                        const grupUrl = `/grupListesiGetir?sinif=${encodeURIComponent(State.pSinif)}&calisma=${encodeURIComponent(State.pCalisma)}`;
                         console.log('[DEBUG degerlendirme] Fetching groups from:', grupUrl);
                         const rG = await fetch(grupUrl);
                         const gruplar = await rG.json();

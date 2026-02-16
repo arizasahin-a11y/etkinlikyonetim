@@ -634,8 +634,10 @@
     <div class="footer-info">Kod: <span>Ali Rıza ŞAHİN</span></div>
 
     <script>
-        let sess = null, atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false, grupUyeleri = [];
-        let globalGrupInfo = null; // Stores { groupNo: "1", members: [...] } if found
+        let sess = null, atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false;
+        // Removed globalGrupInfo
+        let studyGroupsCache = {}; // Cache for study-specific groups: { "StudyName": { groupNo: 1, members: [...] } }
+        let isFetchingGroups = {}; // Prevent multiple fetches per study
         let otoKayitYapildi = false, girisSayisi = 0, girisIslandi = false;
 
         let grupSorgusuYapildi = false;
@@ -765,7 +767,7 @@
 
             // Start process
             ekranDegis('p_liste');
-            fetchGlobalGroupInfo(); // Fetch group info once
+            // fetchGlobalGroupInfo(); // REMOVED (Dynamic fetching now)
             veriCek();
             setInterval(veriCek, 3000);
             startTimer(); // Start 1-second timer for clock
@@ -1042,6 +1044,54 @@
                 const permSoru = hasGranular ? (a.soruIzni === true) : (a.gorme === true);
                 const isActive = (a.yapma === true);
 
+                // 1. Group Info Fetch (Dynamic)
+                if (a.yontem === "Grup" && isActive) {
+                    // Check if cached
+                    if (!studyGroupsCache[a.calisma] && !isFetchingGroups[a.calisma]) {
+                        isFetchingGroups[a.calisma] = true;
+                        // Fetch specific group for this study
+                        fetch(`/grupListesiGetir?sinif=${encodeURIComponent(sess.sinif)}&calisma=${encodeURIComponent(a.calisma)}`)
+                            .then(r => r.json())
+                            .then(gruplar => {
+                                // Find student's group
+                                let found = null;
+                                // Groups come as [[Member, Member], [Member, Member]] array of arrays
+                                if (Array.isArray(gruplar)) {
+                                    for (let i = 0; i < gruplar.length; i++) {
+                                        const members = gruplar[i];
+                                        if (members.some(m => String(m['Okul Numaranız']) === String(sess.no))) {
+                                            found = { groupNo: i + 1, members: members };
+                                            break;
+                                        }
+                                    }
+                                }
+                                studyGroupsCache[a.calisma] = found || { groupNo: "?", members: [] }; // Cache result (even empty)
+                                isFetchingGroups[a.calisma] = false;
+                                // Re-render this accordion content dynamically?
+                                // The accordion is already open. We need to update its content?
+                                // Or just let the user re-open?
+                                // Better: Update the specific DOM element if possible.
+                                // But generating unique IDs for accordions is tricky here since they are generated in a loop.
+                                // We can just re-render the list view if needed, but that closes accordions!
+                                // Actually, we can just update the innerHTML of `group-info-${id}` if we add IDs.
+
+                                const el = document.getElementById(`group-info-${a.id}`);
+                                if (el && found) {
+                                    const membersHtml = found.members.map(m => {
+                                        const isMe = (String(m['Okul Numaranız']) === String(sess.no));
+                                        return `<li style="${isMe ? 'font-weight:bold; color:var(--yesil);' : ''}">
+                                            ${m['Adınız Soyadınız']} ${isMe ? '(Siz)' : ''}
+                                        </li>`;
+                                    }).join('');
+                                    el.innerHTML = `<strong style="color:#E65100; display:block; margin-bottom:5px;">${sess.sinif} ${found.groupNo}. Grup Listesi:</strong>
+                                        <ul style="margin:0; padding-left:20px; font-size:0.9rem;">${membersHtml}</ul>`;
+                                    el.style.display = "block";
+                                }
+
+                            }).catch(e => { console.error(e); isFetchingGroups[a.calisma] = false; });
+                    }
+                }
+
                 let isFinished = false;
                 if (a.bitis && (a.bitis - Date.now() < 0)) isFinished = true;
 
@@ -1059,18 +1109,28 @@
                 if (permAciklama || isActive) {
                     // Inject Group List if Group Study
                     let groupInfoHtml = "";
-                    if (a.yontem === "Grup" && globalGrupInfo) {
-                        const membersHtml = globalGrupInfo.members.map(m => {
-                            const isMe = (String(m['Okul Numaranız']) === String(sess.no));
-                            return `<li style="${isMe ? 'font-weight:bold; color:var(--yesil);' : ''}">
-                                ${m['Adınız Soyadınız']} ${isMe ? '(Siz)' : ''}
-                            </li>`;
-                        }).join('');
+                    if (a.yontem === "Grup") {
+                        // PREPARE PLACEHOLDER
+                        // If cached data exists, render it. If not, render empty placeholder with ID.
+                        const cached = studyGroupsCache[a.calisma];
+                        if (cached) {
+                            const membersHtml = cached.members.map(m => {
+                                const isMe = (String(m['Okul Numaranız']) === String(sess.no));
+                                return `<li style="${isMe ? 'font-weight:bold; color:var(--yesil);' : ''}">
+                                    ${m['Adınız Soyadınız']} ${isMe ? '(Siz)' : ''}
+                                </li>`;
+                            }).join('');
 
-                        groupInfoHtml = `<div style="background:#FFF8E1; padding:10px; border:1px solid #FFE0B2; border-radius:6px; margin-bottom:10px;">
-                            <strong style="color:#E65100; display:block; margin-bottom:5px;">${sess.sinif} ${globalGrupInfo.groupNo}. Grup Listesi:</strong>
-                            <ul style="margin:0; padding-left:20px; font-size:0.9rem;">${membersHtml}</ul>
-                        </div>`;
+                            groupInfoHtml = `<div id="group-info-${a.id}" style="background:#FFF8E1; padding:10px; border:1px solid #FFE0B2; border-radius:6px; margin-bottom:10px;">
+                                <strong style="color:#E65100; display:block; margin-bottom:5px;">${sess.sinif} ${cached.groupNo}. Grup Listesi:</strong>
+                                <ul style="margin:0; padding-left:20px; font-size:0.9rem;">${membersHtml}</ul>
+                            </div>`;
+                        } else {
+                            // Placeholder (will be populated by async fetch above)
+                            groupInfoHtml = `<div id="group-info-${a.id}" style="background:#FFF8E1; padding:10px; border:1px solid #FFE0B2; border-radius:6px; margin-bottom:10px; display:none;">
+                                Yükleniyor...
+                            </div>`;
+                        }
                     }
 
                     html += `<details class="nested-acc" ${isActive ? 'open' : ''}>
@@ -1258,10 +1318,11 @@
                 let baslikHtml = `<div style="font-size:1.1rem; font-weight:bold; color:#333;">${atan.calisma}</div>`;
                 baslikHtml += `<div style="font-size:0.9rem;">${sess.sinif}`;
 
-                // FIX: Use globalGrupInfo consistently. 
+                // FIX: Use studyGroupsCache consistently. 
                 // If method is Group AND valid group info exists
-                if (atan.yontem === "Grup" && globalGrupInfo) {
-                    baslikHtml += ` - ${globalGrupInfo.groupNo}. Grup`;
+                const grpInfo = studyGroupsCache[atan.calisma];
+                if (atan.yontem === "Grup" && grpInfo) {
+                    baslikHtml += ` - ${grpInfo.groupNo}. Grup`;
                 } else {
                     baslikHtml += ` - ${sess.ad}`;
                 }
@@ -1332,9 +1393,11 @@
             const answersPayload = (cevaplar && cevaplar.length > 0) ? cevaplar : undefined;
 
             let p;
-            if (atan.yontem === "Grup" && grupUyeleri.length > 0) {
+            // Use cached group info if available
+            const cachedGrup = studyGroupsCache[atan.calisma];
+            if (atan.yontem === "Grup" && cachedGrup && cachedGrup.members.length > 0) {
                 // Group members - keep structure
-                p = grupUyeleri.map(u => ({
+                p = cachedGrup.members.map(u => ({
                     ogrenciNo: String(u["Okul Numaranız"]).trim(),
                     adSoyad: u["Adınız Soyadınız"],
                     sinif: sess.sinif,
