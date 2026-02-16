@@ -1097,22 +1097,114 @@ async function autoMigrate() {
 
 // --- YEDEKLEME ENDPOINT (Global) ---
 const AdmZip = require('adm-zip');
-app.get('/yedekAl', (req, res) => {
+app.get('/yedekAl', async (req, res) => {
   try {
+    console.log("[BACKUP] Starting DB backup...");
     const zip = new AdmZip();
-    // Use synchronous readdir to be safe, filtering only files
-    const files = fs.readdirSync(__dirname);
 
-    files.forEach(file => {
-      // Backup only JSON data files
-      // Logic: www_* (answers), ggg* (groups), qqq* (assignments), qwx* (studies), veritabani.json
-      if (file.endsWith('.json')) {
-        if (file.startsWith('www_') || file.startsWith('ggg') || file.startsWith('qqq') || file.startsWith('qwx') || file === 'veritabani.json' || file.endsWith('Grupları.json')) {
-          const p = path.join(__dirname, file);
-          if (fs.existsSync(p)) zip.addLocalFile(p);
+    // 1. STUDENTS -> veritabani.json
+    try {
+      const students = await query("SELECT * FROM students");
+      const veritabani = {};
+      students.rows.forEach(s => {
+        if (!veritabani[s.class_name]) veritabani[s.class_name] = [];
+        veritabani[s.class_name].push({
+          "Okul Numaranız": s.school_no,
+          "Adınız Soyadınız": s.name,
+          "Sınıfınız": s.class_name,
+          "Telefon numaranız": s.phone,
+          "Velinizin telefon numarası": s.parent_phone,
+          "E-Posta Adresiniz": s.email,
+          "Drive Klasörünüzün linki": s.drive_link,
+          ...s.extra_info
+        });
+      });
+      zip.addFile("veritabani.json", Buffer.from(JSON.stringify(veritabani, null, 2)));
+      console.log("[BACKUP] Added veritabani.json");
+    } catch (e) { console.error("[BACKUP] veritabani.json error:", e); }
+
+    // 2. CLASS GROUPS -> [Class]Grupları.json
+    try {
+      const groups = await query("SELECT class_name, groups_data FROM class_groups");
+      groups.rows.forEach(g => {
+        zip.addFile(`${g.class_name}Grupları.json`, Buffer.from(JSON.stringify(g.groups_data, null, 2)));
+      });
+      console.log(`[BACKUP] Added ${groups.rows.length} group files`);
+    } catch (e) { console.error("[BACKUP] Groups error:", e); }
+
+    // 3. STUDIES -> qwx[Name].json
+    try {
+      const studies = await query("SELECT name, content FROM studies");
+      studies.rows.forEach(s => {
+        zip.addFile(`qwx${s.name}.json`, Buffer.from(JSON.stringify(s.content, null, 2)));
+      });
+      console.log(`[BACKUP] Added ${studies.rows.length} study files`);
+    } catch (e) { console.error("[BACKUP] Studies error:", e); }
+
+    // 4. ASSIGNMENTS -> qqq[Class][Study].json
+    try {
+      const assigns = await query(`
+                SELECT a.*, s.name as study_name 
+                FROM study_assignments a 
+                JOIN studies s ON a.study_id = s.id
+            `);
+      assigns.rows.forEach(a => {
+        const filename = `qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`;
+        // Construct legacy assignment object
+        const data = {
+          id: filename.replace(".json", ""),
+          sinif: a.class_name,
+          calisma: a.study_name,
+          yontem: a.method,
+          ...a.settings
+        };
+        zip.addFile(filename, Buffer.from(JSON.stringify(data, null, 2)));
+      });
+      console.log(`[BACKUP] Added ${assigns.rows.length} assignment files`);
+    } catch (e) { console.error("[BACKUP] Assignments error:", e); }
+
+    // 5. STUDENT EVALUATIONS (Answers) -> www_[Study].json
+    try {
+      // Fetch all evaluations joined with student and study info
+      const evals = await query(`
+                SELECT se.*, s.name as study_name, st.name as student_name 
+                FROM student_evaluations se
+                JOIN studies s ON se.study_id = s.id
+                LEFT JOIN students st ON se.student_school_no = st.school_no
+            `);
+
+      // Group by study_name
+      const studyGroups = {};
+      evals.rows.forEach(row => {
+        if (!studyGroups[row.study_name]) studyGroups[row.study_name] = [];
+
+        // Reconstruct legacy student answer object
+        let cevaplarListesi = [];
+        if (row.answers) {
+          if (Array.isArray(row.answers)) cevaplarListesi = row.answers;
+          else if (row.answers.cevaplar) cevaplarListesi = row.answers.cevaplar;
+          else if (row.answers.answers) cevaplarListesi = row.answers.answers;
         }
-      }
-    });
+
+        const studentObj = {
+          ogrenciNo: row.student_school_no,
+          adSoyad: row.student_name || 'Bilinmiyor',
+          sinif: row.class_name,
+          cevaplar: cevaplarListesi,
+          puanlar: row.scores,
+          girisSayisi: row.entry_count,
+          degerlendirme: row.evaluation
+        };
+        studyGroups[row.study_name].push(studentObj);
+      });
+
+      Object.keys(studyGroups).forEach(studyName => {
+        zip.addFile(`www_${studyName}.json`, Buffer.from(JSON.stringify(studyGroups[studyName], null, 2)));
+      });
+      console.log(`[BACKUP] Added ${Object.keys(studyGroups).length} answer files (www_)`);
+
+    } catch (e) { console.error("[BACKUP] Answers error:", e); }
+
 
     const zipBuffer = zip.toBuffer();
     const fileName = `Yedek_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
@@ -1121,6 +1213,7 @@ app.get('/yedekAl', (req, res) => {
     res.set('Content-Disposition', `attachment; filename=${fileName}`);
     res.set('Content-Length', zipBuffer.length);
     res.send(zipBuffer);
+    console.log("[BACKUP] Complete.");
 
   } catch (e) {
     console.error("Backup error:", e);
