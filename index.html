@@ -1000,7 +1000,7 @@
 
                     html += `<div class="grup"><h3>${i + 1}. GRUP</h3><ul>`;
                     grup.forEach(ogr => {
-                        html += `<li><span class="no">${ogr['Okul Numaranız']}</span> <span class="ad">${ogr['Adınız Soyadınız']}</span></li>`;
+                        html += `<li><span class="no">${ogr['Okul Numaranız']}</span> <span class="ad" onclick="s3OAGiris('${ogr['Okul Numaranız']}')" style="cursor:pointer; text-decoration:underline;" title="Not Girmek İçin Tıklayın">${ogr['Adınız Soyadınız']}</span></li>`;
                     });
                     html += "</ul></div>";
                 });
@@ -1009,6 +1009,53 @@
             } catch (error) {
                 console.error(error);
                 document.getElementById('tablo').innerHTML = "Gruplar yüklenemedi.";
+            }
+        }
+
+        async function s3OAGiris(ogrNo) {
+            if (!secilenCalismaGrupIcin) return alert("Lütfen önce yukarıdan bir çalışma seçin. (Notlar çalışmaya özeldir)");
+
+            const calismaAdi = secilenCalismaGrupIcin.replace("qwx", "").replace(".json", ""); // Normalize
+            try {
+                // 1. Fetch current data
+                const res = await fetch(`/calismaGetir?isim=www_${calismaAdi}`);
+                let data = [];
+                if (res.ok) data = await res.json();
+
+                const student = data.find(x => String(x.ogrenciNo) === String(ogrNo)) || { ogrenciNo: ogrNo, degerlendirme: {} };
+                const currentOA = (student.degerlendirme && student.degerlendirme.OA) ? student.degerlendirme.OA : "";
+
+                const newOA = prompt(`Öğrenci Notu (OA) - ${ogrNo}:`, currentOA);
+                if (newOA === null) return; // Cancelled
+
+                // 2. Prepare update
+                const newEval = { ...(student.degerlendirme || {}), OA: newOA };
+
+                // 3. Save
+                // Only sending degerlendirme to update just that column/field in DB/File
+                const payload = {
+                    dosyaAdi: "www_" + calismaAdi,
+                    veri: {
+                        ogrenciNo: ogrNo,
+                        degerlendirme: newEval,
+                        // Add class/name if creating new record, good practice
+                        sinif: secilenSinif
+                    }
+                };
+
+                const saveRes = await fetch("/kaydet", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (saveRes.ok) {
+                    alert("Not kaydedildi: " + newOA);
+                } else {
+                    alert("Kaydedilemedi.");
+                }
+            } catch (e) {
+                alert("Hata: " + e.message);
             }
         }
 
