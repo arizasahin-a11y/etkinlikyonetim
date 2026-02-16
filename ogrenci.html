@@ -624,7 +624,9 @@
 
     <script>
         let sess = null, atan = null, sorular = [], cevaplar = [], sIdx = 0, isTyping = false, grupUyeleri = [];
+        let globalGrupInfo = null; // Stores { groupNo: "1", members: [...] } if found
         let otoKayitYapildi = false, girisSayisi = 0, girisIslandi = false;
+
         let grupSorgusuYapildi = false;
         let lastSaveTime = 0;
         let openAccordionId = null;
@@ -744,19 +746,36 @@
 
         function panelHazirla() {
             document.getElementById('p_giris').style.display = "none";
-            // Header Update: Class - Group (Student)
-            let headerText = `${sess.sinif} - ${sess.ad}`;
-            // Simple check if user has a group saved in session or found later? 
-            // For now, initially standard, updated if group found.
-            // Let's rely on cachedGrupBaslik if available or update it later.
-            if (window.cachedGrupBaslik) {
-                headerText = `${window.cachedGrupBaslik} (${sess.ad})`;
-            }
+            // Header Revert: Class - Name (Standard) per user request
+            const headerText = `${sess.sinif} - ${sess.ad}`;
+
             document.getElementById('h_ad').textContent = headerText;
             document.getElementById('h_nav').style.display = "flex";
+
+            // Start process
             ekranDegis('p_liste');
+            fetchGlobalGroupInfo(); // Fetch group info once
             veriCek();
             setInterval(veriCek, 3000);
+        }
+
+        async function fetchGlobalGroupInfo() {
+            if (globalGrupInfo) return; // Already fetched
+            try {
+                const r = await fetch(`/grupListesiGetir?sinif=${encodeURIComponent(sess.sinif)}`);
+                if (!r.ok) return;
+                const gruplar = await r.json();
+
+                // Find student
+                for (const [gNo, members] of Object.entries(gruplar)) {
+                    if (Array.isArray(members) && members.some(m => String(m['Okul Numaranız']) === String(sess.no))) {
+                        globalGrupInfo = { groupNo: gNo, members: members };
+                        // Re-render list if it's already visible to show "X. Grup"
+                        if (atanlar.length > 0) listeCiz();
+                        break;
+                    }
+                }
+            } catch (e) { console.error("Group fetch error:", e); }
         }
 
         async function veriCek() {
@@ -870,12 +889,21 @@
                 const isOpen = (openAccordionId === a.id) ? "open" : "";
                 const arrowRot = (openAccordionId === a.id) ? "transform:rotate(180deg);" : "";
 
+                // Group Info in Header Logic
+                let groupBadge = "";
+                if (a.yontem === "Grup" && globalGrupInfo && globalGrupInfo.groupNo) {
+                    groupBadge = `<span style="font-size:0.8rem; background:#FFECB3; color:#E65100; padding:2px 6px; border-radius:4px; margin-left:8px; border:1px solid #FFD54F;">${globalGrupInfo.groupNo}. GRUP</span>`;
+                }
+
                 h += `
                 <div class="accordion-item ${isOpen} ${borderClass}" id="item_${a.id}">
                     <div class="accordion-header ${bgClass}" onclick="accordionToggle('${a.id}')">
                         <div style="display:flex; align-items:center;">
                             <div>
-                                <span class="accordion-title-large">${a.calisma}</span>
+                                <span class="accordion-title-large">
+                                    ${a.calisma}
+                                    ${groupBadge}
+                                </span>
                                 <span class="accordion-subtitle">İncelemek için tıklayınız</span>
                             </div>
                             <span class="badge-status ${badgeClass}" style="margin-left:auto;">${status}</span>
@@ -984,37 +1012,9 @@
                 let isFinished = false;
                 if (a.bitis && (a.bitis - Date.now() < 0)) isFinished = true;
 
-                // 1. Group Info Fetch (Optimized)
-                if (a.yontem === "Grup" && !window.cachedGrupBaslik) {
-                    // Try fetch group info once
-                    fetch(`/grupListesiGetir?sinif=${encodeURIComponent(sess.sinif)}`)
-                        .then(r => r.json())
-                        .then(gruplar => {
-                            // Find student
-                            let myGroup = null;
-                            let myGroupNo = null;
-                            // DB format: { "1": [...], "2": [...] } or array?
-                            // Usually object with keys as group numbers.
-                            for (const [gNo, members] of Object.entries(gruplar)) {
-                                if (Array.isArray(members) && members.some(m => String(m['Okul Numaranız']) === String(sess.no))) {
-                                    myGroup = members;
-                                    myGroupNo = gNo;
-                                    break;
-                                }
-                            }
-
-                            if (myGroupNo) {
-                                window.cachedGrupBaslik = `${sess.sinif} - Grup ${myGroupNo}`;
-                                document.getElementById('h_ad').textContent = `${window.cachedGrupBaslik} (${sess.ad})`;
-                            }
-                        }).catch(err => console.error("Grup bilgisi alınamadı", err));
-                } else if (window.cachedGrupBaslik) {
-                    // Ensure header is correct if switching back and forth
-                    document.getElementById('h_ad').textContent = `${window.cachedGrupBaslik} (${sess.ad})`;
-                } else {
-                    // No group or standard
-                    document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
-                }
+                // 1. Group Info Fetch - NO LONGER UPDATES HEADER
+                // Just relying on globalGrupInfo fetched at start.
+                // We keep this structure clean.
 
 
                 let html = "";
@@ -1024,9 +1024,28 @@
                 // - Questions: Show ONLY if (PermSoru OR Active OR MyAnswers exist)
 
                 if (permAciklama || isActive) {
+                    // Inject Group List if Group Study
+                    let groupInfoHtml = "";
+                    if (a.yontem === "Grup" && globalGrupInfo) {
+                        const membersHtml = globalGrupInfo.members.map(m => {
+                            const isMe = (String(m['Okul Numaranız']) === String(sess.no));
+                            return `<li style="${isMe ? 'font-weight:bold; color:var(--yesil);' : ''}">
+                                ${m['Adınız Soyadınız']} ${isMe ? '(Siz)' : ''}
+                            </li>`;
+                        }).join('');
+
+                        groupInfoHtml = `<div style="background:#FFF8E1; padding:10px; border:1px solid #FFE0B2; border-radius:6px; margin-bottom:10px;">
+                            <strong style="color:#E65100; display:block; margin-bottom:5px;">${sess.sinif} ${globalGrupInfo.groupNo}. Grup Listesi:</strong>
+                            <ul style="margin:0; padding-left:20px; font-size:0.9rem;">${membersHtml}</ul>
+                        </div>`;
+                    }
+
                     html += `<details class="nested-acc" ${isActive ? 'open' : ''}>
                         <summary>Açıklama</summary>
-                        <div class="nested-content">${linkleriDonustur(desc)}</div>
+                        <div class="nested-content">
+                            ${groupInfoHtml}
+                            ${linkleriDonustur(desc)}
+                        </div>
                     </details>`;
                 }
 
