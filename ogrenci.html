@@ -814,23 +814,24 @@
                     atan = null;
                 }
 
-                const yeniAtanlar = [];
-                for (const dosya of adaylar) {
+                // Parallel Fetching for Speed
+                const promises = adaylar.map(async (dosya) => {
                     try {
                         const r = await fetch(`/calismaGetir?isim=${dosya}`);
-                        if (!r.ok) continue;
+                        if (!r.ok) return null;
                         const veri = await r.json();
-                        // Check if valid/active
-                        // Logic: Show if Active OR (Visible Permission) OR (Evaluation)
-                        // Actually, show everything that is assigned to this class?
-                        // Old logic: `if (veri.yapma === true || veri.gorme === true || veri.degerl === true || veri.aciklamaIzni === true || veri.soruIzni === true)`
                         if (veri) {
-                            // Add ID for accordion key
                             veri.id = dosya.replace('.json', '');
-                            yeniAtanlar.push(veri);
+                            return veri;
                         }
-                    } catch (e) { console.error(dosya, e); }
-                }
+                    } catch (e) {
+                        console.error(dosya, e);
+                    }
+                    return null;
+                });
+
+                const results = await Promise.all(promises);
+                const yeniAtanlar = results.filter(x => x !== null);
 
                 // Update global list
                 // Flicker Fix: Check if data actually changed
