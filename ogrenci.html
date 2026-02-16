@@ -468,6 +468,34 @@
             color: #666;
             font-weight: normal;
         }
+
+        .nested-acc {
+            margin-bottom: 15px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .nested-acc summary {
+            padding: 12px;
+            background: #f1f3f5;
+            cursor: pointer;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 1px solid #eee;
+        }
+
+        .nested-acc[open] summary {
+            border-bottom: 1px solid #ddd;
+            background: #e9ecef;
+        }
+
+        .nested-content {
+            padding: 15px;
+            background: #fff;
+            font-size: 0.95rem;
+            color: #333;
+        }
     </style>
 </head>
 
@@ -478,8 +506,6 @@
         <h1>Öğrenci Paneli</h1>
         <div class="header-nav" id="h_nav" style="display:none;">
             <span id="giris_sayaci_badge" class="giris-badge">Giriş: 1</span>
-            <span id="h_sure"
-                style="font-family:monospace; background:rgba(0,0,0,0.2); padding:3px 6px; border-radius:4px; font-weight:bold;">--:--</span>
             <span id="h_sure"
                 style="font-family:monospace; background:rgba(0,0,0,0.2); padding:3px 6px; border-radius:4px; font-weight:bold;">--:--</span>
             <!-- Açıklama butonu kaldırıldı -->
@@ -919,50 +945,115 @@
                 // We need to render: Description, "Start" button (which opens p_soru), or "Summary" if done.
                 // Re-using logic from 'durumYonetimi' but generating local HTML.
 
-                const hasGranular = (typeof a.aciklamaIzni === 'boolean' || typeof a.soruIzni === 'boolean');
-                const permAciklama = hasGranular ? (a.aciklamaIzni === true) : (a.gorme === true);
-                const permSoru = hasGranular ? (a.soruIzni === true) : (a.gorme === true);
-                const isActive = (a.yapma === true);
+                // --- NESTED ACCORDIONS & ACTIONS LOGIC (v2) ---
 
-                // Check completion
-                let isFinished = false;
-                // Legacy: 'sure' > 0 and 'bitis' time passed.
-                if (a.bitis && (a.bitis - Date.now() < 0)) isFinished = true;
+                // 1. Group Info Fetch (Optimized)
+                if (a.yontem === "Grup" && !window.cachedGrupBaslik) {
+                    // Try fetch group info once
+                    fetch(`/grupListesiGetir?sinif=${encodeURIComponent(sess.sinif)}`)
+                        .then(r => r.json())
+                        .then(gruplar => {
+                            // Find student
+                            let myGroup = null;
+                            let myGroupNo = null;
+                            // DB format: { "1": [...], "2": [...] } or array?
+                            // Usually object with keys as group numbers.
+                            for (const [gNo, members] of Object.entries(gruplar)) {
+                                if (Array.isArray(members) && members.some(m => String(m['Okul Numaranız']) === String(sess.no))) {
+                                    myGroup = members;
+                                    myGroupNo = gNo;
+                                    break;
+                                }
+                            }
+
+                            if (myGroupNo) {
+                                window.cachedGrupBaslik = `${sess.sinif} - Grup ${myGroupNo}`;
+                                document.getElementById('h_ad').textContent = `${window.cachedGrupBaslik} (${sess.ad})`;
+                            }
+                        }).catch(err => console.error("Grup bilgisi alınamadı", err));
+                } else if (window.cachedGrupBaslik) {
+                    // Ensure header is correct if switching back and forth
+                    document.getElementById('h_ad').textContent = `${window.cachedGrupBaslik} (${sess.ad})`;
+                } else {
+                    // No group or standard
+                    document.getElementById('h_ad').textContent = `${sess.sinif} - ${sess.ad}`;
+                }
+
 
                 let html = "";
 
-                // Description
-                if (permAciklama || isActive) {
-                    html += `<div style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:10px; border-left:4px solid var(--mavi);">
-                        <h4 style="margin:0 0 5px 0; color:var(--ana);">Açıklama</h4>
-                        <div style="font-size:0.9rem;">${linkleriDonustur(desc)}</div>
-                     </div>`;
-                }
+                // 2. Action Buttons (Top)
+                // - Active Study: Start/Continue
+                // - Finished Study: Evaluation (if allowed)
+                // - Read Only: View Summary (if allowed)
 
-                // Group Info (If Group)
-                if (a.yontem === "Grup") {
-                    // We might need to fetch group info here if not loaded.
-                    // For now, simple placeholder or button to load group info?
-                    // Let's just say "Grup Çalışması"
-                    html += `<div style="margin-bottom:10px; font-size:0.85rem; color:#E65100;">👥 Bu bir grup çalışmasıdır.</div>`;
-                }
-
-                // Actions
-                html += `<div style="display:flex; gap:10px; flex-wrap:wrap;">`;
+                html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">`;
 
                 if (isActive && !isFinished) {
                     html += `<button onclick="baslaAccordion('${id}')" class="btn-mavi" style="flex:1;">ÇALIŞMAYA BAŞLA / DEVAM ET</button>`;
                 }
 
-                if (permSoru || (myAnswers.length > 0)) {
-                    html += `<button onclick="ozetAccordion('${id}')" class="btn-yesil" style="flex:1;">CEVAPLARI / SORULARI GÖR</button>`;
+                // Evaluation Button
+                // Show if: (Active OR Finished) AND (Evaluation Allowed)
+                if ((isActive || isFinished) && a.degerl) {
+                    html += `<button onclick="degerlendirmeAccordion('${id}')" class="btn-mor" style="flex:1;">DEĞERLENDİRMEYE GEÇ</button>`;
                 }
 
-                if (isFinished) {
-                    html += `<div style="width:100%; text-align:center; color:red; font-weight:bold; margin-top:5px;">⛔ Süre doldu.</div>`;
+                if (isFinished && !isActive) {
+                    html += `<div style="width:100%; text-align:center; color:red; font-weight:bold; padding:5px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px;">⛔ Süre doldu.</div>`;
                 }
 
                 html += `</div>`;
+
+
+                // 3. Nested Accordions (Info)
+                // - Description: Show if (PermAciklama OR Active)
+                // - Questions: Show if (PermSoru OR Active OR MyAnswers exist)
+
+                if (permAciklama || isActive) {
+                    html += `<details class="nested-acc" ${isActive ? 'open' : ''}>
+                        <summary>Açıklama</summary>
+                        <div class="nested-content">${linkleriDonustur(desc)}</div>
+                    </details>`;
+                }
+
+                // Questions / Answers List (Mini View)
+                const canSeeQuestions = (permSoru || isActive || (myAnswers.length > 0));
+                // But user wants "Questions/Answers" inside accordion WITHOUT buttons.
+                // If active, they use "Start" button to edit.
+                // If read-only, they see this list.
+
+                if (canSeeQuestions) {
+                    let qListHtml = `<div style="display:flex; flex-direction:column; gap:10px;">`;
+                    sorular.forEach((s, idx) => {
+                        const soruMetni = (typeof s === 'object' ? s.soru : s);
+                        const k = cevaplar.find(c => Number(c.soruIndex) === Number(idx));
+
+                        let cvs = `<div style="font-style:italic; color:#999;">Cevap yok</div>`;
+                        if (k && k.cevaplar && k.cevaplar.length > 0) {
+                            cvs = k.cevaplar.map(val => `<div style="background:#f1f8e9; padding:5px; border-left:3px solid #66bb6a; margin-top:2px;">${linkleriDonustur(val)}</div>`).join('');
+                        }
+
+                        qListHtml += `
+                        <div style="border-bottom:1px solid #f0f0f0; padding-bottom:10px;">
+                            <div style="font-weight:600; color:#333; margin-bottom:5px;">${idx + 1}. ${linkleriDonustur(soruMetni)}</div>
+                            <div style="font-size:0.9rem;">${cvs}</div>
+                        </div>`;
+                    });
+                    qListHtml += `</div>`;
+
+                    // Show "Sorular ve Cevaplar" accordion
+                    // Use <details>
+                    html += `<details class="nested-acc">
+                        <summary>Sorular ve Cevaplar</summary>
+                        <div class="nested-content">${qListHtml}</div>
+                    </details>`;
+                }
+
+                // If NOTHING is visible (no permission, not active)
+                if (!isActive && !permAciklama && !canSeeQuestions) {
+                    html += `<div style="text-align:center; color:#999; padding:20px;">Bu çalışmayı görüntüleme izniniz bulunmuyor.</div>`;
+                }
 
                 container.innerHTML = html;
 
@@ -972,14 +1063,18 @@
         }
 
         function baslaAccordion(id) {
-            // Set global state -> Switch to p_soru
             const a = atanlar.find(x => x.id === id);
             if (a) {
                 atan = a;
-                // Re-fetch content/answers (or verify global state is set from loadStudyInAccordion)
-                // loadStudyInAccordion already set 'sorular' and 'cevaplar'. 
-                // So we just go.
                 ekranDegis('p_soru');
+            }
+        }
+
+        function degerlendirmeAccordion(id) {
+            const a = atanlar.find(x => x.id === id);
+            if (a) {
+                atan = a;
+                degerlendirmeyeGec();
             }
         }
 
