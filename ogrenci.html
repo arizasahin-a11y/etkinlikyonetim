@@ -486,6 +486,27 @@
             font-weight: normal;
         }
 
+        .timer-badge {
+            font-size: 0.85rem;
+            font-weight: bold;
+            font-family: monospace;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        .badge-green {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .badge-red {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
         .nested-acc {
             margin-bottom: 15px;
             border: 1px solid #eee;
@@ -776,21 +797,42 @@
 
         function startTimer() {
             setInterval(() => {
-                const el = document.getElementById('h_sure');
-                if (!atan || !atan.bitis) {
-                    if (el) el.textContent = "--:--";
-                    return;
+                const clockEl = document.getElementById('h_sure');
+
+                // 1. Update Global Header Clock (based on 'atan' if active)
+                if (atan && atan.yapma && atan.bitis) {
+                    const fark = atan.bitis - Date.now();
+                    if (fark <= 0) {
+                        if (clockEl) clockEl.textContent = "BİTTİ";
+                    } else {
+                        const m = Math.floor(fark / 60000);
+                        const s = Math.floor((fark % 60000) / 1000);
+                        if (clockEl) clockEl.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+                    }
+                } else {
+                    if (clockEl) clockEl.textContent = "--:--";
                 }
 
-                const fark = atan.bitis - Date.now();
-                if (fark <= 0) {
-                    if (el) el.textContent = "00:00";
-                    // Status updates handled by veriCek/durumYonetimi
-                } else {
-                    const m = Math.floor(fark / 60000);
-                    const s = Math.floor((fark % 60000) / 1000);
-                    if (el) el.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
-                }
+                // 2. Update Per-Study Timers in Accordion Buttons
+                atanlar.forEach(a => {
+                    const timerEl = document.getElementById(`timer_${a.id}`);
+                    if (!timerEl) return;
+
+                    if (a.yapma && a.bitis) {
+                        const diff = a.bitis - Date.now();
+                        if (diff <= 0) {
+                            timerEl.textContent = "(Süre Doldu)";
+                            timerEl.className = "timer-badge badge-red";
+                        } else {
+                            const m = Math.floor(diff / 60000);
+                            const s = Math.floor((diff % 60000) / 1000);
+                            timerEl.textContent = `(${m}:${s < 10 ? '0' : ''}${s})`;
+                            timerEl.className = "timer-badge badge-green";
+                        }
+                    } else {
+                        timerEl.textContent = ""; // Hide if not running
+                    }
+                });
             }, 1000);
         }
 
@@ -937,6 +979,7 @@
                             <div>
                                 <span class="accordion-title-large">
                                     ${a.calisma}
+                                    <span id="timer_${a.id}" class="timer-badge"></span>
                                     ${groupBadge}
                                 </span>
                                 <span class="accordion-subtitle">İncelemek için tıklayınız</span>
@@ -1259,7 +1302,7 @@
             const hSure = document.getElementById('h_sure');
             let sureBitti = false;
 
-            if (atan.bitis) {
+            if (atan.bitis && atan.yapma) {
                 const fark = atan.bitis - Date.now();
                 if (fark > 0) {
                     // Clock updated by startTimer()
@@ -1268,6 +1311,8 @@
                     hSure.textContent = "BİTTİ";
                     sureBitti = true;
                 }
+            } else {
+                hSure.textContent = "--:--";
             }
 
             if ((sureBitti || !atan.yapma) && !otoKayitYapildi) { kaydet(); otoKayitYapildi = true; }
