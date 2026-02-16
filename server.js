@@ -1221,6 +1221,185 @@ app.get('/yedekAl', async (req, res) => {
   }
 });
 
+// --- YEDEK YÜKLEME (RESTORE) ---
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ status: "error", message: "Dosya yüklenmedi." });
+
+    console.log(`[RESTORE] Yedek yükleniyor: ${req.file.originalname} (${req.file.size} bytes)`);
+    const zip = new AdmZip(req.file.buffer);
+    const zipEntries = zip.getEntries();
+
+    let stats = { students: 0, groups: 0, studies: 0, assignments: 0, answers: 0, errors: [] };
+
+    for (const entry of zipEntries) {
+      if (entry.isDirectory || !entry.entryName.endsWith('.json')) continue;
+
+      try {
+        const content = JSON.parse(entry.getData().toString('utf8'));
+        const name = entry.entryName;
+
+        // 1. VERITABANI.JSON (Students)
+        if (name === "veritabani.json") {
+          // content is grouped by class: { "9-A": [student1, student2], "9-B": [...] }
+          const allStudents = [];
+          Object.values(content).forEach(arr => { if (Array.isArray(arr)) allStudents.push(...arr); });
+
+          for (const s of allStudents) {
+            await query(`
+                            INSERT INTO students (school_no, name, class_name, phone, parent_phone, email, drive_link, extra_info)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            ON CONFLICT (school_no) DO UPDATE SET 
+                                name = EXCLUDED.name, 
+                                class_name = EXCLUDED.class_name,
+                                phone = EXCLUDED.phone,
+                                parent_phone = EXCLUDED.parent_phone,
+                                email = EXCLUDED.email,
+                                drive_link = EXCLUDED.drive_link,
+                                extra_info = EXCLUDED.extra_info
+                         `, [
+              String(s["Okul Numaranız"]),
+              s["Adınız Soyadınız"],
+              s["Sınıfınız"],
+              s["Telefon numaranız"],
+              s["Velinizin telefon numarası"],
+              s["E-Posta Adresiniz"],
+              s["Drive Klasörünüzün linki"],
+              s
+            ]);
+            stats.students++;
+          }
+        }
+        // 2. CLASS GROUPS
+        else if (name.endsWith("Grupları.json")) {
+          const className = name.replace("Grupları.json", "");
+          await query(`
+                        INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2::jsonb)
+                        ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
+                    `, [className, JSON.stringify(content)]);
+          stats.groups++;
+        }
+        // 3. STUDIES (qwx)
+        else if (name.startsWith("qwx")) {
+          const studyName = name.replace("qwx", "").replace(".json", "");
+          await query(`
+                        INSERT INTO studies (name, content) VALUES ($1, $2::jsonb)
+                        ON CONFLICT (name) DO UPDATE SET content = $2::jsonb
+                    `, [studyName, JSON.stringify(content)]);
+          stats.studies++;
+        }
+        // 4. ASSIGNMENTS (qqq)
+        else if (name.startsWith("qqq")) {
+          // Content is the assignment config object
+          // { sinif, calisma, yontem, ...settings }
+          // We need study_id first
+          const studyRes = await query("SELECT id FROM studies WHERE name = $1", [content.calisma]);
+          if (studyRes.rows.length === 0) {
+            // Create dummy study if missing? No, safer to log error. 
+            // Or create placeholder study.
+            stats.errors.push(`${name}: Study '${content.calisma}' not found.`);
+            continue;
+          }
+          const studyId = studyRes.rows[0].id;
+
+          const settings = {
+            gorme: content.gorme,
+            aciklamaIzni: content.aciklamaIzni,
+            soruIzni: content.soruIzni,
+            yapma: content.yapma,
+            degerl: content.degerl,
+            sure: content.sure,
+            bitis: content.bitis
+          };
+
+          await query(`
+                        INSERT INTO study_assignments (study_id, class_name, method, settings)
+                        VALUES ($1, $2, $3, $4::jsonb)
+                        ON CONFLICT (study_id, class_name) DO UPDATE SET method = $3, settings = $4::jsonb
+                     `, [studyId, content.sinif, content.yontem, JSON.stringify(settings)]);
+          stats.assignments++;
+        }
+        // 5. ANSWERS (www_)
+        else if (name.startsWith("www_")) {
+          const studyName = name.replace("www_", "").replace(".json", "");
+          const studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
+          if (studyRes.rows.length === 0) {
+            // Attempting to restore answers for a non-existent study.
+            // Maybe creating it?
+            await query("INSERT INTO studies (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", [studyName]);
+            // Re-fetch
+            const sRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
+            if (sRes.rows.length === 0) {
+              stats.errors.push(`${name}: Could not create/find study '${studyName}'.`);
+              continue;
+            }
+            // Use found ID
+            // (Wait, we can't re-assign to const studyRes, declaring new var)
+          }
+
+          // We need correct studyId
+          const sResFinal = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
+          const studyId = sResFinal.rows[0].id;
+
+          const answersArray = Array.isArray(content) ? content : [content];
+          for (const ans of answersArray) {
+            if (ans.ogrenciNo === "AYARLAR") continue; // Skip settings, handled by assignments? Or keep?
+            // Actually AYARLAR in www_ file is legacy assignment config. 
+            // If we already restored qqq, we might not need this. But let's ignore for now to avoid duplication or corrupting assignment table.
+
+            // Upsert Student Evaluation
+            // Ensure student exists
+            await query(`INSERT INTO students (school_no, name, class_name) VALUES ($1, $2, $3) ON CONFLICT (school_no) DO NOTHING`,
+              [String(ans.ogrenciNo), ans.adSoyad || 'Yedek', ans.sinif || '']);
+
+            await query(`
+                            INSERT INTO student_evaluations (study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
+                            VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, NOW())
+                            ON CONFLICT (study_id, student_school_no) DO UPDATE SET 
+                                answers = EXCLUDED.answers,
+                                scores = EXCLUDED.scores,
+                                evaluation = EXCLUDED.evaluation,
+                                entry_count = EXCLUDED.entry_count
+                        `, [
+              studyId,
+              String(ans.ogrenciNo),
+              ans.sinif || '',
+              JSON.stringify({ cevaplar: ans.cevaplar || [] }),
+              JSON.stringify(ans.puanlar || {}),
+              ans.girisSayisi || 0,
+              JSON.stringify(ans.degerlendirme || {})
+            ]);
+            stats.answers++;
+          }
+        }
+
+      } catch (entryErr) {
+        console.error(`[RESTORE] Error processing ${entry.entryName}:`, entryErr);
+        stats.errors.push(`${entry.entryName}: ${entryErr.message}`);
+      }
+    }
+
+    const msg = `
+            Öğrenciler: ${stats.students}
+            Sınıf Grupları: ${stats.groups}
+            Çalışmalar: ${stats.studies}
+            Atamalar: ${stats.assignments}
+            Öğrenci Cevap Kayıtları: ${stats.answers}
+            Hatalar: ${stats.errors.length}
+        `;
+
+    console.log("[RESTORE] Completed.", stats);
+    res.json({ status: "ok", message: msg });
+
+  } catch (e) {
+    console.error("Restore error:", e);
+    res.status(500).json({ status: "error", message: e.message });
+  }
+});
+
 // --- SUNUCUYU BAŞLAT ---
 app.listen(PORT, "0.0.0.0", async () => {
   console.log(`Sunucu ${PORT} portunda hazır! (SQL Modu)`);

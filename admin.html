@@ -111,58 +111,71 @@
     <h2>🚀 Veritabanı Yönetimi (Admin)</h2>
 
     <div class="kutu">
-        <h3>⬆️ Dosya Yükle (PostgreSQL'e Aktar)</h3>
-        <p style="font-size:0.9em; color:#666; margin-top:-10px; margin-bottom:15px;">
-            Özellikle <b>veritabani.json</b> dosyanızı buradan yüklemeyi unutmayınız.
-        </p>
-        <div class="upload-area" onclick="document.getElementById('f').click()">
-            📂 Dosyaları seçmek için tıklayın (Çoklu seçim yapılabilir)
-            <input type="file" id="f" accept=".json" multiple style="display:none" onchange="yukle()">
+        <h3>☁️ Yedekleme ve Geri Yükleme</h3>
+        <p style="font-size:0.9em; color:#666;">Verilerinizi düzenli olarak yedekleyin. Geri yükleme işlemi mevcut
+            verilerin üzerine yazabilir!</p>
+
+        <div style="display:flex; gap:20px; align-items:center;">
+            <button onclick="location.href='/yedekAl'" class="btn btn-green"
+                style="padding:15px 30px; font-size:1.1em;">
+                ⬇️ YEDEK İNDİR (ZIP)
+            </button>
+
+            <div style="border-left:1px solid #ddd; padding-left:20px;">
+                <input type="file" id="yedekInput" accept=".zip" style="display:none" onchange="yedekYukle()">
+                <button onclick="document.getElementById('yedekInput').click()" class="btn btn-red"
+                    style="padding:15px 30px; font-size:1.1em;">
+                    ⬆️ YEDEK YÜKLE (Restore)
+                </button>
+            </div>
         </div>
     </div>
 
     <div class="kutu">
-        <h3>📂 Veritabanındaki Dosyalar <button onclick="sunucuyuYenidenBaslat()" class="btn btn-red"
-                style="float:right">Sunucuyu Yeniden Başlat</button></h3>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 50%;">Dosya Adı</th>
-                    <th>Durum</th>
-                    <th style="text-align: right;">İşlemler</th>
-                </tr>
-            </thead>
-            <tbody id="liste"></tbody>
-        </table>
-    </div>
+        <h3>⬆️ Dosya Yükle (Tekil JSON)</h3>
 
-    <script>
-        window.onload = listele;
+        <div class="kutu">
+            <h3>📂 Veritabanındaki Dosyalar <button onclick="sunucuyuYenidenBaslat()" class="btn btn-red"
+                    style="float:right">Sunucuyu Yeniden Başlat</button></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">Dosya Adı</th>
+                        <th>Durum</th>
+                        <th style="text-align: right;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="liste"></tbody>
+            </table>
+        </div>
 
-        async function listele() {
-            try {
-                const res = await fetch('/yonetimDosyaListesi');
-                const dosyalar = await res.json();
-                const tbody = document.getElementById('liste');
-                tbody.innerHTML = "";
+        <script>
+            window.onload = listele;
 
-                if (dosyalar.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#777;">Veritabanında kayıtlı dosya yok.</td></tr>';
-                    return;
-                }
+            async function listele() {
+                try {
+                    const res = await fetch('/yonetimDosyaListesi');
+                    const dosyalar = await res.json();
+                    const tbody = document.getElementById('liste');
+                    tbody.innerHTML = "";
 
-                dosyalar.forEach(d => {
-                    const badge = d.arsivde ?
-                        '<span class="badge bg-archived">Arşivde</span>' :
-                        '<span class="badge bg-active">Aktif</span>';
+                    if (dosyalar.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#777;">Veritabanında kayıtlı dosya yok.</td></tr>';
+                        return;
+                    }
 
-                    const safeName = d.dosya_adi.replace(/'/g, "\\'");
+                    dosyalar.forEach(d => {
+                        const badge = d.arsivde ?
+                            '<span class="badge bg-archived">Arşivde</span>' :
+                            '<span class="badge bg-active">Aktif</span>';
 
-                    const arsivBtn = d.arsivde ?
-                        `<button onclick="arsivle('${safeName}', false)" class="btn btn-green">Aktif Et</button>` :
-                        `<button onclick="arsivle('${safeName}', true)" class="btn btn-orange">Arşivle</button>`;
+                        const safeName = d.dosya_adi.replace(/'/g, "\\'");
 
-                    tbody.innerHTML += `
+                        const arsivBtn = d.arsivde ?
+                            `<button onclick="arsivle('${safeName}', false)" class="btn btn-green">Aktif Et</button>` :
+                            `<button onclick="arsivle('${safeName}', true)" class="btn btn-orange">Arşivle</button>`;
+
+                        tbody.innerHTML += `
                         <tr>
                             <td><b>${d.dosya_adi}</b></td>
                             <td>${badge}</td>
@@ -172,84 +185,125 @@
                                 <button class="btn btn-red" onclick="sil('${safeName}')">🗑️ Sil</button>
                             </td>
                         </tr>`;
-                });
-            } catch (e) { console.error("Listeleme hatası:", e); }
-        }
+                    });
+                } catch (e) { console.error("Listeleme hatası:", e); }
+            }
 
-        async function indir(isim) {
-            try {
-                const res = await fetch(`/calismaGetir?isim=${encodeURIComponent(isim)}`);
-                if (!res.ok) throw new Error("Dosya alınamadı.");
-                const data = await res.json();
-                const blob = new Blob([JSON.stringify(data, null, 4)], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = isim;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } catch (e) { alert("Hata: " + e.message); }
-        }
+            async function indir(isim) {
+                try {
+                    const res = await fetch(`/calismaGetir?isim=${encodeURIComponent(isim)}`);
+                    if (!res.ok) throw new Error("Dosya alınamadı.");
+                    const data = await res.json();
+                    const blob = new Blob([JSON.stringify(data, null, 4)], { type: 'application/json' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = isim;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } catch (e) { alert("Hata: " + e.message); }
+            }
 
-        async function yukle() {
-            const files = document.getElementById('f').files;
-            if (files.length === 0) return alert("Dosya seçilmedi!");
+            async function yedekYukle() {
+                const fileInput = document.getElementById('yedekInput');
+                if (fileInput.files.length === 0) return;
+                const file = fileInput.files[0];
 
-            let sayac = 0;
-            for (let file of files) {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    try {
-                        const content = JSON.parse(e.target.result);
-                        await fetch('/kaydet', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ dosyaAdi: file.name, veri: content })
-                        });
-                        sayac++;
-                        if (sayac === files.length) {
-                            alert("Yüklendi!"); listele();
-                        }
-                    } catch (err) {
-                        alert(file.name + " hatası: JSON formatı bozuk olabilir.");
+                if (!confirm(`DİKKAT! "${file.name}" yedeğini geri yüklemek üzeresiniz.\n\nBu işlem mevcut verilerin güncellenmesine veya değişmesine neden olabilir.\n\nEmin misiniz?`)) {
+                    fileInput.value = "";
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('yedekDosyasi', file);
+
+                try {
+                    // Show loading
+                    const originalText = fileInput.nextElementSibling.innerText;
+                    fileInput.nextElementSibling.innerText = "Yükleniyor...";
+                    fileInput.nextElementSibling.disabled = true;
+
+                    const res = await fetch('/yedekYukle', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await res.json();
+
+                    if (result.status === "ok") {
+                        alert(`✅ Geri Yükleme Başarılı!\n\nÖzet:\n${result.message}`);
+                        listele();
+                    } else {
+                        alert("❌ Hata: " + result.message);
                     }
-                };
-                reader.readAsText(file);
+                } catch (err) {
+                    alert("Yükleme Hatası: " + err.message);
+                } finally {
+                    fileInput.value = "";
+                    fileInput.nextElementSibling.innerText = "⬆️ YEDEK YÜKLE (Restore)";
+                    fileInput.nextElementSibling.disabled = false;
+                }
             }
-        }
 
-        async function sil(isim) {
-            if (!confirm(`"${isim}" dosyasını KALICI OLARAK silmek istediğinize emin misiniz?`)) return;
-            await fetch('/calismaSil', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ calismaIsmi: isim })
-            });
-            listele();
-        }
+            async function yukle() {
+                const files = document.getElementById('f').files;
+                if (files.length === 0) return alert("Dosya seçilmedi!");
 
-        async function arsivle(isim, durum) {
-            await fetch('/arsivGuncelle', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dosyaIsmi: isim, durum: durum })
-            });
-            listele();
-        }
-        async function sunucuyuYenidenBaslat() {
-            if (!confirm("Sunucu yeniden başlatılacak. Emin misiniz?")) return;
-            try {
-                await fetch('/restart', { method: 'POST' });
-                alert("Sunucu yeniden başlatılıyor... Lütfen 5-10 saniye bekleyip sayfayı yenileyin.");
-                setTimeout(() => location.reload(), 5000);
-            } catch (e) {
-                alert("Hata: " + e.message);
+                let sayac = 0;
+                for (let file of files) {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const content = JSON.parse(e.target.result);
+                            await fetch('/kaydet', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ dosyaAdi: file.name, veri: content })
+                            });
+                            sayac++;
+                            if (sayac === files.length) {
+                                alert("Yüklendi!"); listele();
+                            }
+                        } catch (err) {
+                            alert(file.name + " hatası: JSON formatı bozuk olabilir.");
+                        }
+                    };
+                    reader.readAsText(file);
+                }
             }
-        }
-    </script>
+
+            async function sil(isim) {
+                if (!confirm(`"${isim}" dosyasını KALICI OLARAK silmek istediğinize emin misiniz?`)) return;
+                await fetch('/calismaSil', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ calismaIsmi: isim })
+                });
+                listele();
+            }
+
+            async function arsivle(isim, durum) {
+                await fetch('/arsivGuncelle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dosyaIsmi: isim, durum: durum })
+                });
+                listele();
+            }
+            async function sunucuyuYenidenBaslat() {
+                if (!confirm("Sunucu yeniden başlatılacak. Emin misiniz?")) return;
+                try {
+                    await fetch('/restart', { method: 'POST' });
+                    alert("Sunucu yeniden başlatılıyor... Lütfen 5-10 saniye bekleyip sayfayı yenileyin.");
+                    setTimeout(() => location.reload(), 5000);
+                } catch (e) {
+                    alert("Hata: " + e.message);
+                }
+            }
+        </script>
 </body>
 
 </html>
