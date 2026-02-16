@@ -1018,22 +1018,29 @@
                 if (!confirm("Bir çalışma seçmediniz. Gruplar GENEL sınıf grupları olarak kaydedilecek. Devam etmek istiyor musunuz?")) return;
             }
 
-            const kisiSayisi = prompt("Grup başına kişi sayısı kaç olsun?", "4");
-            if (!kisiSayisi) return;
+            const grupSayisiStr = prompt("Sınıf KAÇ ADET gruba bölünsün?");
+            if (!grupSayisiStr) return;
 
-            const n = parseInt(kisiSayisi);
-            if (isNaN(n) || n < 1) return alert("Geçersiz sayı!");
+            const grupSayisi = parseInt(grupSayisiStr);
+            if (isNaN(grupSayisi) || grupSayisi < 1) return alert("Geçersiz sayı!");
 
             // 1. Sınıf listesini çek (veritabani.json veya DB)
             const sinifListesi = globalData.filter(x => x['Sınıfınız'] === secilenSinif);
             if (sinifListesi.length === 0) return alert("Sınıf boş!");
 
+            if (grupSayisi > sinifListesi.length) return alert(`Grup sayısı (${grupSayisi}) öğrenci sayısından (${sinifListesi.length}) fazla olamaz!`);
+
             // Karıştır
             const karisik = sinifListesi.sort(() => 0.5 - Math.random());
-            const gruplar = [];
-            for (let i = 0; i < karisik.length; i += n) {
-                gruplar.push(karisik.slice(i, i + n));
-            }
+
+            // Grupları oluştur
+            const gruplar = Array.from({ length: grupSayisi }, () => []);
+
+            // Dağıt (Round-robin distribution to ensure evenness)
+            karisik.forEach((ogr, index) => {
+                const grupIndex = index % grupSayisi;
+                gruplar[grupIndex].push(ogr);
+            });
 
             // Kaydet
             // Send 'calisma' param if selected
