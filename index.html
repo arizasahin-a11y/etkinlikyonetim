@@ -598,7 +598,7 @@
                 </div>
 
                 <div style="display:inline-block; text-align:left; margin-left:20px; margin-bottom:10px;">
-                    <div><strong>2. Çalışma Seçin:</strong></div>
+                    <div><strong>Çalışma Seçin:</strong></div>
                     <select id="sinifCalismaSec" style="width: 250px;">
                         <option value="">-- Çalışma Seçin --</option>
                     </select>
@@ -1168,7 +1168,7 @@
                 // Populate Study Selects
                 document.getElementById("s3CalismaSec").innerHTML = '<option value="">-- Seçin --</option>';
                 document.getElementById("s4DosyaSec").innerHTML = '<option value="">-- Seç --</option>';
-                document.getElementById("sinifCalismaSec").innerHTML = '<option value="">-- Genel (Çalışmasız) --</option>';
+                document.getElementById("sinifCalismaSec").innerHTML = '<option value="">-- Çalışma Seçin --</option>';
 
                 dosyalar.filter(d => d.startsWith("qwx")).forEach(d => {
                     const name = d.replace("qwx", "").replace(".json", "");
