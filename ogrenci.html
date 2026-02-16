@@ -1195,9 +1195,9 @@
                 // - Questions: Show ONLY if (PermSoru OR Active OR MyAnswers exist)
 
                 if (permAciklama || isActive) {
-                    // Inject Group List if Group Study
+                    // Inject Group List if Group Study AND Description Permission is Granted
                     let groupInfoHtml = "";
-                    if (a.yontem === "Grup") {
+                    if (a.yontem === "Grup" && permAciklama) {
                         // PREPARE PLACEHOLDER
                         // If cached data exists, render it. If not, render empty placeholder with ID.
                         const cached = studyGroupsCache[a.calisma];
