@@ -1113,6 +1113,84 @@ app.get("/veritabani.json", async (req, res) => {
   }
 });
 
+// Migration: Class Groups -> Study Groups (Hybrid DB/FS)
+app.get("/migrateGroupsToStudies", async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const files = fs.readdirSync(__dirname);
+
+    // 1. Find all Assignments (qqq[Class][Study].json)
+    // Structure: qqq[Class][Study].json
+    // But 'Class' can be '9-A', '10-C', etc.
+    // 'Study' is the rest.
+    // This is tricky parsing. 
+    // ALTERNATIVE: Read content of qqq files to get 'sinif' and 'calisma'.
+
+    const qqqFiles = files.filter(f => f.startsWith("qqq") && f.endsWith(".json"));
+
+    let migratedCount = 0;
+    let skippedCount = 0;
+    let fsCreated = 0;
+
+    for (const qFile of qqqFiles) {
+      let content;
+      try {
+        content = JSON.parse(fs.readFileSync(path.join(__dirname, qFile), 'utf-8'));
+      } catch (e) { continue; }
+
+      if (!content.sinif || !content.calisma) continue;
+
+      const studyName = content.calisma;
+      const className = content.sinif;
+
+      // 2. Check if Generic Group File exists
+      const normClass = sinifIsmiTemizle(className);
+      const legacyGroupFile = `${normClass}Grupları.json`;
+
+      if (!fs.existsSync(path.join(__dirname, legacyGroupFile))) continue;
+
+      // Read generic groups
+      let groupsData;
+      try {
+        groupsData = JSON.parse(fs.readFileSync(path.join(__dirname, legacyGroupFile), 'utf-8'));
+      } catch (e) { continue; }
+
+      // 3. Create Study-Specific Group File (FS)
+      const newFileName = `ggg${studyName}${className}.json`; // .json added below usually? No, full name
+      // Wait, index.html says: `ggg${study}${class}` (no json?) -> server adds .json
+      // Let's create `ggg[Study][Class].json`.
+      const newFilePath = path.join(__dirname, `ggg${studyName}${className}.json`);
+
+      if (!fs.existsSync(newFilePath)) {
+        fs.writeFileSync(newFilePath, JSON.stringify(groupsData, null, 2));
+        fsCreated++;
+      }
+
+      // 4. Try DB Insert (Best Effort)
+      try {
+        await query(`
+                INSERT INTO study_groups (study_name, class_name, groups_data)
+                VALUES ($1, $2, $3::jsonb)
+                ON CONFLICT (study_name, class_name) DO NOTHING
+             `, [studyName, className, JSON.stringify(groupsData)]);
+        migratedCount++;
+      } catch (e) {
+        // DB Error (Ignored)
+      }
+    }
+
+    res.json({
+      status: "ok",
+      message: `Migration verified. FS Created: ${fsCreated}, DB Migrated: ${migratedCount}`
+    });
+
+  } catch (e) {
+    console.error("Migration To Studies Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Temporary Migration Endpoint
 app.get("/adminMigration", async (req, res) => {
   try {
