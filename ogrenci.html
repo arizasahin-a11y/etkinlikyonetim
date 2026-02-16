@@ -833,6 +833,26 @@
                         timerEl.textContent = ""; // Hide if not running
                     }
                 });
+
+                // 2. Update Focus Mode Timer (in p_soru)
+                const focusTimer = document.getElementById('timer_focus');
+                if (focusTimer) {
+                    if (atan && atan.yapma && atan.bitis) {
+                        const diff = atan.bitis - Date.now();
+                        if (diff <= 0) {
+                            focusTimer.textContent = "Süre Doldu";
+                            focusTimer.style.color = "#c62828";
+                        } else {
+                            const m = Math.floor(diff / 60000);
+                            const s = Math.floor((diff % 60000) / 1000);
+                            focusTimer.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+                            focusTimer.style.color = "#2e7d32";
+                        }
+                    } else {
+                        focusTimer.textContent = "";
+                    }
+                }
+
             }, 1000);
         }
 
@@ -1378,7 +1398,11 @@
                 if (footer) footer.style.display = 'none';
 
                 // Populate Question Page Header
-                let baslikHtml = `<div style="font-size:1.1rem; font-weight:bold; color:#333;">${atan.calisma}</div>`;
+                let baslikHtml = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">`;
+
+                // Left Side: Title and Info
+                baslikHtml += `<div style="text-align:left;">`;
+                baslikHtml += `<div style="font-size:1.1rem; font-weight:bold; color:#333;">${atan.calisma}</div>`;
                 baslikHtml += `<div style="font-size:0.9rem;">${sess.sinif}`;
 
                 // FIX: Use studyGroupsCache consistently. 
@@ -1389,7 +1413,13 @@
                 } else {
                     baslikHtml += ` - ${sess.ad}`;
                 }
-                baslikHtml += `</div>`;
+                baslikHtml += `</div></div>`; // Close info div and line
+
+                // Right Side: Focus Timer
+                baslikHtml += `<div id="timer_focus" style="font-size:1.4rem; font-weight:bold; font-family:monospace; margin-left:15px;"></div>`;
+
+                baslikHtml += `</div>`; // Close Flex Container
+
                 const sHeader = document.getElementById('soru_baslik_container');
                 if (sHeader) sHeader.innerHTML = baslikHtml;
 
