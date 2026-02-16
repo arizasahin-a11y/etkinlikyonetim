@@ -595,14 +595,21 @@
                 </div>
                 <span id="s_metin" class="soru-metni"></span>
                 <div id="s_inputs"></div>
-                <button onclick="yeniSatirEkle('')" class="btn-gri" style="width:auto; padding:8px 15px;">+ Yeni Cevap
-                    Satırı</button>
-                <div class="nav-btns">
-                    <button id="nav_geri" onclick="soruGit(-1)" class="btn-gri" style="flex:1">❮ GERİ</button>
-                    <button id="nav_ileri" onclick="soruGit(1)" class="btn-mavi" style="flex:2">KAYDET VE İLERİ
-                        ❯</button>
-                    <button id="nav_bitir" onclick="ozetCiz()" class="btn-yesil" style="flex:2; display:none;">KAYDET VE
-                        BİTİR</button>
+
+                <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+                    <button onclick="yeniSatirEkle('')" class="btn-gri" style="width:100%; padding:10px;">+ Yeni Cevap
+                        Satırı</button>
+
+                    <div class="nav-btns" style="margin-top:0;">
+                        <button id="nav_geri" onclick="soruGit(-1)" class="btn-gri" style="flex:1">❮ GERİ</button>
+                        <button id="nav_ileri" onclick="soruGit(1)" class="btn-mavi" style="flex:2">KAYDET VE İLERİ
+                            ❯</button>
+                        <button id="nav_bitir" onclick="ozetCiz()" class="btn-yesil"
+                            style="flex:2; display:none;">KAYDET VE BİTİR</button>
+                    </div>
+
+                    <button onclick="ekranDegis('p_liste')" class="btn-kirmizi" style="margin-top:5px;">LİSTEYE DÖN /
+                        ÇIKIŞ</button>
                 </div>
             </div>
 
@@ -1113,7 +1120,8 @@
                 }
 
                 // Evaluation Button
-                if ((isActive || isFinished) && a.degerl) {
+                // FIX: Decouple from isActive/isFinished. If 'degerl' is true, show it.
+                if (a.degerl) {
                     html += `<button onclick="degerlendirmeAccordion('${id}')" class="btn-mor" style="flex:1;">DEĞERLENDİRMEYE GEÇ</button>`;
                 }
 
@@ -1214,9 +1222,28 @@
         }
 
         function ekranDegis(id) {
-            ['p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
+            ['p_yonerge', 'p_soru', 'p_ozet', 'p_liste'].forEach(p => {
+                const el = document.getElementById(p);
+                if (el) el.style.display = "none";
+            });
             document.getElementById(id).style.display = "block";
             window.scrollTo(0, 0);
+
+            // Focus Mode for 'p_soru'
+            const header = document.querySelector('.header');
+            const container = document.querySelector('.container');
+            const footer = document.querySelector('.footer-info');
+
+            if (id === 'p_soru') {
+                if (header) header.style.display = 'none';
+                if (container) container.style.marginTop = '20px'; // Remove header compensation
+                if (footer) footer.style.display = 'none';
+            } else {
+                if (header) header.style.display = 'flex';
+                if (container) container.style.marginTop = '80px';
+                if (footer) footer.style.display = 'block';
+            }
+
             if (id === 'p_soru') soruYukle();
         }
 
