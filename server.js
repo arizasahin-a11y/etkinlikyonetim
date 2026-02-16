@@ -960,33 +960,7 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
       fsGroupFiles = files.filter(f => f.endsWith("Grupları.json"));
     } catch (e) { console.error("FS Read Error:", e); }
 
-    const AdmZip = require('adm-zip');
 
-    app.get('/yedekAl', (req, res) => {
-      try {
-        const zip = new AdmZip();
-        const files = fs.readdirSync(__dirname);
-
-        files.forEach(file => {
-          // Backup only JSON data files
-          if (file.endsWith('.json') && (file.startsWith('www_') || file.startsWith('ggg') || file.startsWith('qqq') || file === 'veritabani.json')) {
-            zip.addLocalFile(path.join(__dirname, file));
-          }
-        });
-
-        const zipBuffer = zip.toBuffer();
-        const fileName = `Yedek_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
-
-        res.set('Content-Type', 'application/octet-stream');
-        res.set('Content-Disposition', `attachment; filename=${fileName}`);
-        res.set('Content-Length', zipBuffer.length);
-        res.send(zipBuffer);
-
-      } catch (e) {
-        console.error("Backup error:", e);
-        res.status(500).send("Yedek oluşturulurken hata oluştu: " + e.message);
-      }
-    });
 
     // Serve static files
     const allGroups = [...new Set([...dbGroupNames, ...fsGroupFiles])];
@@ -1120,6 +1094,39 @@ async function autoMigrate() {
     console.warn("Auto-migration failed (likely due to no DB connection locally):", e.message);
   }
 }
+
+// --- YEDEKLEME ENDPOINT (Global) ---
+const AdmZip = require('adm-zip');
+app.get('/yedekAl', (req, res) => {
+  try {
+    const zip = new AdmZip();
+    // Use synchronous readdir to be safe, filtering only files
+    const files = fs.readdirSync(__dirname);
+
+    files.forEach(file => {
+      // Backup only JSON data files
+      // Logic: www_* (answers), ggg* (groups), qqq* (assignments), qwx* (studies), veritabani.json
+      if (file.endsWith('.json')) {
+        if (file.startsWith('www_') || file.startsWith('ggg') || file.startsWith('qqq') || file.startsWith('qwx') || file === 'veritabani.json' || file.endsWith('Grupları.json')) {
+          const p = path.join(__dirname, file);
+          if (fs.existsSync(p)) zip.addLocalFile(p);
+        }
+      }
+    });
+
+    const zipBuffer = zip.toBuffer();
+    const fileName = `Yedek_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+
+    res.set('Content-Type', 'application/octet-stream');
+    res.set('Content-Disposition', `attachment; filename=${fileName}`);
+    res.set('Content-Length', zipBuffer.length);
+    res.send(zipBuffer);
+
+  } catch (e) {
+    console.error("Backup error:", e);
+    res.status(500).send("Yedek oluşturulurken hata oluştu: " + e.message);
+  }
+});
 
 // --- SUNUCUYU BAŞLAT ---
 app.listen(PORT, "0.0.0.0", async () => {
