@@ -991,7 +991,8 @@
                 // Group Info in Header Logic
                 let groupBadge = "";
                 const cached = studyGroupsCache[a.calisma];
-                if (a.yontem === "Grup") {
+                // Only show group badge if Description Permission is granted
+                if (a.yontem === "Grup" && permAciklama) {
                     if (cached && cached.groupNo) {
                         groupBadge = `<span style="font-size:0.85rem; font-style:italic; color:#666; margin-left:10px;">(Bu çalışmada ${cached.groupNo}. Gruptasınız)</span>`;
                     } else if (globalGrupInfo && globalGrupInfo.groupNo) {
@@ -1407,8 +1408,9 @@
 
                 // FIX: Use studyGroupsCache consistently. 
                 // If method is Group AND valid group info exists
+                // AND Description Permission is granted (atan.aciklamaIzni)
                 const grpInfo = studyGroupsCache[atan.calisma];
-                if (atan.yontem === "Grup" && grpInfo) {
+                if (atan.yontem === "Grup" && grpInfo && atan.aciklamaIzni) {
                     baslikHtml += ` - ${grpInfo.groupNo}. Grup`;
                 } else {
                     baslikHtml += ` - ${sess.ad}`;
