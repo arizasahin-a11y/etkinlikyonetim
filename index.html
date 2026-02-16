@@ -1123,7 +1123,7 @@
                 <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
                 <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>
                 <td><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px" min="0"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px;">OK</button></td>
-                <td><span class="timer-text" id="t_${a.id}">${!a.yapma ? "Bitti" : "--:--"}</span></td>
+                <td><span class="timer-text" id="t_${a.id}">${!a.yapma ? "BİTTİ" : "--:--"}</span></td>
                 <td><button onclick="s3Del('${a.id}')" class="action red" style="min-width:auto; padding:5px;">Sil</button></td>`;
                 b.appendChild(tr);
             });
@@ -1138,7 +1138,7 @@
                 // Immediate UI update for 'yapma'
                 if (k === 'yapma') {
                     const el = document.getElementById("t_" + id);
-                    if (el) el.textContent = v ? "--:--" : "Bitti";
+                    if (el) el.textContent = v ? "--:--" : "BİTTİ";
                 }
 
                 try {
@@ -1166,21 +1166,20 @@
 
             if (a) {
                 a.sure = s;
-                a.yapma = true;
 
                 if (s > 0) {
-                    // Timer set
+                    // Timer set -> Grant Permission
+                    a.yapma = true;
                     a.bitis = Date.now() + (s * 60 * 1000);
                 } else {
-                    // Manual/Unlimited (0 mins) - Clear 'Bitti'
+                    // 0 Duration -> Revoke Permission (Stop)
+                    a.yapma = false;
                     a.bitis = null;
-                    const el = document.getElementById("t_" + id);
-                    if (el) el.textContent = "--:--";
                 }
 
                 s3Upd(id, 'bitis', a.bitis);
-                s3Upd(id, 'yapma', true);
-                s3Upd(id, 'sure', s); // Also save the new duration default
+                s3Upd(id, 'yapma', a.yapma);
+                s3Upd(id, 'sure', s);
                 s3TabloCiz();
             }
         }
@@ -1193,7 +1192,7 @@
 
                 // Priority: If yapma is false -> SBitti
                 if (!a.yapma) {
-                    el.textContent = "Bitti";
+                    el.textContent = "BİTTİ";
                     return;
                 }
 
