@@ -143,6 +143,73 @@
             color: #333;
         }
 
+        /* GRUP KARTLARI */
+        .grup {
+            border: 1px solid #e0e0e0;
+            padding: 0;
+            border-radius: 12px;
+            background: white;
+            width: 320px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grup:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .grup h3 {
+            margin: 0;
+            color: #fff;
+            background: linear-gradient(135deg, #673AB7, #512DA8);
+            padding: 15px;
+            text-align: center;
+            font-size: 1.3rem;
+            letter-spacing: 0.5px;
+        }
+
+        .grup ul {
+            list-style: none;
+            padding: 10px;
+            margin: 0;
+            flex: 1;
+        }
+
+        .grup li {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            color: #444;
+        }
+
+        .grup li:last-child {
+            border-bottom: none;
+        }
+
+        .grup li span.no {
+            font-weight: bold;
+            color: #673AB7;
+            background: #ede7f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .grup li span.ad {
+            flex: 1;
+            margin-left: 10px;
+            font-weight: 500;
+        }
+
         #calismaListesi {
             list-style-type: none;
             padding: 0;
@@ -924,9 +991,16 @@
 
                 let html = "";
                 gruplar.forEach((grup, i) => {
-                    html += `<div class="grup-kutu"><h3>${i + 1}. Grup</h3><ul>`;
+                    // Sort students by Number (ascending)
+                    grup.sort((a, b) => {
+                        const noA = parseInt(a['Okul Numaranız']) || 0;
+                        const noB = parseInt(b['Okul Numaranız']) || 0;
+                        return noA - noB;
+                    });
+
+                    html += `<div class="grup"><h3>${i + 1}. GRUP</h3><ul>`;
                     grup.forEach(ogr => {
-                        html += `<li>${ogr['Okul Numaranız']} - ${ogr['Adınız Soyadınız']}</li>`;
+                        html += `<li><span class="no">${ogr['Okul Numaranız']}</span> <span class="ad">${ogr['Adınız Soyadınız']}</span></li>`;
                     });
                     html += "</ul></div>";
                 });
