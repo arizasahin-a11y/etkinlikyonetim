@@ -644,6 +644,7 @@
         let lastSaveTime = 0;
         let openAccordionId = null;
         let atanlar = []; // Array to hold all active assignments
+        let lastAtanlarJson = ""; // For flicker fix
         let benimKaydim = null;
 
         // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
@@ -844,7 +845,24 @@
                 });
 
                 const results = await Promise.all(promises);
-                atanlar = results.filter(x => x !== null);
+                const filteredResults = results.filter(x => x !== null);
+
+                // FLICKER FIX: Compare structural data to avoid redundant redraws
+                const currentDataJson = JSON.stringify(filteredResults.map(x => ({
+                    id: x.id,
+                    yapma: x.yapma,
+                    bitis: x.bitis,
+                    yontem: x.yontem,
+                    calisma: x.calisma,
+                    aciklamaIzni: x.aciklamaIzni,
+                    soruIzni: x.soruIzni,
+                    gorme: x.gorme,
+                    groupNo: (studyGroupsCache[x.calisma] || {}).groupNo
+                })));
+
+                const dataChanged = (currentDataJson !== lastAtanlarJson);
+                atanlar = filteredResults;
+                lastAtanlarJson = currentDataJson;
 
                 // Pre-fetch Group Info for all group studies to show badges in list
                 atanlar.forEach(a => {
@@ -865,12 +883,17 @@
                                 }
                                 studyGroupsCache[a.calisma] = found || { groupNo: "?", members: [] };
                                 isFetchingGroups[a.calisma] = false;
-                                if (found) listeCiz(); // Re-draw list to show badge
+                                if (found) {
+                                    // This will trigger a re-draw on NEXT veriCek or we can force it if visibility is changed
+                                    // Actually, let's just force a redraw if this specific info was missing
+                                    // but we need to update lastAtanlarJson to avoid infinite loop or redundant calls
+                                    // Better: let the next 3s cycle handle it OR manually trigger ONLY if dataChanged would be true now
+                                }
                             }).catch(e => { isFetchingGroups[a.calisma] = false; });
                     }
                 });
 
-                if (document.getElementById('p_liste').style.display === 'block') {
+                if (dataChanged && document.getElementById('p_liste').style.display === 'block') {
                     listeCiz();
                 }
 
