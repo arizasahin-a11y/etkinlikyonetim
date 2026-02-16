@@ -589,6 +589,11 @@
             </div>
 
             <div id="p_soru" style="display:none;">
+                <!-- Study Header (Added per request) -->
+                <div id="soru_baslik_container"
+                    style="background:#f5f5f5; border-bottom:1px solid #ddd; padding:10px; margin-bottom:15px; text-align:center; border-radius:4px; color:#555;">
+                </div>
+
                 <div
                     style="display:flex; justify-content:space-between; color:#888; font-size:0.8rem; margin-bottom:10px;">
                     <span id="s_sayac"></span><span id="s_durum">Senkronize Edildi</span>
@@ -1086,10 +1091,21 @@
                     sorular.forEach((s, idx) => {
                         const soruMetni = (typeof s === 'object' ? s.soru : s);
                         const k = cevaplar.find(c => Number(c.soruIndex) === Number(idx));
+                        const degBitti = (benimKaydim && benimKaydim.degerlendirme && benimKaydim.degerlendirme.bitti);
+                        const soruPuanlar = (degBitti && benimKaydim.puanlar) ? benimKaydim.puanlar[idx] : null;
 
-                        let cvs = `<div style="font-style:italic; color:#999;">Cevap yok</div>`;
+                        let cvs = `<div class="cevap-alt cevap-bos">BOŞ</div>`;
+
                         if (k && k.cevaplar && k.cevaplar.length > 0) {
-                            cvs = k.cevaplar.map(val => `<div style="background:#f1f8e9; padding:5px; border-left:3px solid #66bb6a; margin-top:2px;">${linkleriDonustur(val)}</div>`).join('');
+                            cvs = k.cevaplar.map((val, cIdx) => {
+                                let cls = ""; // Default class handled by cevap-alt
+                                if (degBitti && soruPuanlar && soruPuanlar[cIdx] !== undefined) {
+                                    const pVal = Number(soruPuanlar[cIdx]);
+                                    if (pVal === 1) cls = "cevap-dogru";
+                                    else if (pVal === 0) cls = "cevap-yanlis";
+                                }
+                                return `<div class="cevap-alt ${cls}">${linkleriDonustur(val)}</div>`;
+                            }).join('');
                         }
 
                         qListHtml += `
@@ -1238,6 +1254,22 @@
                 if (header) header.style.display = 'none';
                 if (container) container.style.marginTop = '20px'; // Remove header compensation
                 if (footer) footer.style.display = 'none';
+
+                // Populate Question Page Header
+                let baslikHtml = `<div style="font-size:1.1rem; font-weight:bold; color:#333;">${atan.calisma}</div>`;
+                baslikHtml += `<div style="font-size:0.9rem;">${sess.sinif}`;
+
+                // FIX: Use globalGrupInfo consistently. 
+                // If method is Group AND valid group info exists
+                if (atan.yontem === "Grup" && globalGrupInfo) {
+                    baslikHtml += ` - ${globalGrupInfo.groupNo}. Grup`;
+                } else {
+                    baslikHtml += ` - ${sess.ad}`;
+                }
+                baslikHtml += `</div>`;
+                const sHeader = document.getElementById('soru_baslik_container');
+                if (sHeader) sHeader.innerHTML = baslikHtml;
+
             } else {
                 if (header) header.style.display = 'flex';
                 if (container) container.style.marginTop = '80px';
