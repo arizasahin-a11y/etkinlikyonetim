@@ -815,7 +815,7 @@
                 let grupListesi = [];
                 if (State.grupCalismasi) {
                     try {
-                        const rG = await fetch(`/grupListesiGetir?sinif=${State.pSinif}`);
+                        const rG = await fetch(`/grupListesiGetir?sinif=${encodeURIComponent(State.pSinif)}&calisma=${encodeURIComponent(State.pCalisma)}`);
                         grupListesi = await rG.json();
                     } catch (e) { }
                 }

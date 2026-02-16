@@ -909,19 +909,10 @@
 
             try {
                 let gruplar = [];
-                if (secilenCalismaGrupIcin) {
-                    // Try fetching ggg[Study][Class].json
-                    // Name format: ggg[Study][Class].json
-                    // We can use /calismaGetir?isim=...
-                    const fName = `ggg${secilenCalismaGrupIcin}${secilenSinif}`; // .json will be added by server if needed
-                    const res = await fetch(`/calismaGetir?isim=${encodeURIComponent(fName)}`);
-                    if (res.ok) gruplar = await res.json();
-                    else gruplar = []; // No groups for this study yet
-                } else {
-                    // Fallback to legacy class groups
-                    const res = await fetch(`/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}`);
-                    if (res.ok) gruplar = await res.json();
-                }
+                const url = `/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}${secilenCalismaGrupIcin ? `&calisma=${encodeURIComponent(secilenCalismaGrupIcin)}` : ''}`;
+                const res = await fetch(url);
+                if (res.ok) gruplar = await res.json();
+                else gruplar = [];
 
                 if (!gruplar || gruplar.length === 0) {
                     document.getElementById('tablo').innerHTML = `<div style="text-align:center; padding:20px; color:#666;">
@@ -1250,7 +1241,7 @@
                 this.kuyruk = [];
 
                 if (dQ.yontem === "Grup") {
-                    const gruplar = await (await fetch(`/grupListesiGetir?sinif=${this.seciliSinif}`)).json();
+                    const gruplar = await (await fetch(`/grupListesiGetir?sinif=${encodeURIComponent(this.seciliSinif)}&calisma=${encodeURIComponent(this.seciliCalisma)}`)).json();
                     gruplar.forEach((grp, idx) => {
                         const kayit = cevaplarVerisi.find(tv => grp.some(u => String(tv.ogrenciNo) === String(u["Okul Numaranız"])));
                         if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;

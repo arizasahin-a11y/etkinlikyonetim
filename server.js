@@ -516,6 +516,14 @@ app.post("/calismaSil", async (req, res) => {
       // We can search in DB: WHERE 'ggg' || study_name || class_name = $1
       await query("DELETE FROM study_groups WHERE 'ggg' || study_name || class_name = $1", [cleanIsim]);
 
+      // FIX: Also delete the file so fallback logic doesn't resurrect it
+      const fs = require('fs');
+      const path = require('path');
+      const filePath = path.join(__dirname, cleanIsim + ".json");
+      if (fs.existsSync(filePath)) {
+        try { fs.unlinkSync(filePath); } catch (e) { console.error("FS Delete Error:", e); }
+      }
+
     } else {
       await query("DELETE FROM studies WHERE name = $1", [cleanIsim]);
     }
@@ -560,12 +568,12 @@ app.post("/arsivGuncelle", async (req, res) => {
 
 // Genel Kayıt (Öğrenci Girişleri, Cevaplar vb.)
 app.post("/kaydet", async (req, res) => {
-  const { dosyaAdi, veri, sinif, gruplar } = req.body;
+  const { dosyaAdi, veri, sinif, gruplar, calisma } = req.body;
 
   // 1. Group Saving
   if (sinif && gruplar) {
     try {
-      console.log(`[Grup Kaydet] Sınıf: ${sinif}, Grup sayısı: ${gruplar.length}`);
+      console.log(`[Grup Kaydet] Sınıf: ${sinif}, Çalışma: ${calisma || 'Genel'}, Grup sayısı: ${gruplar.length}`);
 
       // Ensure gruplar is valid array
       if (!Array.isArray(gruplar)) {
@@ -575,17 +583,40 @@ app.post("/kaydet", async (req, res) => {
       // PostgreSQL JSONB için JSON string'e çevir
       const jsonData = JSON.stringify(gruplar);
 
-      await query(`
-            INSERT INTO class_groups (class_name, groups_data)
-            VALUES ($1, $2::jsonb)
-            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
-        `, [sinif, jsonData]);
+      if (calisma) {
+        // Study-Specific Groups
+        await query(`
+              INSERT INTO study_groups (study_name, class_name, groups_data)
+              VALUES ($1, $2, $3::jsonb)
+              ON CONFLICT (study_name, class_name) DO UPDATE SET groups_data = $3::jsonb
+          `, [calisma, sinif, jsonData]);
 
-      console.log(`✅ [Grup Kaydet] Başarılı: ${sinif}`);
+        // Also save to FS (fallback)
+        const fs = require('fs');
+        const path = require('path');
+        const filename = `ggg${calisma}${sinif}.json`;
+        fs.writeFileSync(path.join(__dirname, filename), JSON.stringify(gruplar, null, 2));
+        console.log(`✅ [Grup Kaydet] Study-Specific Başarılı: ${filename}`);
+
+      } else {
+        // Legacy/Generic Class Groups
+        await query(`
+              INSERT INTO class_groups (class_name, groups_data)
+              VALUES ($1, $2::jsonb)
+              ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
+          `, [sinif, jsonData]);
+
+        // Also save to FS (fallback)
+        const fs = require('fs');
+        const path = require('path');
+        const filename = `${sinifIsmiTemizle(sinif)}Grupları.json`;
+        fs.writeFileSync(path.join(__dirname, filename), JSON.stringify(gruplar, null, 2));
+        console.log(`✅ [Grup Kaydet] Generic Başarılı: ${sinif}`);
+      }
+
       return res.json({ status: "ok", saved: true });
     } catch (e) {
       console.error(`❌ [Grup Kaydet] Hata:`, e.message);
-      console.error(`Stack:`, e.stack);
       return res.status(500).json({ status: "error", message: e.message });
     }
   }
@@ -1276,7 +1307,50 @@ async function autoMigrate() {
             VALUES ($1, $2::jsonb)
             ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
         `, [className, jsonData]);
-      console.log(`Migrated group: ${file} (Class: ${className})`);
+      console.log(`Migrated generic group: ${file} (Class: ${className})`);
+    }
+
+    // 2. Study-Specific Groups (ggg*)
+    const studyGroupFiles = files.filter(f => f.startsWith("ggg") && f.endsWith(".json"));
+    if (studyGroupFiles.length > 0) {
+      // To parse study/class from ggg[Study][Class].json, we need list of studies and classes
+      const studies = await query("SELECT name FROM studies");
+      const studentClasses = await query("SELECT DISTINCT class_name FROM students");
+
+      for (const file of studyGroupFiles) {
+        let content;
+        try {
+          content = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf-8'));
+        } catch (err) { continue; }
+
+        const rawName = file.replace("ggg", "").replace(".json", "");
+
+        // Try matching against known study/class pairs
+        let foundStudy = null;
+        let foundClass = null;
+
+        for (const s of studies.rows) {
+          if (rawName.startsWith(s.name)) {
+            const classPart = rawName.substring(s.name.length);
+            if (classPart.length > 0) {
+              foundStudy = s.name;
+              foundClass = classPart;
+              break;
+            }
+          }
+        }
+
+        if (foundStudy && foundClass) {
+          await query(`
+                    INSERT INTO study_groups (study_name, class_name, groups_data)
+                    VALUES ($1, $2, $3::jsonb)
+                    ON CONFLICT (study_name, class_name) DO UPDATE SET groups_data = $3::jsonb
+                `, [foundStudy, foundClass, JSON.stringify(content)]);
+          console.log(`Migrated study group: ${file} (Study: ${foundStudy}, Class: ${foundClass})`);
+        } else {
+          console.warn(`Could not parse Study/Class from filename: ${file}`);
+        }
+      }
     }
   } catch (e) {
     console.warn("Auto-migration failed (likely due to no DB connection locally):", e.message);
