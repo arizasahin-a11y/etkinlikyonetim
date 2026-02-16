@@ -642,7 +642,7 @@
 
         let grupSorgusuYapildi = false;
         let lastSaveTime = 0;
-        let openAccordionId = null;
+        let openAccordionId = localStorage.getItem('openAccordionId'); // PERSTISTENCE
         let atanlar = []; // Array to hold all active assignments
         let lastAtanlarJson = ""; // For flicker fix
         let benimKaydim = null;
@@ -843,7 +843,8 @@
                     aciklamaIzni: x.aciklamaIzni,
                     soruIzni: x.soruIzni,
                     gorme: x.gorme,
-                    degerl: x.degerl, // FIX: Inclusion for immediate permission sync
+                    degerl: x.degerl,
+                    masterDegerl: x.masterDegerl, // FIX: Inclusion for immediate permission sync
                     groupNo: (studyGroupsCache[x.calisma] || {}).groupNo
                 })));
 
@@ -979,12 +980,14 @@
                 const arrow = item.querySelector('.accordion-arrow');
                 if (arrow) arrow.style.transform = "rotate(180deg)";
                 openAccordionId = id;
+                localStorage.setItem('openAccordionId', id); // SAVE STATE
                 await loadStudyInAccordion(id);
             } else {
                 item.classList.remove('open');
                 const arrow = item.querySelector('.accordion-arrow');
                 if (arrow) arrow.style.transform = "rotate(0deg)";
                 openAccordionId = null;
+                localStorage.removeItem('openAccordionId'); // CLEAR STATE
             }
         }
 
@@ -1210,8 +1213,8 @@
                 }
 
                 // Evaluation Button
-                // FIX: Decouple from isActive/isFinished. If 'degerl' is true, show it.
-                if (a.degerl) {
+                // TWO-LEVEL SECURITY CHECK: Master Switch (Tab 4) AND Class Switch (Tab 3)
+                if (a.masterDegerl && a.degerl) {
                     html += `<button onclick="degerlendirmeAccordion('${id}')" class="btn-mor" style="flex:1;">DEĞERLENDİRMEYE GEÇ</button>`;
                 }
 
