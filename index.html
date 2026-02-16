@@ -1122,8 +1122,8 @@
                 </td>
                 <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
                 <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>
-                <td><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px;">OK</button></td>
-                <td><span class="timer-text" id="t_${a.id}">--:--</span></td>
+                <td><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px" min="0"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px;">OK</button></td>
+                <td><span class="timer-text" id="t_${a.id}">${!a.yapma ? "Bitti" : "--:--"}</span></td>
                 <td><button onclick="s3Del('${a.id}')" class="action red" style="min-width:auto; padding:5px;">Sil</button></td>`;
                 b.appendChild(tr);
             });
@@ -1134,6 +1134,12 @@
                 a[k] = v;
                 // If setting granular permissions, clear legacy 'gorme' to avoid override
                 if (k === 'aciklamaIzni' || k === 'soruIzni') a.gorme = false;
+
+                // Immediate UI update for 'yapma'
+                if (k === 'yapma') {
+                    const el = document.getElementById("t_" + id);
+                    if (el) el.textContent = v ? "--:--" : "Bitti";
+                }
 
                 try {
                     const res = await fetch("/calismaKaydet", {
@@ -1149,14 +1155,50 @@
             }
         }
         function s3Start(id) {
-            const a = aktifAtamalar.find(x => x.id === id); const s = parseInt(document.getElementById("inp_" + id).value) || 0;
-            if (a && s > 0) { a.sure = s; a.yapma = true; a.bitis = Date.now() + (s * 60 * 1000); s3Upd(id, 'bitis', a.bitis); s3Upd(id, 'yapma', true); s3TabloCiz(); }
+            const a = aktifAtamalar.find(x => x.id === id);
+            let s = parseInt(document.getElementById("inp_" + id).value) || 0;
+
+            // Prevent negative
+            if (s < 0) {
+                s = 0;
+                document.getElementById("inp_" + id).value = 0;
+            }
+
+            if (a) {
+                a.sure = s;
+                a.yapma = true;
+
+                if (s > 0) {
+                    // Timer set
+                    a.bitis = Date.now() + (s * 60 * 1000);
+                } else {
+                    // Manual/Unlimited (0 mins) - Clear 'Bitti'
+                    a.bitis = null;
+                    const el = document.getElementById("t_" + id);
+                    if (el) el.textContent = "--:--";
+                }
+
+                s3Upd(id, 'bitis', a.bitis);
+                s3Upd(id, 'yapma', true);
+                s3Upd(id, 'sure', s); // Also save the new duration default
+                s3TabloCiz();
+            }
         }
         function s3Del(id) { if (confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: id }) }).then(() => s3AtamalariCek()); }
 
         setInterval(() => {
             aktifAtamalar.forEach(a => {
-                const el = document.getElementById("t_" + a.id); if (!el || !a.bitis) return;
+                const el = document.getElementById("t_" + a.id);
+                if (!el) return;
+
+                // Priority: If yapma is false -> SBitti
+                if (!a.yapma) {
+                    el.textContent = "Bitti";
+                    return;
+                }
+
+                if (!a.bitis) return;
+
                 const diff = a.bitis - Date.now();
                 if (diff > 0) { el.textContent = `${Math.floor(diff / 60000).toString().padStart(2, '0')}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')}`; }
                 else { el.textContent = "BİTTİ"; if (a.yapma) { a.yapma = false; s3Upd(a.id, 'yapma', false); } }
