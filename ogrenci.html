@@ -757,6 +757,27 @@
             fetchGlobalGroupInfo(); // Fetch group info once
             veriCek();
             setInterval(veriCek, 3000);
+            startTimer(); // Start 1-second timer for clock
+        }
+
+        function startTimer() {
+            setInterval(() => {
+                const el = document.getElementById('h_sure');
+                if (!atan || !atan.bitis) {
+                    if (el) el.textContent = "--:--";
+                    return;
+                }
+
+                const fark = atan.bitis - Date.now();
+                if (fark <= 0) {
+                    if (el) el.textContent = "00:00";
+                    // Status updates handled by veriCek/durumYonetimi
+                } else {
+                    const m = Math.floor(fark / 60000);
+                    const s = Math.floor((fark % 60000) / 1000);
+                    if (el) el.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+                }
+            }, 1000);
         }
 
         async function fetchGlobalGroupInfo() {
@@ -892,7 +913,7 @@
                 // Group Info in Header Logic
                 let groupBadge = "";
                 if (a.yontem === "Grup" && globalGrupInfo && globalGrupInfo.groupNo) {
-                    groupBadge = `<span style="font-size:0.8rem; background:#FFECB3; color:#E65100; padding:2px 6px; border-radius:4px; margin-left:8px; border:1px solid #FFD54F;">${globalGrupInfo.groupNo}. GRUP</span>`;
+                    groupBadge = `<span style="font-size:0.85rem; font-style:italic; color:#666; margin-left:10px;">(Bu çalışmada ${globalGrupInfo.groupNo}. Gruptasınız)</span>`;
                 }
 
                 h += `
@@ -1139,9 +1160,12 @@
             if (atan.bitis) {
                 const fark = atan.bitis - Date.now();
                 if (fark > 0) {
-                    hSure.textContent = Math.floor(fark / 60000) + ":" + Math.floor((fark % 60000) / 1000).toString().padStart(2, '0');
-                    hSure.parentElement.style.display = "flex";
-                } else { hSure.textContent = "BİTTİ"; sureBitti = true; }
+                    // Clock updated by startTimer()
+                    if (hSure.parentElement) hSure.parentElement.style.display = "flex";
+                } else {
+                    hSure.textContent = "BİTTİ";
+                    sureBitti = true;
+                }
             }
 
             if ((sureBitti || !atan.yapma) && !otoKayitYapildi) { kaydet(); otoKayitYapildi = true; }
