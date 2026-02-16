@@ -1000,7 +1000,7 @@
 
                     html += `<div class="grup"><h3>${i + 1}. GRUP</h3><ul>`;
                     grup.forEach(ogr => {
-                        html += `<li><span class="no">${ogr['Okul Numaranız']}</span> <span class="ad" onclick="s3OAGiris('${ogr['Okul Numaranız']}')" style="cursor:pointer; text-decoration:underline;" title="Not Girmek İçin Tıklayın">${ogr['Adınız Soyadınız']}</span></li>`;
+                        html += `<li><span class="no">${ogr['Okul Numaranız']}</span> <span class="ad">${ogr['Adınız Soyadınız']}</span> <span onclick="s3OAGiris('${ogr['Okul Numaranız']}')" style="cursor:pointer; margin-left:5px;" title="Not Girmek İçin Tıklayın">📝</span></li>`;
                     });
                     html += "</ul></div>";
                 });
