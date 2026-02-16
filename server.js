@@ -10,6 +10,12 @@ const app = express();
 app.use(express.json({ limit: '50mb' })); // Increased limit just in case
 app.use(cors());
 
+// DEBUG MIDDLEWARE
+app.use((req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.url}`);
+  next();
+});
+
 // --- 1. PORT AYARI ---
 const PORT = process.env.PORT || 3000;
 
@@ -67,18 +73,38 @@ app.get("/grupListesiGetir", async (req, res) => {
   try {
     if (calisma) {
       // FETCH STUDY-SPECIFIC GROUPS
-      const resDb = await query("SELECT groups_data FROM study_groups WHERE study_name = $1 AND class_name = $2", [calisma, rawSinif]);
+      let resDb = { rows: [] };
+      try {
+        resDb = await query("SELECT groups_data FROM study_groups WHERE study_name = $1 AND class_name = $2", [calisma, rawSinif]);
+      } catch (dbErr) {
+        console.error("Study Groups DB Error (Ignored for fallback):", dbErr.message);
+      }
 
       if (resDb.rows.length > 0) {
         return res.json(resDb.rows[0].groups_data || []);
       } else {
-        // Fallback to checking file system for ggg[Study][Class].json?
-        // Only if we want robust fallback. 
-        // File name: ggg[Study][Class].json (Assuming no spaces in filename usually, but here 'calisma' might have spaces?)
-        // Server strips extension usually?
-        // Let's assume 'calisma' is the name matching DB 'name'.
+        // Fallback to File System (ggg[Study][Class].json)
+        // ROBUST FUZZY MATCH (Handles Unicode/Encoding mismatches)
+        const fs = require('fs');
+        const files = fs.readdirSync(__dirname);
+        const searchName = `ggg${calisma}${rawSinif}`.toLowerCase();
 
-        // If not in DB, return empty array for study-specific request
+        const matchingFile = files.find(f => {
+          const low = f.toLowerCase();
+          return low.startsWith("ggg") && low.endsWith(".json") &&
+            low.includes(calisma.toLowerCase()) && low.includes(rawSinif.toLowerCase());
+        });
+
+        if (matchingFile) {
+          const filePath = path.join(__dirname, matchingFile);
+          try {
+            const fContent = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            return res.json(fContent);
+          } catch (e) {
+            console.error("FS Read Error:", e);
+            return res.json([]);
+          }
+        }
         return res.json([]);
       }
     }
@@ -892,43 +918,29 @@ app.get("/calismaGetir", async (req, res) => {
 
       if (isim.startsWith("ggg")) {
         // New Format: ggg[Study][Class].json
-        // Need to parse Study and Class. 
-        // Regex approach? or Logic? 
-        // User said: ggg[Study][Class].json
-        // We can't easily parse without separator if Study/Class has variable length.
-        // BUT, usually the client requests this.
-        // Let's assume the CLIENT sends the correctly formatted name.
-        // Server side just needs to match it to DB.
+        let searchKey = isim;
+        if (!searchKey.endsWith(".json")) searchKey += ".json";
 
-        // Actually, we can pass query params to a GET, but here we are using a file-like route /DosyaAdi
-        // So we need to reverse-engineer or...
-
-        // Wait, if I change the DB structure, I should also change how I query it.
-        // If the requester asks for "gggMatematik9-A.json", I need to find study="Matematik" class="9-A".
-        // This is hard to parse if names overlap.
-        // Better approach: Client sends "ggg[Study]__[Class].json" with a separator?
-        // OR, strict naming: ggg + Study + Class + .json
-
-        // Let's assume for now the client is smart enough OR we use a different endpoint for groups?
-        // No, existing structure uses /calismaGetir?isim=...
-
-        // Let's try to find a match in the DB using LIKE if we can't parse exactly?
-        // Or just store the "file name" logic in the client.
-        // For now, let's implement the DB fetch assuming we can get Study and Class.
-
-        // Actually, let's modify the ROUTE logic to be smarter.
-        // If it starts with ggg, we try to find a match in study_groups table where concatenation matches?
-        // SELECT * FROM study_groups WHERE 'ggg' || study_name || class_name || '.json' = $1
-
-        const resDb = await query("SELECT groups_data FROM study_groups WHERE 'ggg' || study_name || class_name || '.json' = $1", [isim]);
+        const resDb = await query("SELECT groups_data FROM study_groups WHERE 'ggg' || study_name || class_name || '.json' = $1", [searchKey]);
         if (resDb.rows.length > 0) {
           res.json(resDb.rows[0].groups_data);
         } else {
-          // Fallback to file system
-          const filePath = path.join(__dirname, isim);
-          if (fs.existsSync(filePath)) {
+          // Fallback to file system (Fuzzy)
+          const fs = require("fs");
+          const files = fs.readdirSync(__dirname);
+          const lowSearch = searchKey.toLowerCase();
+
+          const matchingFile = files.find(f => {
+            const low = f.toLowerCase();
+            return low.startsWith("ggg") && low.includes(".json") &&
+              (low === lowSearch || (low.includes(searchKey.toLowerCase().replace(".json", ""))));
+          });
+
+          if (matchingFile) {
+            const filePath = path.join(__dirname, matchingFile);
             try { res.json(JSON.parse(fs.readFileSync(filePath, 'utf-8'))); } catch (e) { res.status(404).send(); }
           } else {
+            console.log(`[DEBUG] /calismaGetir - File not found: ${searchKey}`);
             res.status(404).send();
           }
         }
