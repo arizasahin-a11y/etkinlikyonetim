@@ -75,7 +75,8 @@ app.get("/grupListesiGetir", async (req, res) => {
       // FETCH STUDY-SPECIFIC GROUPS
       let resDb = { rows: [] };
       try {
-        resDb = await query("SELECT groups_data FROM study_groups WHERE study_name = $1 AND class_name = $2", [calisma, rawSinif]);
+        const normalized = sinifIsmiTemizle(rawSinif);
+        resDb = await query("SELECT groups_data FROM study_groups WHERE study_name = $1 AND (class_name = $2 OR class_name = $3)", [calisma, rawSinif, normalized]);
       } catch (dbErr) {
         console.error("Study Groups DB Error (Ignored for fallback):", dbErr.message);
       }
@@ -87,12 +88,17 @@ app.get("/grupListesiGetir", async (req, res) => {
         // ROBUST FUZZY MATCH (Handles Unicode/Encoding mismatches)
         const fs = require('fs');
         const files = fs.readdirSync(__dirname);
-        const searchName = `ggg${calisma}${rawSinif}`.toLowerCase();
+
+        const cleanStr = (s) => (s || "").replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]/g, "").toLowerCase();
+        const searchCalisma = cleanStr(calisma);
+        const searchSinif = cleanStr(rawSinif);
 
         const matchingFile = files.find(f => {
-          const low = f.toLowerCase();
-          return low.startsWith("ggg") && low.endsWith(".json") &&
-            low.includes(calisma.toLowerCase()) && low.includes(rawSinif.toLowerCase());
+          const low = cleanStr(f);
+          const match = f.startsWith("ggg") && f.endsWith(".json") &&
+            low.includes(searchCalisma) && low.includes(searchSinif);
+
+          return match;
         });
 
         if (matchingFile) {
@@ -952,7 +958,13 @@ app.get("/calismaGetir", async (req, res) => {
         let searchKey = isim;
         if (!searchKey.endsWith(".json")) searchKey += ".json";
 
-        const resDb = await query("SELECT groups_data FROM study_groups WHERE 'ggg' || study_name || class_name || '.json' = $1", [searchKey]);
+        const normalized = sinifIsmiTemizle(isim.replace("ggg", "").replace(".json", ""));
+        const resDb = await query(`
+            SELECT groups_data FROM study_groups 
+            WHERE ('ggg' || study_name || class_name || '.json' = $1)
+               OR ('ggg' || study_name || $2 || '.json' = $1)
+        `, [searchKey, normalized]);
+
         if (resDb.rows.length > 0) {
           res.json(resDb.rows[0].groups_data);
         } else {

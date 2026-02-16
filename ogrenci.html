@@ -844,21 +844,34 @@
                 });
 
                 const results = await Promise.all(promises);
-                const yeniAtanlar = results.filter(x => x !== null);
+                atanlar = results.filter(x => x !== null);
 
-                // Update global list
-                // Flicker Fix: Check if data actually changed
-                const newDataStr = JSON.stringify(yeniAtanlar.map(x => ({ id: x.id, yapma: x.yapma, sure: x.sure, bitis: x.bitis })));
-                const oldDataStr = JSON.stringify(atanlar.map(x => ({ id: x.id, yapma: x.yapma, sure: x.sure, bitis: x.bitis })));
-
-                if (newDataStr !== oldDataStr) {
-                    atanlar = yeniAtanlar;
-                    if (document.getElementById('p_liste').style.display === 'block') {
-                        listeCiz();
+                // Pre-fetch Group Info for all group studies to show badges in list
+                atanlar.forEach(a => {
+                    if (a.yontem === "Grup" && !studyGroupsCache[a.calisma] && !isFetchingGroups[a.calisma]) {
+                        isFetchingGroups[a.calisma] = true;
+                        fetch(`/grupListesiGetir?sinif=${encodeURIComponent(sess.sinif)}&calisma=${encodeURIComponent(a.calisma)}`)
+                            .then(r => r.json())
+                            .then(gruplar => {
+                                let found = null;
+                                if (Array.isArray(gruplar)) {
+                                    for (let i = 0; i < gruplar.length; i++) {
+                                        const members = gruplar[i];
+                                        if (members.some(m => String(m['Okul Numaranız']) === String(sess.no))) {
+                                            found = { groupNo: i + 1, members: members };
+                                            break;
+                                        }
+                                    }
+                                }
+                                studyGroupsCache[a.calisma] = found || { groupNo: "?", members: [] };
+                                isFetchingGroups[a.calisma] = false;
+                                if (found) listeCiz(); // Re-draw list to show badge
+                            }).catch(e => { isFetchingGroups[a.calisma] = false; });
                     }
-                } else {
-                    // Data same, update atanlar ref but don't redraw list if not needed
-                    atanlar = yeniAtanlar;
+                });
+
+                if (document.getElementById('p_liste').style.display === 'block') {
+                    listeCiz();
                 }
 
                 // Sync UI for active study
@@ -926,8 +939,13 @@
 
                 // Group Info in Header Logic
                 let groupBadge = "";
-                if (a.yontem === "Grup" && globalGrupInfo && globalGrupInfo.groupNo) {
-                    groupBadge = `<span style="font-size:0.85rem; font-style:italic; color:#666; margin-left:10px;">(Bu çalışmada ${globalGrupInfo.groupNo}. Gruptasınız)</span>`;
+                const cached = studyGroupsCache[a.calisma];
+                if (a.yontem === "Grup") {
+                    if (cached && cached.groupNo) {
+                        groupBadge = `<span style="font-size:0.85rem; font-style:italic; color:#666; margin-left:10px;">(Bu çalışmada ${cached.groupNo}. Gruptasınız)</span>`;
+                    } else if (globalGrupInfo && globalGrupInfo.groupNo) {
+                        groupBadge = `<span style="font-size:0.85rem; font-style:italic; color:#666; margin-left:10px;">(Bu çalışmada ${globalGrupInfo.groupNo}. Gruptasınız)</span>`;
+                    }
                 }
 
                 h += `
@@ -1045,7 +1063,7 @@
                 const isActive = (a.yapma === true);
 
                 // 1. Group Info Fetch (Dynamic)
-                if (a.yontem === "Grup" && isActive) {
+                if (a.yontem === "Grup") {
                     // Check if cached
                     if (!studyGroupsCache[a.calisma] && !isFetchingGroups[a.calisma]) {
                         isFetchingGroups[a.calisma] = true;
@@ -1086,6 +1104,15 @@
                                     el.innerHTML = `<strong style="color:#E65100; display:block; margin-bottom:5px;">${sess.sinif} ${found.groupNo}. Grup Listesi:</strong>
                                         <ul style="margin:0; padding-left:20px; font-size:0.9rem;">${membersHtml}</ul>`;
                                     el.style.display = "block";
+                                }
+
+                                // ALSO: Update the header badge if it's currently "?"
+                                // (This involves a partial re-render or just finding the header element)
+                                // Standard way: re-call listeCiz() but that might flicker.
+                                // Let's just update the placeholder in the header if it exists.
+                                // Actually, calling listeCiz() is safer to keep everything in sync.
+                                if (found) {
+                                    listeCiz();
                                 }
 
                             }).catch(e => { console.error(e); isFetchingGroups[a.calisma] = false; });
