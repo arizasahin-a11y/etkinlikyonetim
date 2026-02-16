@@ -581,7 +581,9 @@
                 <div id="c_yok"
                     style="text-align:center; color:#E65100; display:none; padding:15px; font-weight:bold; background:#FFF3E0; border-radius:8px; margin-bottom:10px; border:1px solid #FFE0B2;">
                     ⚠️ Aktif çalışma bulunmamaktadır.</div>
-                <h3 style="color:#555; margin-bottom:10px; border-bottom:2px solid #eee; padding-bottom:5px;">Size
+                <h3
+                    style="color:#555; margin-bottom:10px; border-bottom:2px solid #eee; padding-bottom:5px; text-align:center;">
+                    Size
                     Atanan Çalışmalar</h3>
                 <div id="accordion_liste"></div>
             </div>
@@ -1017,33 +1019,9 @@
 
                 let html = "";
 
-                // 2. Action Buttons (Top)
-                // - Active Study: Start/Continue
-                // - Finished Study: Evaluation (if allowed)
-                // - Read Only: View Summary (if allowed)
-
-                html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">`;
-
-                if (isActive && !isFinished) {
-                    html += `<button onclick="baslaAccordion('${id}')" class="btn-mavi" style="flex:1;">ÇALIŞMAYA BAŞLA / DEVAM ET</button>`;
-                }
-
-                // Evaluation Button
-                // Show if: (Active OR Finished) AND (Evaluation Allowed)
-                if ((isActive || isFinished) && a.degerl) {
-                    html += `<button onclick="degerlendirmeAccordion('${id}')" class="btn-mor" style="flex:1;">DEĞERLENDİRMEYE GEÇ</button>`;
-                }
-
-                if (isFinished && !isActive) {
-                    html += `<div style="width:100%; text-align:center; color:red; font-weight:bold; padding:5px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px;">⛔ Süre doldu.</div>`;
-                }
-
-                html += `</div>`;
-
-
-                // 3. Nested Accordions (Info)
-                // - Description: Show if (PermAciklama OR Active)
-                // - Questions: Show if (PermSoru OR Active OR MyAnswers exist)
+                // 2. Nested Accordions (Info) - MOVED TO TOP
+                // - Description: Show ONLY if (PermAciklama OR Active)
+                // - Questions: Show ONLY if (PermSoru OR Active OR MyAnswers exist)
 
                 if (permAciklama || isActive) {
                     html += `<details class="nested-acc" ${isActive ? 'open' : ''}>
@@ -1054,9 +1032,6 @@
 
                 // Questions / Answers List (Mini View)
                 const canSeeQuestions = (permSoru || isActive || (myAnswers.length > 0));
-                // But user wants "Questions/Answers" inside accordion WITHOUT buttons.
-                // If active, they use "Start" button to edit.
-                // If read-only, they see this list.
 
                 if (canSeeQuestions) {
                     let qListHtml = `<div style="display:flex; flex-direction:column; gap:10px;">`;
@@ -1078,7 +1053,6 @@
                     qListHtml += `</div>`;
 
                     // Show "Sorular ve Cevaplar" accordion
-                    // Use <details>
                     html += `<details class="nested-acc">
                         <summary>Sorular ve Cevaplar</summary>
                         <div class="nested-content">${qListHtml}</div>
@@ -1089,6 +1063,24 @@
                 if (!isActive && !permAciklama && !canSeeQuestions) {
                     html += `<div style="text-align:center; color:#999; padding:20px;">Bu çalışmayı görüntüleme izniniz bulunmuyor.</div>`;
                 }
+
+                // 3. Action Buttons (MOVED TO BOTTOM)
+                html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">`;
+
+                if (isActive && !isFinished) {
+                    html += `<button onclick="baslaAccordion('${id}')" class="btn-mavi" style="flex:1;">ÇALIŞMAYA BAŞLA / DEVAM ET</button>`;
+                }
+
+                // Evaluation Button
+                if ((isActive || isFinished) && a.degerl) {
+                    html += `<button onclick="degerlendirmeAccordion('${id}')" class="btn-mor" style="flex:1;">DEĞERLENDİRMEYE GEÇ</button>`;
+                }
+
+                if (isFinished && !isActive) {
+                    html += `<div style="width:100%; text-align:center; color:red; font-weight:bold; padding:5px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px;">⛔ Süre doldu.</div>`;
+                }
+
+                html += `</div>`;
 
                 container.innerHTML = html;
 
