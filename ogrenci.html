@@ -656,6 +656,9 @@
 
             <div id="p_ozet" style="display:none;">
                 <h3 style="text-align:center; color:var(--ana); margin-top:0;">Cevap Özetiniz</h3>
+                <div id="ozet_baslik_container"
+                    style="background:#f5f5f5; border-bottom:1px solid #ddd; padding:10px; margin-bottom:15px; text-align:center; border-radius:4px; color:#555;">
+                </div>
                 <div id="ozet_tablo_alani"></div>
                 <button id="btn_degerlendirme" onclick="degerlendirmeyeGec()" class="btn-mor"
                     style="margin-top:20px; display:none;">DEĞERLENDİRMEYE GEÇ ➜</button>
@@ -844,16 +847,37 @@
                             focusTimer.style.color = "#c62828";
                         } else {
                             const m = Math.floor(diff / 60000);
-                            const s = Math.floor((diff % 60000) / 1000);
-                            focusTimer.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
-                            focusTimer.style.color = "#2e7d32";
-                        }
-                    } else {
-                        focusTimer.textContent = "";
-                    }
-                }
+                            let timerText = "";
+                            let timerColor = "";
+                            if (diff <= 0) {
+                                timerText = "Süre Doldu";
+                                timerColor = "#c62828";
+                            } else {
+                                const m = Math.floor(diff / 60000);
+                                const s = Math.floor((diff % 60000) / 1000);
+                                timerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                                timerColor = "#2e7d32";
+                            }
+                            focusTimer.textContent = timerText;
+                            focusTimer.style.color = timerColor;
 
-            }, 1000);
+                            // ALSO UPDATE SUMMARY TIMER IF EXISTS
+                            const elOzet = document.getElementById('timer_ozet');
+                            if (elOzet) {
+                                elOzet.textContent = timerText;
+                                elOzet.style.color = timerColor;
+                            }
+                        } else {
+                            focusTimer.textContent = "";
+                            const elOzet = document.getElementById('timer_ozet');
+                            if (elOzet) {
+                                elOzet.textContent = "";
+                                elOzet.style.color = ""; // Reset color
+                            }
+                        }
+                    }
+
+                }, 1000);
         }
 
         async function fetchGlobalGroupInfo() {
@@ -1542,6 +1566,45 @@
             document.getElementById('p_ozet').style.display = "block";
             const canEdit = atan && atan.yapma;
 
+            // --- HEADER INFO (New) ---
+            let baslikHtml = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">`;
+
+            // Left: Study & Group
+            baslikHtml += `<div style="text-align:left;">`;
+            baslikHtml += `<div style="font-size:1.1rem; font-weight:bold; color:#333;">${atan.calisma}</div>`;
+            baslikHtml += `<div style="font-size:0.9rem;">${sess.sinif}`;
+
+            const grpInfo = studyGroupsCache[atan.calisma];
+            if (atan.yontem === "Grup" && grpInfo && atan.aciklamaIzni) {
+                baslikHtml += ` - ${grpInfo.groupNo}. Grup`;
+            } else {
+                baslikHtml += ` - ${sess.ad}`; // Fallback or personal
+            }
+            baslikHtml += `</div></div>`;
+
+            // Right: Timer
+            let timerHtml = "";
+            if (atan.bitis && atan.yapma) {
+                const diff = atan.bitis - Date.now();
+                if (diff > 0) {
+                    // Timer logic will need to update this, but for static render:
+                    // actually, let's just put a placeholder ID and let updateTimer/durumYonetimi handle it if possible?
+                    // Or just render once.
+                    const min = Math.floor(diff / 60000);
+                    const sec = Math.floor((diff % 60000) / 1000);
+                    timerHtml = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+                } else {
+                    timerHtml = "0:00";
+                }
+            }
+            // Use same ID as focus timer so if we have global timer logic it might update? 
+            // No, global logic updates `timer_focus`. Let's use a new ID: `timer_ozet`
+            baslikHtml += `<div id="timer_ozet" style="font-size:1.4rem; font-weight:bold; font-family:monospace; margin-left:15px; color:${atan.yapma ? '#2e7d32' : '#d32f2f'}">${timerHtml}</div>`;
+
+            baslikHtml += `</div>`; // Close flex
+            document.getElementById('ozet_baslik_container').innerHTML = baslikHtml;
+
+
             // Puan Gösterimi
             let scoreHtml = "";
             const degBitti = benimKaydim && benimKaydim.degerlendirme && benimKaydim.degerlendirme.bitti;
@@ -1583,6 +1646,15 @@
                 <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${i})">Sil</button></td>` : ''}</tr>`;
             });
             document.getElementById('ozet_tablo_alani').innerHTML = h + "</tbody></table>";
+
+            // BUTTON UPDATES per user request
+            const btnEval = document.getElementById('btn_degerlendirme');
+            if (btnEval) {
+                btnEval.style.display = (atan && atan.degerl) ? "block" : "none";
+                // Ensure formatting matches request if needed?? 
+                // User said "Update codes". The display logic is here.
+            }
+
             document.getElementById('ozet_don_btn').style.display = canEdit ? "block" : "none";
         }
 
