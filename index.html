@@ -984,6 +984,16 @@
                 else gruplar = [];
 
                 if (!gruplar || gruplar.length === 0) {
+                    // FALLBACK: Load full class list from globalData if valid
+                    if (globalData && secilenSinif) {
+                        const sinifMevcudu = globalData.filter(x => x['Sınıfınız'] === secilenSinif);
+                        if (sinifMevcudu.length > 0) {
+                            gruplar = [sinifMevcudu]; // Treat as one single group
+                        }
+                    }
+                }
+
+                if (!gruplar || gruplar.length === 0) {
                     document.getElementById('tablo').innerHTML = `<div style="text-align:center; padding:20px; color:#666;">
                         ${secilenCalismaGrupIcin ? `"${secilenCalismaGrupIcin}" çalışması için ${secilenSinif} sınıfına ait grup bulunamadı.` : `"${secilenSinif}" sınıfı için genel grup bulunamadı.`}
                         <br>Gruba ayırmak için yukarıdaki butonu kullanın.
@@ -1021,7 +1031,7 @@
                         return noA - noB;
                     });
 
-                    html += `<div class="grup"><h3>${i + 1}. GRUP</h3><ul>`;
+                    html += `<div class="grup"><h3>${(gruplar.length === 1 && grup.length > 10) ? "SINIF LİSTESİ" : (i + 1) + ". GRUP"}</h3><ul>`;
                     grup.forEach(ogr => {
                         const hasOA = oaMap[String(ogr['Okul Numaranız'])];
                         const style = hasOA ? 'background-color: #ffebee;' : '';
