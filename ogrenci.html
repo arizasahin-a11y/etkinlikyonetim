@@ -837,47 +837,43 @@
                     }
                 });
 
-                // 2. Update Focus Mode Timer (in p_soru)
+                // 2. Update Focus Mode Timer (in p_soru) AND Summary Timer (in p_ozet)
                 const focusTimer = document.getElementById('timer_focus');
+                const summaryTimer = document.getElementById('timer_ozet');
+
                 if (focusTimer) {
                     if (atan && atan.yapma && atan.bitis) {
                         const diff = atan.bitis - Date.now();
+                        let tText = "", tColor = "";
+
                         if (diff <= 0) {
-                            focusTimer.textContent = "Süre Doldu";
-                            focusTimer.style.color = "#c62828";
+                            tText = "Süre Doldu";
+                            tColor = "#c62828";
                         } else {
                             const m = Math.floor(diff / 60000);
-                            let timerText = "";
-                            let timerColor = "";
-                            if (diff <= 0) {
-                                timerText = "Süre Doldu";
-                                timerColor = "#c62828";
-                            } else {
-                                const m = Math.floor(diff / 60000);
-                                const s = Math.floor((diff % 60000) / 1000);
-                                timerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-                                timerColor = "#2e7d32";
-                            }
-                            focusTimer.textContent = timerText;
-                            focusTimer.style.color = timerColor;
+                            const s = Math.floor((diff % 60000) / 1000);
+                            tText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                            tColor = "#2e7d32"; // Green
+                        }
 
-                            // ALSO UPDATE SUMMARY TIMER IF EXISTS
-                            const elOzet = document.getElementById('timer_ozet');
-                            if (elOzet) {
-                                elOzet.textContent = timerText;
-                                elOzet.style.color = timerColor;
-                            }
-                        } else {
-                            focusTimer.textContent = "";
-                            const elOzet = document.getElementById('timer_ozet');
-                            if (elOzet) {
-                                elOzet.textContent = "";
-                                elOzet.style.color = ""; // Reset color
-                            }
+                        focusTimer.textContent = tText;
+                        focusTimer.style.color = tColor;
+
+                        if (summaryTimer) {
+                            summaryTimer.textContent = tText;
+                            summaryTimer.style.color = tColor;
+                        }
+
+                    } else {
+                        focusTimer.textContent = "";
+                        if (summaryTimer) {
+                            summaryTimer.textContent = "";
+                            summaryTimer.style.color = "";
                         }
                     }
+                }
 
-                }, 1000);
+            }, 1000);
         }
 
         async function fetchGlobalGroupInfo() {
