@@ -977,6 +977,8 @@
             try {
                 let gruplar = [];
                 const url = `/grupListesiGetir?sinif=${encodeURIComponent(secilenSinif)}${secilenCalismaGrupIcin ? `&calisma=${encodeURIComponent(secilenCalismaGrupIcin)}` : ''}`;
+
+                // 1. Fetch groups
                 const res = await fetch(url);
                 if (res.ok) gruplar = await res.json();
                 else gruplar = [];
@@ -987,6 +989,27 @@
                         <br>Gruba ayırmak için yukarıdaki butonu kullanın.
                     </div>`;
                     return;
+                }
+
+                // 2. Fetch study data for OA highlighting (only if study is selected)
+                let oaMap = {};
+                if (secilenCalismaGrupIcin) {
+                    const calismaAdi = secilenCalismaGrupIcin.replace("qwx", "").replace(".json", "");
+                    try {
+                        const resOA = await fetch(`/calismaGetir?isim=www_${calismaAdi}`);
+                        if (resOA.ok) {
+                            const data = await resOA.json();
+                            if (Array.isArray(data)) {
+                                data.forEach(s => {
+                                    if (s.degerlendirme && s.degerlendirme.OA) {
+                                        oaMap[String(s.ogrenciNo)] = true;
+                                    }
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("OA fetch warning (rendering will continue):", e);
+                    }
                 }
 
                 let html = "";
@@ -1010,8 +1033,8 @@
                 document.getElementById('tablo').innerHTML = html;
 
             } catch (error) {
-                console.error(error);
-                document.getElementById('tablo').innerHTML = "Gruplar yüklenemedi.";
+                console.error("Tablo Ciz Error:", error);
+                document.getElementById('tablo').innerHTML = "Gruplar yüklenirken hata oluştu: " + error.message;
             }
         }
 
