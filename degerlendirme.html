@@ -418,11 +418,29 @@
 
                 let h = "";
                 liste.forEach((txt, i) => {
-                    const p = Number(puanlar[i]);
+                    const p = puanlar[i]; // Can be string "G" or "M" now
                     const disabled = degerlendirmeBitti ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '';
+
+                    let btnDClass = (Number(p) === 1) ? 'btn-dogru-aktif' : '';
+                    let btnYClass = (Number(p) === 0) ? 'btn-yanlis-aktif' : '';
+
+                    // Special visual for G/M?
+                    // Maybe just highlight Y if G/M/0? No, specifically G/M might need attention.
+                    // For now, let's just show them as "Incorrect" (Y) since they are 0 points effectively,
+                    // BUT detecting them is useful.
+                    // User said "Çalışmadı için D0 puan olarak girilmeli". I auto-set to "0".
+                    // "Girmedi/Mazeretli" -> G/M.
+                    // Let's make "Y" button distinct if it's G or M.
+
+                    let yText = "Y";
+                    if (p === "G" || p === "M") {
+                        yText = p; // Show G or M on the button
+                        btnYClass = 'btn-yanlis-aktif'; // Highlight as wrong/special
+                    }
+
                     h += `<div class="cevap-item"><div class="cevap-metin">${txt}</div>
-                    <button class="cevap-puan-btn ${p === 1 ? 'btn-dogru-aktif' : ''}" onclick="App.puanla(${i},1)" ${disabled}>D</button>
-                    <button class="cevap-puan-btn ${p === 0 ? 'btn-yanlis-aktif' : ''}" onclick="App.puanla(${i},0)" ${disabled}>Y</button></div>`;
+                    <button class="cevap-puan-btn ${btnDClass}" onclick="App.puanla(${i},1)" ${disabled}>D</button>
+                    <button class="cevap-puan-btn ${btnYClass}" onclick="App.puanla(${i},0)" ${disabled} title="${p === 'G' ? 'Girmedi' : (p === 'M' ? 'Mazeretli' : 'Yanlış')}">${yText}</button></div>`;
                 });
                 document.getElementById('cevap_listesi').innerHTML = h || "<i>Cevap yok.</i>";
 
@@ -480,23 +498,37 @@
                     }
                 }
 
-                const promises = [];
-                // Her üye için puanları ve bitişi kaydet
-                targetMembers.forEach(no => {
-                    // 1. Puanları Kaydet (Opsiyonel: Zaten anlık kaydediliyor ama garanti olsun)
-                    // Mevcut backend yapısında puanlar anlık kaydediliyor, burada sadece bitişi versek yeterli.
-                    // Ancak garanti olsun diye son durumu da basabiliriz. 
-                    // Şimdilik sadece bitir diyelim, çünkü anlık puanlama çalışıyor.
+                // Prepare Payload for all members
+                // We want to force the CURRENT scores to everyone in the group
+                const scoresToSave = State.anlikPuanlar;
+                const evalData = { bitti: true, tarih: new Date().toLocaleString(), toplam: toplamPuan };
 
-                    // 2. Değerlendirmeyi Bitir
-                    promises.push(fetch("/degerlendirmeBitir", {
-                        method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            dosyaAdi: `www_${State.pCalisma}`,
-                            ogrenciNo: no,
+                // Preserve existing OA if we are propagating? 
+                // Actually, the request says "O student's score given to all". 
+                // Usually OA is individual, but if one gets a score, should OA overwrite?
+                // Let's assume we propagate SCORES and EVAL STATUS. OA should probably be individual OR duplicated if explicitly set.
+                // But here we are just saving 'bitti' and 'scores'.
+
+                const promises = [];
+                targetMembers.forEach(no => {
+                    // Normalize ID
+                    const sNo = String(no).trim();
+
+                    // We use /kaydet for full control (scores + evaluation)
+                    const payload = {
+                        dosyaAdi: `www_${State.pCalisma}`,
+                        veri: {
+                            ogrenciNo: sNo,
                             sinif: State.pSinif,
-                            toplam: toplamPuan
-                        })
+                            puanlar: scoresToSave,
+                            degerlendirme: evalData
+                            // We do NOT send 'cevaplar' here to avoid overwriting them with empty/wrong data
+                        }
+                    };
+
+                    promises.push(fetch("/kaydet", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
                     }));
                 });
 
@@ -660,6 +692,27 @@
 
                 if (!State.pSinif && State.activeVeri.sinif) State.pSinif = State.activeVeri.sinif;
                 State.anlikPuanlar = State.activeVeri.puanlar || {};
+
+                // --- OA AUTO-CORRECT LOGIC ---
+                // "Girmedi"/"Gelmedi" -> "G"
+                // "Mazeretli" -> "M"
+                // "Çalışmadı" -> "0"
+                if (State.activeVeri.degerlendirme && State.activeVeri.degerlendirme.OA) {
+                    const oa = State.activeVeri.degerlendirme.OA.toLowerCase().trim();
+                    let autoCode = null;
+                    if (oa.includes("girmedi") || oa.includes("gelmedi")) autoCode = "G";
+                    else if (oa.includes("mazeretli")) autoCode = "M";
+                    else if (oa.includes("çalışmadı") || oa.includes("calismadi")) autoCode = "0";
+
+                    if (autoCode) {
+                        console.log(`[OA Auto-Score] Detected '${oa}' -> Applying '${autoCode}' to all.`);
+                        State.sorular.forEach((_, i) => {
+                            State.anlikPuanlar[i] = autoCode;
+                        });
+                        // Also mark as 'bitti' internally so it shows up? 
+                        // Or just let the teacher see/save it.
+                    }
+                }
 
                 let headerInfo = "";
                 if (State.grupCalismasi && State.grupAdi) {
