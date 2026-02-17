@@ -633,7 +633,13 @@ app.post("/kaydet", async (req, res) => {
       if (dosyaAdi.startsWith("www_")) {
         console.log(`[www_ Kaydet] Başlangıç: ${dosyaAdi}, Veri tipi: ${Array.isArray(veri) ? 'Array' : 'Object'}, ${Array.isArray(veri) ? `Kayıt sayısı: ${veri.length}` : `OgrenciNo: ${veri.ogrenciNo}`}`);
 
-        const studyName = dosyaAdi.replace("www_", "");
+        // Robust Study Name Resolution
+        let studyName = dosyaAdi;
+        if (studyName.startsWith("www_")) studyName = studyName.replace("www_", "");
+        studyName = studyName.trim(); // Ensure no leading/trailing spaces mismatch
+
+        console.log(`[www_ Kaydet] Dosya: ${dosyaAdi} -> StudyName: ${studyName}`);
+
         let studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
         if (studyRes.rows.length === 0) {
           // AUTO-CREATE study if it doesn't exist (backwards compatibility)
@@ -643,6 +649,7 @@ app.post("/kaydet", async (req, res) => {
           studyRes = { rows: [{ id: insertRes.rows[0].id }] };
         }
         const studyId = studyRes.rows[0].id;
+        console.log(`[www_ Kaydet] Resolved Study ID: ${studyId}`);
 
         // veri can be array or object
         const items = Array.isArray(veri) ? veri : [veri];
@@ -680,14 +687,9 @@ app.post("/kaydet", async (req, res) => {
             // Eğer cevaplar gönderilmişse kullan, yoksa mevcut cevapları koru
             let answersJson = null;
             if (item.cevaplar !== undefined) {
-              logToFile(`[SAVE] Received ANSWERS for ${studentNo}: Length=${item.cevaplar ? item.cevaplar.length : 'null'}`);
+              // logToFile(`[SAVE] Received ANSWERS for ${studentNo}`);
               answersJson = JSON.stringify({ cevaplar: item.cevaplar });
-            } else {
-              logToFile(`[SAVE] No ANSWERS payload for ${studentNo}. Preserving existing.`);
             }
-
-            const scoresJson = JSON.stringify(item.puanlar || {});
-            const evaluationJson = JSON.stringify(item.degerlendirme || {});
 
             // Önce mevcut kaydı kontrol et
             const existingRes = await query(
@@ -702,6 +704,10 @@ app.post("/kaydet", async (req, res) => {
               let pIdx = 1;
 
               if (answersJson !== null) {
+                // Remove strict ::jsonb cast on param to be safe, but cast column to jsonb for merge if needed?
+                // Actually, simply overwriting answers is safer if we sending full list.
+                // But for OA and Eval, we MUST merge.
+                // Let's stick to overwrite for answers (users re-save all answers usually)
                 updateFields.push(`answers = $${pIdx++}::jsonb`);
                 updateParams.push(answersJson);
               }
@@ -712,7 +718,9 @@ app.post("/kaydet", async (req, res) => {
               }
 
               if (item.degerlendirme !== undefined) {
-                updateFields.push(`evaluation = $${pIdx++}::jsonb`);
+                // SAFE MERGE for Evaluation (OA is here)
+                // COALESCE(evaluation, '{}') || $N
+                updateFields.push(`evaluation = COALESCE(evaluation::jsonb, '{}'::jsonb) || $${pIdx++}::jsonb`);
                 updateParams.push(JSON.stringify(item.degerlendirme));
               }
 
@@ -731,7 +739,7 @@ app.post("/kaydet", async (req, res) => {
                 const queryText = `UPDATE student_evaluations SET ${updateFields.join(", ")} WHERE study_id = $${pIdx++} AND student_school_no = $${pIdx++}`;
                 updateParams.push(studyId, studentNo);
                 await query(queryText, updateParams);
-                logToFile(`[SAVE] Updated student_evaluations for ${studentNo}. Fields: ${updateFields.join(", ")}`);
+                logToFile(`[SAVE] Updated student_evaluations for ${studentNo}.`);
               }
             } else {
               logToFile(`[SAVE] INSERTING NEW RECORD for ${studentNo}`);
