@@ -722,22 +722,43 @@
                             cevaplar.forEach(row => {
                                 let toplamPuan = 0;
                                 let soruPuanlari = [];
+                                let hasSpecialCode = false;
+                                let specialCodeVal = "";
 
                                 // Puan Hesapla
                                 const puanObj = row.puanlar || {};
 
                                 sorular.forEach((_, sIdx) => {
                                     const pArr = puanObj[sIdx];
-                                    let sPuan = 0;
+                                    let sPuan = 0; // Default numeric 0
+                                    let sVal = "0"; // Display value
+
                                     if (Array.isArray(pArr)) {
-                                        sPuan = pArr.reduce((a, b) => a + (Number(b) || 0), 0);
+                                        // Check if any value is a special code string
+                                        const rawVal = pArr.find(v => v !== undefined && v !== null);
+                                        if (rawVal === "G" || rawVal === "M") {
+                                            sVal = rawVal;
+                                            hasSpecialCode = true;
+                                            specialCodeVal = rawVal;
+                                        } else {
+                                            // Normal numeric sum
+                                            sPuan = pArr.reduce((a, b) => a + (Number(b) || 0), 0);
+                                            sVal = sPuan.toString();
+                                            toplamPuan += sPuan;
+                                        }
                                     }
-                                    soruPuanlari.push(sPuan);
-                                    toplamPuan += sPuan;
+                                    soruPuanlari.push(sVal);
                                 });
 
                                 // Özel durum: Eğer değerlendirme "G" ise toplam puan "G" olsun
-                                if (row.degerlendirme && row.degerlendirme.toplam === "G") toplamPuan = "G";
+                                // Veya soru bazlı özel kod varsa toplam da o olsun (Genelde hepsi G ise toplam G olur)
+                                if (row.degerlendirme && row.degerlendirme.toplam === "G") {
+                                    toplamPuan = "G";
+                                } else if (hasSpecialCode && toplamPuan === 0) {
+                                    // If all questions are G or M, total should be G or M
+                                    // Use the first found special code as total if numeric sum is 0
+                                    toplamPuan = specialCodeVal;
+                                }
 
                                 csvContent += `${row.sinif || ""};${row.ogrenciNo};${row.adSoyad || ""};${toplamPuan}`;
                                 soruPuanlari.forEach(p => csvContent += `;${p}`);
