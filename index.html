@@ -746,6 +746,24 @@
                                             sVal = sPuan.toString();
                                             toplamPuan += sPuan;
                                         }
+                                    } else if (typeof pArr === 'string') {
+                                        // Handle legacy/buggy case where pArr is direct string "G"/"M"
+                                        if (pArr === "G" || pArr === "M") {
+                                            sVal = pArr;
+                                            hasSpecialCode = true;
+                                            specialCodeVal = pArr;
+                                        } else {
+                                            // Numeric string?
+                                            // If it looks like number, parse it.
+                                            let n = Number(pArr);
+                                            if (!isNaN(n)) {
+                                                sPuan = n;
+                                                sVal = n.toString();
+                                                toplamPuan += sPuan;
+                                            } else {
+                                                sVal = pArr; // literal value
+                                            }
+                                        }
                                     }
                                     soruPuanlari.push(sVal);
                                 });

@@ -707,10 +707,9 @@
                     if (autoCode) {
                         console.log(`[OA Auto-Score] Detected '${oa}' -> Applying '${autoCode}' to all.`);
                         State.sorular.forEach((_, i) => {
-                            State.anlikPuanlar[i] = autoCode;
+                            // FIX: Must be an array to match data structure [score]
+                            State.anlikPuanlar[i] = [autoCode];
                         });
-                        // Also mark as 'bitti' internally so it shows up? 
-                        // Or just let the teacher see/save it.
                     }
                 }
 
