@@ -726,7 +726,36 @@
                                 let specialCodeVal = "";
 
                                 // Puan Hesapla
-                                const puanObj = row.puanlar || {};
+                                let puanObj = row.puanlar || {};
+
+                                // --- EXPORT FALLBACK: AUTO-CALCULATE FROM OA IF PUAN IS MISSING OR TO OVERRIDE ---
+                                // If student has an OA note but might not have been 'saved' with new scores yet.
+                                if (row.degerlendirme && row.degerlendirme.OA) {
+                                    const oa = row.degerlendirme.OA.toLowerCase().trim();
+                                    let autoInit = null;
+                                    if (oa.includes("girmedi") || oa.includes("gelmedi")) autoInit = "G";
+                                    else if (oa.includes("mazeretli")) autoInit = "M";
+                                    else if (oa.includes("çalışmadı") || oa.includes("calismadi")) autoInit = "0";
+
+                                    if (autoInit) {
+                                        // Override local puanObj for export purposes
+                                        // We treat this as if the teacher gave this grade to ALL questions
+                                        // This ensures the table reflects the OA status even if DB scores are empty
+
+                                        // Caution: Only override if puanObj is empty? 
+                                        // User request: "OA açıklamsı varsa... D0/G/M puan olarak girilmeli".
+                                        // This implies OA determines the score. Let's prioritize it or fill gaps.
+                                        // Since these are "status" codes, they usually apply to the whole study.
+                                        // Let's FORCE override for export to match user expectation.
+
+                                        // Mock a puanObj structure for the loop below
+                                        // We need to know how many questions? 'sorular' array length is available.
+                                        puanObj = {};
+                                        sorular.forEach((_, qIdx) => {
+                                            puanObj[qIdx] = [autoInit];
+                                        });
+                                    }
+                                }
 
                                 sorular.forEach((_, sIdx) => {
                                     const pArr = puanObj[sIdx];
