@@ -1975,11 +1975,12 @@
                             }
                         }
 
-                        h += `< div style = "${optStyle}" >
+                        h += `<div style="${optStyle}">
                             <strong style="margin-right:15px; font-size:1.1rem; color:#555;">${char})</strong>
                             <span style="flex:1; font-size:1rem; color:#333;">${sec}</span>
                             ${isSelected ? `<span style="font-size:0.8rem; font-weight:bold; color:white; background:${Number(p) === 1 ? '#4CAF50' : '#F44336'}; padding:3px 8px; border-radius:12px; margin-left:10px;">Öğrenci Seçimi</span>` : ''}
-                        </div > `;
+                            ${(!isSelected && isCorrectAnswer && Number(p) === 0) ? `<span style="font-size:0.8rem; font-weight:bold; color:#4CAF50; border:1px solid #4CAF50; padding:2px 8px; border-radius:12px; margin-left:10px;">Doğru Cevap</span>` : ''}
+                        </div>`;
                     });
                     h += `</div > `;
 
@@ -2037,7 +2038,7 @@
                             if (cevaplar) {
                                 cevaplar.forEach((p, cIx) => {
                                     if (p !== undefined && p !== null) {
-                                        puanPromises.push(fetch("/puanKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma} `, ogrenciNo: ogrNo, sinif: this.seciliSinif, soruIndex: parseInt(sIx), cevapIndex: cIx, puan: p }) }));
+                                        puanPromises.push(fetch("/puanKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif, soruIndex: parseInt(sIx), cevapIndex: cIx, puan: p }) }));
                                     }
                                 });
                             }
@@ -2047,8 +2048,8 @@
 
                     const bitirPromises = [];
                     for (const ogrNo of item.members) {
-                        // Toplam puanı gönder
-                        bitirPromises.push(fetch("/degerlendirmeBitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif, toplam: toplamPuan }) }));
+                        // Toplam puanı ve degerlendirildi bayrağını gönder
+                        bitirPromises.push(fetch("/degerlendirmeBitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif, toplam: toplamPuan, degerlendirildi: true }) }));
                     }
                     await Promise.all(bitirPromises);
                 }
