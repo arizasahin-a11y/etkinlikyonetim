@@ -1488,13 +1488,11 @@
             aktifAtamalar.sort((a, b) => a.id.localeCompare(b.id)).forEach(a => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `<td>${a.sinif}</td><td>${a.calisma}</td><td><b>${a.yontem}</b></td>
-                <td style="font-size:0.9em; white-space:nowrap;">
-                    <div style="margin-bottom: 5px;">
-                        <label style="margin-right:10px; cursor:pointer;" title="Açıklama metnini ve Grup listesini göster"><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açık.</label>
-                        <label style="margin-right:10px; cursor:pointer;" title="Soruları ve öğrenci cavaplarını göster (Salt Okunur)"><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
-                    </div>
-                    <div>
-                        <label style="margin-right:10px; cursor:pointer; color:#d32f2f; font-weight:bold;" title="Öğrenci sorulara çalışırken soruların sırasını karıştır"><input type="checkbox" ${a.karisikSoru ? 'checked' : ''} onchange="s3Upd('${a.id}','karisikSoru',this.checked)"> Karışık</label>
+                <td style="font-size:0.85em; white-space:nowrap;">
+                    <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
+                        <label style="cursor:pointer;" title="Açıklama metnini ve Grup listesini göster"><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açıklama</label>
+                        <label style="cursor:pointer;" title="Soruları ve öğrenci cavaplarını göster (Salt Okunur)"><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
+                        <label style="cursor:pointer; color:#d32f2f; font-weight:bold;" title="Öğrenci sorulara çalışırken soruların sırasını karıştır"><input type="checkbox" ${a.karisikSoru ? 'checked' : ''} onchange="s3Upd('${a.id}','karisikSoru',this.checked)"> Karışık</label>
                     </div>
                 </td>
                 <td style="white-space:nowrap;">
