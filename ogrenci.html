@@ -1104,7 +1104,35 @@
 
                 // Set global 'sorular' for 'kaydet' and 'ozetCiz' to work?
                 // Yes, legacy functions rely on global 'sorular'.
-                sorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
+                let rawSorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
+                sorular = rawSorular.map((s, i) => ({
+                    soru: typeof s === 'object' ? s.soru : s,
+                    originalIndex: i
+                }));
+
+                // Seeded Shuffle per student
+                if (a.karisikSoru) {
+                    const seedStr = String(sess.no) + String(a.calisma);
+                    let h = 0;
+                    for (let i = 0; i < seedStr.length; i++) {
+                        h = Math.imul(31, h) + seedStr.charCodeAt(i) | 0;
+                    }
+                    let seed = h;
+                    function random() {
+                        var t = seed += 0x6D2B79F5;
+                        t = Math.imul(t ^ t >>> 15, t | 1);
+                        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+                    }
+                    let m = sorular.length, t, i;
+                    while (m) {
+                        i = Math.floor(random() * m--);
+                        t = sorular[m];
+                        sorular[m] = sorular[i];
+                        sorular[i] = t;
+                    }
+                }
+
                 const desc = icerik.aciklama || "";
 
                 // NEW: Use record data already provided by aggregated veriCek
@@ -1258,11 +1286,12 @@
 
                 if (canSeeQuestions) {
                     let qListHtml = `<div style="display:flex; flex-direction:column; gap:10px;">`;
-                    sorular.forEach((s, idx) => {
+                    sorular.forEach((s, visualIdx) => {
+                        const oIdx = s.originalIndex !== undefined ? s.originalIndex : visualIdx; // Fallback
                         const soruMetni = (typeof s === 'object' ? s.soru : s);
-                        const k = cevaplar.find(c => Number(c.soruIndex) === Number(idx));
+                        const k = cevaplar.find(c => Number(c.soruIndex) === Number(oIdx));
                         const degBitti = (benimKaydim && benimKaydim.degerlendirme && benimKaydim.degerlendirme.bitti);
-                        const soruPuanlar = (degBitti && benimKaydim.puanlar) ? benimKaydim.puanlar[idx] : null;
+                        const soruPuanlar = (degBitti && benimKaydim.puanlar) ? benimKaydim.puanlar[oIdx] : null;
 
                         let cvs = `<div class="cevap-alt cevap-bos">BOŞ</div>`;
 
@@ -1280,7 +1309,7 @@
 
                         qListHtml += `
                         <div style="border-bottom:1px solid #f0f0f0; padding-bottom:10px;">
-                            <div style="font-weight:600; color:#333; margin-bottom:5px;">${idx + 1}. ${linkleriDonustur(soruMetni)}</div>
+                            <div style="font-weight:600; color:#333; margin-bottom:5px;">${visualIdx + 1}. ${linkleriDonustur(soruMetni)}</div>
                             <div style="font-size:0.9rem;">${cvs}</div>
                         </div>`;
                     });
@@ -1471,7 +1500,8 @@
         function renderInputs(full) {
             const cont = document.getElementById('s_inputs');
             if (full) cont.innerHTML = "";
-            const kayit = cevaplar.find(c => Number(c.soruIndex) === Number(sIdx));
+            const oIdx = (sorular[sIdx] && sorular[sIdx].originalIndex !== undefined) ? sorular[sIdx].originalIndex : sIdx;
+            const kayit = cevaplar.find(c => Number(c.soruIndex) === Number(oIdx));
             const satirlar = (kayit && kayit.cevaplar.length > 0) ? kayit.cevaplar : [""];
             if (full) {
                 satirlar.forEach(v => yeniSatirEkle(v));
@@ -1501,9 +1531,10 @@
         async function kaydet() {
             if (document.getElementById('p_soru').style.display === "block") {
                 const vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
-                const idx = cevaplar.findIndex(c => c.soruIndex === sIdx);
-                if (idx > -1) cevaplar[idx] = { soruIndex: sIdx, cevaplar: vals };
-                else cevaplar.push({ soruIndex: sIdx, cevaplar: vals });
+                const oIdx = (sorular[sIdx] && sorular[sIdx].originalIndex !== undefined) ? sorular[sIdx].originalIndex : sIdx;
+                const idx = cevaplar.findIndex(c => c.soruIndex === oIdx);
+                if (idx > -1) cevaplar[idx] = { soruIndex: oIdx, cevaplar: vals };
+                else cevaplar.push({ soruIndex: oIdx, cevaplar: vals });
             }
 
             // Fix: Do NOT send empty array if we have no answers locally.
@@ -1617,9 +1648,10 @@
             }
 
             let h = scoreHtml + `<table><thead><tr><th>#</th><th>Soru ve Cevaplar</th>${canEdit ? '<th>İşlem</th>' : ''}</tr></thead><tbody>`;
-            sorular.forEach((s, i) => {
-                const k = cevaplar.find(c => Number(c.soruIndex) === Number(i));
-                const soruPuanlar = (benimKaydim && benimKaydim.puanlar) ? benimKaydim.puanlar[i] : null;
+            sorular.forEach((s, visualIndex) => {
+                const oIdx = s.originalIndex !== undefined ? s.originalIndex : visualIndex;
+                const k = cevaplar.find(c => Number(c.soruIndex) === Number(oIdx));
+                const soruPuanlar = (benimKaydim && benimKaydim.puanlar) ? benimKaydim.puanlar[oIdx] : null;
 
                 // LİNK DÖNÜŞTÜRMELİ VE RENKLENDİRMELİ CEVAPLAR
                 let cvs = "";
@@ -1637,9 +1669,9 @@
 
                 const soruMetni = (typeof s === 'object' ? s.soru : s);
 
-                h += `<tr><td>${i + 1}</td><td><span class="soru-ust">${linkleriDonustur(soruMetni)}</span>${cvs}</td>
-                ${canEdit ? `<td><button class="btn-mavi btn-sm" onclick="sIdx=${i};ekranDegis('p_soru')">Düzelt</button> 
-                <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${i})">Sil</button></td>` : ''}</tr>`;
+                h += `<tr><td>${visualIndex + 1}</td><td><span class="soru-ust">${linkleriDonustur(soruMetni)}</span>${cvs}</td>
+                ${canEdit ? `<td><button class="btn-mavi btn-sm" onclick="sIdx=${visualIndex};ekranDegis('p_soru')">Düzelt</button> 
+                <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${oIdx})">Sil</button></td>` : ''}</tr>`;
             });
             document.getElementById('ozet_tablo_alani').innerHTML = h + "</tbody></table>";
 

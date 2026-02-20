@@ -625,6 +625,10 @@
                         <option value="Grup">Grup</option>
                         <option value="Tek">Tek</option>
                     </select></div>
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                    <label class="chk-container" title="Soruları her öğrenciye farklı sırada gösterir."><input
+                            type="checkbox" id="chkKarisikSoru"> Karışık Soru</label>
+                </div>
                 <button id="btnS3Olustur" class="action blue" style="min-width:100px;">Oluştur</button>
             </div>
             <table>
@@ -1256,11 +1260,15 @@
         }
         document.getElementById("btnS3Olustur").onclick = () => {
             const sn = document.getElementById("s3SinifSec").value, cl = document.getElementById("s3CalismaSec").value, yn = document.getElementById("s3YontemSec").value;
+            const karisik = document.getElementById("chkKarisikSoru").checked;
             if (!sn || !cl || !yn) return alert("Eksik seçim!");
             const dId = "qqq" + sn.replace(/\s/g, '') + cl.replace("qwx", "");
             // Initializing new permissions
-            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, aciklamaIzni: false, soruIzni: false, yapma: false, degerl: false, sure: 0, bitis: null };
-            fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: dId, sorular: obj }) }).then(() => setTimeout(s3AtamalariCek, 300));
+            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, aciklamaIzni: false, soruIzni: false, yapma: false, degerl: false, sure: 0, bitis: null, karisikSoru: karisik };
+            fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: dId, sorular: obj }) }).then(() => {
+                document.getElementById("chkKarisikSoru").checked = false; // Reset checkbox after apply
+                setTimeout(s3AtamalariCek, 300);
+            });
         };
         function s3TabloCiz() {
             const b = document.getElementById("atamaBody"); b.innerHTML = "";
