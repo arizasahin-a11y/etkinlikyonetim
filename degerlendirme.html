@@ -598,13 +598,19 @@
                 document.getElementById('main_content').style.display = "none";
                 document.getElementById('controls_area').style.display = "none";
                 const res = document.getElementById("sonuc_ekrani");
+
+                const isFocusViolation = State.activeVeri?.degerlendirme?.OA?.includes("Odak Koptu");
+                const pMsg = isFocusViolation
+                    ? "Çalışma Kurallarına aykırı davrandığınız için değerlendirme notunuz 0 olarak atanmıştır. Değerlendirme yapamazsınız."
+                    : "Çalışmanız değerlendirildi. tekrar değerlendirme yapamazsınız";
+
                 res.style.display = "block";
                 res.innerHTML = `
-                    <div style="position:relative; background:#e8f5e9; border:2px solid #a5d6a7; border-radius:12px; padding:25px; text-align:center; color:#2e7d32; margin-bottom:20px; box-shadow:0 4px 10px rgba(46,125,50,0.1);">
-                        <button onclick="window.location.href='/giris'" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:1.5em; cursor:pointer; color:#2e7d32; font-weight:bold;" title="Kapat">✕</button>
-                        <div style="font-size:2.5em; margin-bottom:10px;">🎉</div>
-                        <h2 style="margin:0; font-size:1.8em;">BU ÇALIŞMA BİTTİ</h2>
-                        <p style="margin:5px 0 0 0; opacity:0.8; font-weight:bold;">Değerlendirme sonucun ve puanın aşağıdadır.</p>
+                    <div style="position:relative; background:${isFocusViolation ? '#ffebee' : '#e8f5e9'}; border:2px solid ${isFocusViolation ? '#ef9a9a' : '#a5d6a7'}; border-radius:12px; padding:25px; text-align:center; color:${isFocusViolation ? '#c62828' : '#2e7d32'}; margin-bottom:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                        <button onclick="window.location.href='/giris'" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:1.5em; cursor:pointer; color:${isFocusViolation ? '#c62828' : '#2e7d32'}; font-weight:bold;" title="Kapat">✕</button>
+                        <div style="font-size:2.5em; margin-bottom:10px;">${isFocusViolation ? '🚫' : '🎉'}</div>
+                        <h2 style="margin:0; font-size:1.8em;">${isFocusViolation ? 'KURAL İHLALİ' : 'BU ÇALIŞMA BİTTİ'}</h2>
+                        <p style="margin:5px 0 0 0; opacity:0.8; font-weight:bold;">${pMsg}</p>
                     </div>
                 `;
 
