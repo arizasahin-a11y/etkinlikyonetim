@@ -1157,7 +1157,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
         myRecord: {
           cevaplar: (myRec.answers ? (Array.isArray(myRec.answers) ? myRec.answers : (myRec.answers.cevaplar || [])) : []),
           puanlar: myRec.scores || {},
-          evaluation: myRec.evaluation || {},
+          degerlendirme: myRec.evaluation || {},
           entry_count: myRec.entry_count || 0
         },
         myGroup: myGroup
