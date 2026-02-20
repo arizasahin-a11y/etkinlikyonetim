@@ -1482,10 +1482,21 @@
             benimKaydim.degerlendirme.bitti = true;
             benimKaydim.degerlendirme.OA = `Çalıştı (Odak Koptu: ${sebep})`;
 
-            // 3. Sunucuya anında kaydet
-            const payload = {
-                dosyaAdi: `www_${atan.calisma}`,
-                veri: {
+            // 3. Sunucuya anında kaydet (Grup çalışması ise tüm gruba cezayı yansıt)
+            let veriPaketi;
+            const cachedGrup = studyGroupsCache[atan.calisma];
+            if (atan.yontem === "Grup" && cachedGrup && cachedGrup.members.length > 0) {
+                veriPaketi = cachedGrup.members.map(u => ({
+                    ogrenciNo: String(u["Okul Numaranız"]).trim(),
+                    adSoyad: u["Adınız Soyadınız"],
+                    sinif: sess.sinif,
+                    cevaplar: (cevaplar && cevaplar.length > 0) ? cevaplar : undefined,
+                    girisSayisi: girisSayisi,
+                    tarih: new Date().toLocaleString(),
+                    degerlendirme: benimKaydim.degerlendirme
+                }));
+            } else {
+                veriPaketi = {
                     ogrenciNo: sess.no,
                     adSoyad: sess.ad,
                     sinif: sess.sinif,
@@ -1493,16 +1504,19 @@
                     girisSayisi: girisSayisi,
                     tarih: new Date().toLocaleString(),
                     degerlendirme: benimKaydim.degerlendirme
-                }
-            };
+                };
+            }
 
             try {
-                console.log("[ODAK MODU] 0 Puan sunucuya gönderiliyor...");
+                console.log("[ODAK MODU] 0 Puan ve İhlal sunucuya gönderiliyor...");
                 await fetch("/kaydet", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     keepalive: true,
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        dosyaAdi: `www_${atan.calisma}`,
+                        veri: veriPaketi
+                    })
                 });
             } catch (e) { console.error("Odak ihlali kaydedilemedi", e); }
 

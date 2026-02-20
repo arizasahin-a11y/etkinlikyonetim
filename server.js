@@ -162,7 +162,7 @@ app.post("/degerlendirmeSifirla", async (req, res) => {
     // Reset evaluation for all students in this class for this study
     await query(`
         UPDATE student_evaluations 
-        SET scores = '{}', evaluation = evaluation - 'toplam' - 'degerlendirildi'
+        SET scores = '{}', evaluation = evaluation - 'toplam' - 'degerlendirildi' - 'OA'
         WHERE study_id = $1 AND class_name = $2
     `, [studyId, sinif]);
 
