@@ -1721,7 +1721,7 @@
                 this.seciliSinif = document.getElementById("s4SinifSec").value.replace(" (Bitti)", "");
                 if (!this.seciliCalisma || !this.seciliSinif) return alert("Seçim yapın.");
                 try {
-                    const rW = await fetch(`/ calismaGetir ? isim = www_${this.seciliCalisma} `);
+                    const rW = await fetch(`/calismaGetir?isim=www_${this.seciliCalisma}`);
                     if (!rW.ok) throw new Error("Dosya Yok");
                     const tumCevaplar = await rW.json();
                     const sinifKaydiVarMi = tumCevaplar.some(x => x.sinif === this.seciliSinif);
