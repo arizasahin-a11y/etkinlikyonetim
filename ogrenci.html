@@ -1454,9 +1454,13 @@
 
         // --- ODAK MODU (FOCUS MODE) KORUMASI ---
         let odakModuAktif = false;
+        let odakTetiklendi = false;
 
-        async function odakModuIhlal() {
-            if (!odakModuAktif || !atan || !atan.yapma) return;
+        async function odakModuIhlal(sebep) {
+            console.warn("[ODAK MODU] İhlal tetiklendi! Sebep:", sebep);
+            if (!odakModuAktif || !atan || !atan.yapma || odakTetiklendi) return;
+
+            odakTetiklendi = true; // Prevent double firing
 
             // 1. Korumayı kapat (tekrarlamasını önle)
             odakModuKapat();
@@ -1469,7 +1473,7 @@
 
             // Set 0 Score logic / OA tag
             benimKaydim.degerlendirme.bitti = true;
-            benimKaydim.degerlendirme.OA = "Çalıştı (Odak Koptu)";
+            benimKaydim.degerlendirme.OA = `Çalıştı (Odak Koptu: ${sebep})`;
 
             // 3. Sunucuya anında kaydet
             const payload = {
@@ -1486,6 +1490,7 @@
             };
 
             try {
+                console.log("[ODAK MODU] 0 Puan sunucuya gönderiliyor...");
                 await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
             } catch (e) { console.error("Odak ihlali kaydedilemedi", e); }
 
@@ -1503,28 +1508,54 @@
             `;
         }
 
-        const visibilityListener = () => { if (document.hidden) odakModuIhlal(); };
-        const blurListener = () => {
-            // Add a small delay to prevent false positives (e.g., clicking an input or iframe inside the page)
+        const visibilityListener = () => {
+            console.log("[ODAK MODU] Visibility changed. hidden:", document.hidden);
+            if (document.hidden) odakModuIhlal("SEKME DEĞİŞTİ");
+        };
+
+        const blurListener = (e) => {
+            console.log("[ODAK MODU] Window blur detected.", e);
+            // Ignore blur if activeElement is an input inside our own document
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'IFRAME')) {
+                console.log("[ODAK MODU] Blur ignored (clicked inside input).");
+                return;
+            }
+
+            // Fallback checking to ensure actual window lost focus
             setTimeout(() => {
                 if (!document.hasFocus() || document.hidden) {
-                    odakModuIhlal();
+                    odakModuIhlal("PENCERE ODAKTAN ÇIKTI");
+                } else {
+                    console.log("[ODAK MODU] Blur false positive, document still has focus.");
                 }
-            }, 200);
+            }, 50);
         };
 
         function odakModuAktiflestir() {
             if (odakModuAktif) return;
+            console.log("🔒 [ODAK MODU] AKTİF EDİLDİ. Sekme değişimi izleniyor...");
             odakModuAktif = true;
+            odakTetiklendi = false;
+
+            // Modern event listeners
             document.addEventListener("visibilitychange", visibilityListener);
             window.addEventListener("blur", blurListener);
+
+            // Legacy fallbacks for aggressive catching
+            window.onblur = blurListener;
+            window.onpagehide = () => odakModuIhlal("SAYFA GİZLENDİ/KAPANDI");
         }
 
         function odakModuKapat() {
             if (!odakModuAktif) return;
+            console.log("🔓 [ODAK MODU] KAPATILDI.");
             odakModuAktif = false;
+
             document.removeEventListener("visibilitychange", visibilityListener);
             window.removeEventListener("blur", blurListener);
+
+            window.onblur = null;
+            window.onpagehide = null;
         }
 
         function durumYonetimi() {

@@ -1485,7 +1485,7 @@
                     </div>
                 </td>
                 <td style="white-space:nowrap;">
-                    <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
+                    <div style="display:flex; flex-direction:row; gap:10px; align-items:center;">
                         <label style="cursor:pointer;" title="Öğrencinin çalışmayı yapmasına izin ver"><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"> İzin</label>
                         <label style="cursor:pointer; color:#1976d2; font-size:0.85em; font-weight:bold; background:#e3f2fd; padding:3px 6px; border-radius:4px;" title="Sınav esnasında sekme değişimini engelle (Kopya Koruması)"><input type="checkbox" ${a.odakModu ? 'checked' : ''} onchange="s3Upd('${a.id}','odakModu',this.checked)"> Odak</label>
                     </div>
