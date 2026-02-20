@@ -417,8 +417,9 @@
                 const liste = cObj ? cObj.cevaplar : [];
                 const puanlar = State.anlikPuanlar[State.sIdx] || [];
 
-                // Değerlendirme bitti mi kontrol et
-                const degerlendirmeBitti = State.activeVeri?.degerlendirme?.bitti === true;
+                // Değerlendirme bitti mi kontrol et (Eski bitti bayrağı artık sınav bitişi için kullanılıyor)
+                const evalDurum = State.activeVeri?.degerlendirme;
+                const degerlendirmeBitti = !!(evalDurum?.degerlendirildi || typeof evalDurum?.toplam !== "undefined");
 
                 let h = "";
 
@@ -503,8 +504,9 @@
                 if (isTeacher) document.getElementById('btn_bitir').textContent = "💾 Sıradaki Öğrenci ❯";
             },
             puanla: async (cIdx, p) => {
-                // Değerlendirme bittiyse puanlama yapılamaz (hem öğrenci hem öğretmen)
-                if (State.activeVeri?.degerlendirme?.bitti) {
+                // Değerlendirme bitti mi kontrol et (degerlendirildi bayrağına bakıyoruz)
+                const evalDurum = State.activeVeri?.degerlendirme;
+                if (evalDurum?.degerlendirildi || typeof evalDurum?.toplam !== "undefined") {
                     alert("⚠️ Bu değerlendirme tamamlanmış. Değişiklik yapmak için 'Değerlendirmeyi Sıfırla' butonunu kullanın.");
                     return;
                 }
@@ -864,10 +866,10 @@
                     // 1. Dosyada hiç kaydı yoksa -> LİSTELEME
                     if (sinifKayitlari.length === 0) return;
 
-                    // 2. Tüm kayıtlar bitmiş mi?
-                    const hepsiBitti = sinifKayitlari.every(k => k.degerlendirme && k.degerlendirme.bitti === true);
+                    // 2. Tüm kayıtlar değerlendirilmiş mi? (Bitmeyen sınavlar -bitti:true- değerlendirilmiş sayılmaz)
+                    const hepsiBitti = sinifKayitlari.every(k => k.degerlendirme && (k.degerlendirme.degerlendirildi || typeof k.degerlendirme.toplam !== "undefined"));
 
-                    // Hepsi bitmişse -> LİSTELEME
+                    // Hepsi değerlendirilmişse -> LİSTELEME
                     if (hepsiBitti) return;
 
                     // Hala iş varsa listeye ekle
@@ -915,7 +917,7 @@
                 if (sinifKayitlari.length === 0) {
                     kilitli = true; // Hiç başlamamış (kayıt yok)
                 } else {
-                    const hepsiBitti = sinifKayitlari.every(k => k.degerlendirme && k.degerlendirme.bitti === true);
+                    const hepsiBitti = sinifKayitlari.every(k => k.degerlendirme && (k.degerlendirme.degerlendirildi || typeof k.degerlendirme.toplam !== "undefined"));
                     if (hepsiBitti) kilitli = true;
                 }
 

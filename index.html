@@ -1749,15 +1749,15 @@
                 } catch (e) { alert("Şu an bu Çalışmayı Değerlendiremezsiniz (Kayıt yok veya Hata)."); return; }
 
                 const qName = "qqq" + this.seciliSinif.replace(/\s/g, '') + this.seciliCalisma;
-                const dQ = await (await fetch(`/ calismaGetir ? isim = ${qName} `)).json();
+                const dQ = await (await fetch(`/calismaGetir?isim=${qName}`)).json();
                 document.getElementById("degSecimPaneli").style.display = "none"; document.getElementById("degerlendirmeContainer").style.display = "block";
                 document.getElementById("degBilgiUst").textContent = this.seciliCalisma;
-                this.sorular = (await (await fetch(`/ calismaGetir ? isim = qwx${this.seciliCalisma} `)).json()).sorular || [];
-                const cevaplarVerisi = await (await fetch(`/ calismaGetir ? isim = www_${this.seciliCalisma} `)).json();
+                this.sorular = (await (await fetch(`/calismaGetir?isim=qwx${this.seciliCalisma}`)).json()).sorular || [];
+                const cevaplarVerisi = await (await fetch(`/calismaGetir?isim=www_${this.seciliCalisma}`)).json();
                 this.kuyruk = [];
 
                 if (dQ.yontem === "Grup") {
-                    const gruplar = await (await fetch(`/ grupListesiGetir ? sinif = ${encodeURIComponent(this.seciliSinif)}& calisma=${encodeURIComponent(this.seciliCalisma)} `)).json();
+                    const gruplar = await (await fetch(`/grupListesiGetir?sinif=${encodeURIComponent(this.seciliSinif)}&calisma=${encodeURIComponent(this.seciliCalisma)}`)).json();
                     gruplar.forEach((grp, idx) => {
                         const kayit = cevaplarVerisi.find(tv => grp.some(u => String(tv.ogrenciNo) === String(u["Okul Numaranız"])));
                         if (kayit && kayit.degerlendirme && (kayit.degerlendirme.degerlendirildi || typeof kayit.degerlendirme.toplam !== "undefined")) return;
@@ -1812,7 +1812,7 @@
 
                 try {
                     // 1. Mevcut cevapları çek
-                    const res = await fetch(`/ calismaGetir ? isim = www_${calisma} `);
+                    const res = await fetch(`/calismaGetir?isim=www_${calisma}`);
                     const data = await res.json();
 
                     const promises = [];
