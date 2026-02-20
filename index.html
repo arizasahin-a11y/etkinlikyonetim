@@ -655,17 +655,30 @@
 
         <div id="sekme4" class="tab-content">
             <div class="yonetim-cerceve" id="degSecimPaneli">
-                <div class="yonetim-toolbar">
-                    <button id="btnPuanTablosu" class="action orange"
-                        style="font-size:12px; padding:6px 15px; display:none;">📊 PUAN TABLOSU</button>
-                    <button id="btnTumCevaplariSifirla" class="action red"
-                        style="font-size:12px; padding:6px 15px; display:none; margin-left:5px;">⚠️ CEVAPLARI
-                        SIFIRLA</button>
-                    <label class="chk-container"><input type="checkbox" id="chkDegerlendirmeIzin" disabled> Öğrenci
-                        İzni</label>
-                    <label class="chk-container"><input type="checkbox" id="chkIzin" disabled> Öğretmen İzni</label>
-                    <div><strong>Çalışma:</strong> <select id="s4DosyaSec" class="kucuk-select"></select></div>
-                    <div><strong>Sınıf:</strong> <select id="s4SinifSec" class="kucuk-select"></select></div>
+                <div class="yonetim-toolbar" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                    <!-- Action Buttons -->
+                    <div style="display:flex; gap:5px;">
+                        <button id="btnPuanTablosu" class="action orange"
+                            style="font-size:12px; padding:6px 15px; display:none;">📊 PUAN TABLOSU</button>
+                        <button id="btnTumCevaplariSifirla" class="action red"
+                            style="font-size:12px; padding:6px 15px; display:none;">⚠️ CEVAPLARI SIFIRLA</button>
+                    </div>
+
+                    <!-- Permissions Checkboxes Inline -->
+                    <div
+                        style="display:flex; gap:15px; border:1px solid #ccc; padding:5px 10px; border-radius:4px; background:#f9f9f9;">
+                        <label class="chk-container" style="margin:0;"><input type="checkbox" id="chkDegerlendirmeIzin"
+                                disabled> Öğrenci İzni</label>
+                        <label class="chk-container" style="margin:0;"><input type="checkbox" id="chkIzin" disabled>
+                            Öğretmen İzni</label>
+                    </div>
+
+                    <!-- Selection Dropdowns -->
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div><strong>Çalışma:</strong> <select id="s4DosyaSec" class="kucuk-select"></select></div>
+                        <div><strong>Sınıf:</strong> <select id="s4SinifSec" class="kucuk-select"></select></div>
+                    </div>
+
                     <button id="btnDegerlendirmeBaslat" class="action blue"
                         style="font-size:12px; padding:6px 15px;">BAŞLAT</button>
                     <button id="btnDegerlendirmeSifirla" class="action red"

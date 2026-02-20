@@ -1404,7 +1404,9 @@
                 // 3. Action Buttons (MOVED TO BOTTOM)
                 html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">`;
 
-                if (isActive && !isFinished) {
+                const isLockedOut = (benimKaydim && benimKaydim.degerlendirme && benimKaydim.degerlendirme.bitti && benimKaydim.degerlendirme.OA && benimKaydim.degerlendirme.OA.includes("Odak Koptu"));
+
+                if (isActive && !isFinished && !isLockedOut) {
                     html += `<button onclick="baslaAccordion('${id}')" class="btn-mavi" style="flex:1;">ÇALIŞMAYA BAŞLA / DEVAM ET</button>`;
                 }
 
@@ -1414,7 +1416,9 @@
                     html += `<button onclick="degerlendirmeAccordion('${id}')" class="btn-mor" style="flex:1;">DEĞERLENDİRMEYE GEÇ</button>`;
                 }
 
-                if (isFinished && !isActive) {
+                if (isLockedOut) {
+                    html += `<div style="width:100%; text-align:center; color:#c62828; font-weight:bold; padding:10px; border:1px solid #ef9a9a; background:#ffebee; border-radius:4px;">🚫 Sistem tarafından kopyaya karşı kilitlendi (Odak Kaybı).</div>`;
+                } else if (isFinished && !isActive) {
                     html += `<div style="width:100%; text-align:center; color:red; font-weight:bold; padding:5px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px;">⛔ Süre doldu.</div>`;
                 }
 
