@@ -1276,8 +1276,9 @@
                 const tr = document.createElement("tr");
                 tr.innerHTML = `<td>${a.sinif}</td><td>${a.calisma}</td><td><b>${a.yontem}</b></td>
                 <td style="font-size:0.9em; white-space:nowrap;">
-                    <label style="margin-right:10px; cursor:pointer;"><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açıklama</label>
-                    <label style="cursor:pointer;"><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
+                    <label style="margin-right:10px; cursor:pointer;" title="Açıklama metnini ve Grup listesini göster"><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açık.</label>
+                    <label style="margin-right:10px; cursor:pointer;" title="Soruları ve öğrenci cavaplarını göster (Salt Okunur)"><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
+                    <label style="cursor:pointer; color:#d32f2f; font-weight:bold;" title="Öğrenci sorulara çalışırken soruların sırasını karıştır"><input type="checkbox" ${a.karisikSoru ? 'checked' : ''} onchange="s3Upd('${a.id}','karisikSoru',this.checked)"> Karışık</label>
                 </td>
                 <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
                 <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>
