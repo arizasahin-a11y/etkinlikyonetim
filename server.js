@@ -308,7 +308,9 @@ app.post("/calismaKaydet", async (req, res) => { // Covers "calismaKaydet" (Crea
         yapma: assignment.yapma || false,
         degerl: assignment.degerl || false,
         sure: assignment.sure || 0,
-        bitis: assignment.bitis || null
+        bitis: assignment.bitis || null,
+        karisikSoru: assignment.karisikSoru || false,
+        odakModu: assignment.odakModu || false
       };
 
       // JSON.stringify for PostgreSQL JSONB
