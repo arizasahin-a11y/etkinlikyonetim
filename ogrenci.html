@@ -1105,10 +1105,13 @@
                 // Set global 'sorular' for 'kaydet' and 'ozetCiz' to work?
                 // Yes, legacy functions rely on global 'sorular'.
                 let rawSorular = Array.isArray(icerik) ? icerik : (icerik.sorular || []);
-                sorular = rawSorular.map((s, i) => ({
-                    soru: typeof s === 'object' ? s.soru : s,
-                    originalIndex: i
-                }));
+                sorular = rawSorular.map((s, i) => {
+                    if (typeof s === 'object') {
+                        return { ...s, originalIndex: i };
+                    } else {
+                        return { soru: s, originalIndex: i };
+                    }
+                });
 
                 // Seeded Shuffle per student
                 if (a.karisikSoru) {
