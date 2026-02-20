@@ -552,6 +552,70 @@
             font-size: 0.95rem;
             color: #333;
         }
+
+        /* Çoktan Seçmeli (MCQ) Stilleri */
+        .mcq-option {
+            display: block;
+            margin-bottom: 12px;
+            cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .mcq-radio {
+            display: none;
+        }
+
+        .mcq-content {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background: #fcfcfc;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .mcq-option:hover .mcq-content {
+            border-color: #bdbdbd;
+            background: #f5f5f5;
+        }
+
+        .mcq-radio:checked+.mcq-content {
+            background: #f1f8e9;
+            border-color: #81c784;
+            box-shadow: 0 2px 8px rgba(129, 199, 132, 0.2);
+        }
+
+        .mcq-letter {
+            background: #e0e0e0;
+            color: #616161;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-right: 15px;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .mcq-radio:checked+.mcq-content .mcq-letter {
+            background: #4caf50;
+            color: white;
+            box-shadow: 0 2px 5px rgba(76, 175, 80, 0.4);
+        }
+
+        .mcq-text {
+            flex: 1;
+            color: #333;
+            font-size: 1.05rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
     </style>
 </head>
 
@@ -1521,15 +1585,17 @@
             if (isMCQ) {
                 if (full || cont.querySelectorAll('input[type="radio"]').length === 0) {
                     const secenekler = sorular[sIdx].secenekler || [];
-                    let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
+                    let html = `<div style="display:flex; flex-direction:column; width:100%;">`;
                     secenekler.forEach((secenek, i) => {
                         const optLetter = String.fromCharCode(65 + i);
                         const isChecked = (satirlar[0] === String(i)) ? 'checked' : '';
                         html += `
-                        <label style="display:flex; align-items:center; padding:12px; background:#f9f9f9; border:1px solid #ddd; border-radius:6px; cursor:pointer; color:#333;">
-                            <input type="radio" onchange="kaydet()" name="mcq_answer" value="${i}" ${isChecked} style="margin-right:10px; transform:scale(1.2);">
-                            <strong style="margin-right:8px;">${optLetter})</strong> 
-                            <span style="flex:1;">${linkleriDonustur(secenek)}</span>
+                        <label class="mcq-option">
+                            <input type="radio" onchange="kaydet()" name="mcq_answer" value="${i}" ${isChecked} class="mcq-radio">
+                            <div class="mcq-content">
+                                <div class="mcq-letter">${optLetter}</div>
+                                <div class="mcq-text">${linkleriDonustur(secenek)}</div>
+                            </div>
                         </label>`;
                     });
                     html += `</div>`;
