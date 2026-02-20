@@ -1632,7 +1632,7 @@
             try {
                 const [dosyalar, rW] = await Promise.all([
                     (await fetch("/listeCalismalar")).json(),
-                    fetch(`/ calismaGetir ? isim = www_${calisma} `).catch(() => null)
+                    fetch(`/calismaGetir?isim=www_${calisma}`).catch(() => null)
                 ]);
 
                 let wwwData = [];
@@ -1647,10 +1647,10 @@
                 sinifSel.innerHTML = '<option value="">-- Seç --</option>';
 
                 for (let f of atananlar) {
-                    const data = await (await fetch(`/ calismaGetir ? isim = ${f.replace(".json", "")} `)).json();
+                    const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json", "")}`)).json();
                     if (data.sinif) {
                         const buSinifinTumCevaplari = wwwData.filter(r => r.sinif === data.sinif);
-                        const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && r.degerlendirme.bitti);
+                        const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && (r.degerlendirme.degerlendirildi || typeof r.degerlendirme.toplam !== "undefined"));
 
                         // FIX: check if there are any answers first
                         const cevapVerenSayisi = buSinifinTumCevaplari.filter(r => (r.cevaplar && r.cevaplar.length > 0) || (r.answers && r.answers.length > 0)).length;
@@ -1760,7 +1760,7 @@
                     const gruplar = await (await fetch(`/ grupListesiGetir ? sinif = ${encodeURIComponent(this.seciliSinif)}& calisma=${encodeURIComponent(this.seciliCalisma)} `)).json();
                     gruplar.forEach((grp, idx) => {
                         const kayit = cevaplarVerisi.find(tv => grp.some(u => String(tv.ogrenciNo) === String(u["Okul Numaranız"])));
-                        if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
+                        if (kayit && kayit.degerlendirme && (kayit.degerlendirme.degerlendirildi || typeof kayit.degerlendirme.toplam !== "undefined")) return;
 
                         // Cevap olmasa bile listeye ekle (Sıfırlandıktan sonra erişim için)
                         const safeKayit = kayit || { ogrenciNo: grp[0]["Okul Numaranız"], cevaplar: [], puanlar: {} };
@@ -1770,7 +1770,7 @@
                     globalData.filter(u => u["Sınıfınız"] === this.seciliSinif).forEach(ogr => {
                         const no = String(ogr["Okul Numaranız"]);
                         const kayit = cevaplarVerisi.find(x => String(x.ogrenciNo) === no);
-                        if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
+                        if (kayit && kayit.degerlendirme && (kayit.degerlendirme.degerlendirildi || typeof kayit.degerlendirme.toplam !== "undefined")) return;
 
                         // Robustly handle kayit structure
                         let safeKayit = { ogrenciNo: no, cevaplar: [], puanlar: {} };
@@ -1820,7 +1820,10 @@
                     data.forEach(student => {
                         if (student.sinif === sinif) {
                             student.puanlar = {}; // Puanları sil
-                            if (student.degerlendirme) student.degerlendirme.bitti = false; // Bitti işaretini kaldır
+                            if (student.degerlendirme) {
+                                delete student.degerlendirme.degerlendirildi;
+                                delete student.degerlendirme.toplam;
+                            }
 
                             // 3. Güncellenmiş veriyi sunucuya geri yükle (Cevaplar korunur)
                             promises.push(fetch("/kaydet", {

@@ -162,7 +162,7 @@ app.post("/degerlendirmeSifirla", async (req, res) => {
     // Reset evaluation for all students in this class for this study
     await query(`
         UPDATE student_evaluations 
-        SET scores = '{}', evaluation = '{"toplam": 0, "bitti": false}'::jsonb 
+        SET scores = '{}', evaluation = evaluation - 'toplam' - 'degerlendirildi'
         WHERE study_id = $1 AND class_name = $2
     `, [studyId, sinif]);
 
@@ -238,13 +238,13 @@ app.post("/degerlendirmeBitir", async (req, res) => {
       }
     });
 
-    const evaluation = { toplam: toplam, bitti: true };
+    const evaluation = { toplam: toplam, degerlendirildi: true };
 
     // JSON.stringify for PostgreSQL JSONB
     const evaluationJson = JSON.stringify(evaluation);
 
     await query(
-      "UPDATE student_evaluations SET evaluation = $1::jsonb WHERE study_id = $2 AND student_school_no = $3",
+      "UPDATE student_evaluations SET evaluation = COALESCE(evaluation, '{}'::jsonb) || $1::jsonb WHERE study_id = $2 AND student_school_no = $3",
       [evaluationJson, studyId, String(ogrenciNo)]
     );
 

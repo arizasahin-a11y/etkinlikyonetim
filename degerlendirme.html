@@ -547,7 +547,12 @@
                 // Prepare Payload for all members
                 // We want to force the CURRENT scores to everyone in the group
                 const scoresToSave = State.anlikPuanlar;
-                const evalData = { bitti: true, tarih: new Date().toLocaleString(), toplam: toplamPuan };
+                const evalData = {
+                    degerlendirildi: true,
+                    bitti: State.activeVeri?.degerlendirme?.bitti || false,
+                    tarih: new Date().toLocaleString(),
+                    toplam: toplamPuan
+                };
 
                 // Preserve existing OA if we are propagating? 
                 // Actually, the request says "O student's score given to all". 
@@ -794,7 +799,8 @@
                 }
                 document.getElementById('header_info').textContent = headerInfo;
 
-                if (State.activeVeri?.degerlendirme?.bitti) {
+                const evalDurum = State.activeVeri?.degerlendirme;
+                if (evalDurum?.degerlendirildi || typeof evalDurum?.toplam !== "undefined") {
                     guncelleToplamPuan();
                     if (!isTeacher) {
                         // Student: Block re-evaluation, show result screen
