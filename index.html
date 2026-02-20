@@ -1649,13 +1649,12 @@
                 for (let f of atananlar) {
                     const data = await (await fetch(`/calismaGetir?isim=${f.replace(".json", "")}`)).json();
                     if (data.sinif) {
-                        const buSinifinTumCevaplari = wwwData.filter(r => r.sinif === data.sinif);
+                        const buSinifinTumCevaplari = wwwData.filter(r => r.sinif === data.sinif && r.ogrenciNo !== "AYARLAR");
                         const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && (r.degerlendirme.degerlendirildi || typeof r.degerlendirme.toplam !== "undefined"));
 
-                        // FIX: check if there are any answers first
-                        const cevapVerenSayisi = buSinifinTumCevaplari.filter(r => (r.cevaplar && r.cevaplar.length > 0) || (r.answers && r.answers.length > 0)).length;
-
-                        let hepsiBittiMi = (cevapVerenSayisi > 0 && buSinifinBitmisCevaplari.length === buSinifinTumCevaplari.length);
+                        // User: "sınava girenler değerlendiyse bitmiştir"
+                        const cevapVerenKayitlar = buSinifinTumCevaplari.filter(r => (r.cevaplar && r.cevaplar.length > 0));
+                        const hepsiBittiMi = (cevapVerenKayitlar.length > 0 && cevapVerenKayitlar.every(r => r.degerlendirme && (r.degerlendirme.degerlendirildi || typeof r.degerlendirme.toplam !== "undefined")));
 
                         sinifSel.appendChild(new Option(data.sinif + (hepsiBittiMi ? " (Bitti)" : ""), data.sinif));
                     }
@@ -1815,10 +1814,10 @@
                     const res = await fetch(`/calismaGetir?isim=www_${calisma}`);
                     const data = await res.json();
 
-                    const promises = [];
+                    const syncPromises = [];
                     // 2. İlgili sınıfın kayıtlarını bul ve güncelle
                     data.forEach(student => {
-                        if (student.sinif === sinif) {
+                        if (String(student.sinif).trim() === String(sinif).trim()) {
                             student.puanlar = {}; // Puanları sil
                             if (student.degerlendirme) {
                                 delete student.degerlendirme.degerlendirildi;
@@ -1827,7 +1826,7 @@
                             }
 
                             // 3. Güncellenmiş veriyi sunucuya geri yükle (Cevaplar korunur)
-                            promises.push(fetch("/kaydet", {
+                            syncPromises.push(fetch("/kaydet", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({
@@ -1838,8 +1837,11 @@
                         }
                     });
 
-                    await Promise.all(promises);
-                    alert("Puanlar sıfırlandı, cevaplar korundu! Tekrar değerlendirebilirsiniz.");
+                    // 3. SQL Tablosunu da sıfırla
+                    syncPromises.push(fetch(`/degerlendirmeSifirla?sinif=${encodeURIComponent(sinif)}&calisma=${encodeURIComponent(calisma)}`));
+
+                    await Promise.all(syncPromises);
+                    alert("Puanlar sıfırlandı! Sınıf listesi güncelleniyor.");
                     location.reload();
                 } catch (e) {
                     alert("Sıfırlama sırasında hata oluştu: " + e);
@@ -1854,34 +1856,21 @@
                 const cevapYok = !item.kayit || !item.kayit.cevaplar || item.kayit.cevaplar.length === 0;
 
                 if (cevapYok) {
-                    // Otomatik olarak G olarak işaretle ve geç
-                    // Kullanıcıya hissettirmeden arkada kaydet
                     const promises = [];
                     item.members.forEach(ogrNo => {
-                        // Puanları "G" olarak kaydet (tek bir G yeterli genel durum için ama biz puanlar objesine de işleyelim)
-                        // Not: Puanlama yapısı soru bazlı olduğu için, 'G' genel bir durumdur.
-                        // Ancak veritabanı yapımızda 'scores' jsonb tutuluyor.
-                        // Biz burada 'degerlendirme' alanına not düşelim ve puanları boş bırakalım ya da özel bir kodla işaretleyelim.
-                        // İstenen: "G" olarak girilsin.
-
-                        // 1. Değerlendirme bitir (Puan: 0, Durum: G)
                         promises.push(fetch("/degerlendirmeBitir", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                dosyaAdi: `www_${this.seciliCalisma} `,
+                                dosyaAdi: `www_${this.seciliCalisma}`,
                                 ogrenciNo: ogrNo,
                                 sinif: this.seciliSinif,
-                                puan: "G" // Server bunu 'evaluation' içine 'toplam: "G"' olarak kaydedecek şekilde güncellenmeli veya server zaten toplam'ı alıyor mu?
-                                // Server.js /degerlendirmeBitir endpoint'i: const { toplam } = req.body; ... evaluation = { toplam: toplam, bitti: true }
-                                // Evet, server direk ne gönderirsek onu kaydediyor.
+                                toplam: "G",
+                                degerlendirildi: true
                             })
                         }));
                     });
-
                     await Promise.all(promises);
-
-                    // Sonraki kişiye geç
                     this.kuyrukIndex++;
                     this.yukle();
                     return;
@@ -1892,12 +1881,15 @@
 
                 // --- AUTO-EVALUATE MULTIPLE CHOICE QUESTIONS ---
                 const rawAnswers = item.kayit.cevaplar || [];
-                // Handle different answer array structures
                 const normalizedAnswers = Array.isArray(rawAnswers) && rawAnswers.length > 0 && typeof rawAnswers[0] === 'object' && rawAnswers[0].cevaplar ? rawAnswers :
                     (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
 
+                // Ensure activeVeri has normalized answers for renderSoru
+                this.activeVeri = item.kayit; // Ensure activeVeri is set before assigning cevaplar
+                this.activeVeri.cevaplar = normalizedAnswers;
+
                 this.sorular.forEach((soru, sIdx) => {
-                    const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
+                    const sAnsObj = normalizedAnswers.find(c => Number(c.soruIndex) === Number(sIdx));
                     if (!sAnsObj || !sAnsObj.cevaplar || sAnsObj.cevaplar.length === 0) return;
 
                     const studentAnsStr = sAnsObj.cevaplar[0];
@@ -1906,13 +1898,13 @@
                     if (typeof soru === 'object' && soru.type === 'coktan_secmeli') {
                         if (!this.anlikPuanlar[sIdx]) this.anlikPuanlar[sIdx] = [];
                         if (this.anlikPuanlar[sIdx][0] === undefined) {
-                            const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
+                            const isCorrect = String(studentAnsStr) === String(soru.dogruCevap);
                             this.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
                         }
                     } else if (typeof soru === 'object' && soru.type === 'text' && soru.cevabiVar) {
                         if (!this.anlikPuanlar[sIdx]) this.anlikPuanlar[sIdx] = [];
                         if (this.anlikPuanlar[sIdx][0] === undefined) {
-                            const isCorrect = studentAnsStr.trim().toLowerCase() === String(soru.dogruCevap || "").trim().toLowerCase();
+                            const isCorrect = String(studentAnsStr).trim().toLowerCase() === String(soru.dogruCevap || "").trim().toLowerCase();
                             this.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
                         }
                     }
@@ -1958,21 +1950,17 @@
                     const studentChoiceIndex = (cevaplar && cevaplar.length > 0) ? parseInt(cevaplar[0]) : -1;
                     const p = puanlar[0];
 
-                    h += `< div style = "display:flex; flex-direction:column; gap:8px; margin-bottom:15px; width:100%;" > `;
+                    h += `<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; width:100%;">`;
                     (sObj.secenekler || []).forEach((sec, idx) => {
                         const char = String.fromCharCode(65 + idx);
                         const isSelected = (idx === studentChoiceIndex);
                         const isCorrectAnswer = (idx === sObj.dogruCevap);
 
-                        let optStyle = `padding: 12px; border: 2px solid #e0e0e0; border - radius: 8px; background: #f9f9f9; display: flex; align - items: center; `;
+                        let optStyle = `padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; display: flex; align-items: center;`;
 
                         // Highlight student's choice
                         if (isSelected) {
-                            if (Number(p) === 1) {
-                                optStyle = `padding: 12px; border: 2px solid #4CAF50; border - radius: 8px; background: #e8f5e9; display: flex; align - items: center; box - shadow: 0 2px 8px rgba(76, 175, 80, 0.3); `;
-                            } else {
-                                optStyle = `padding: 12px; border: 2px solid #F44336; border - radius: 8px; background: #ffebee; display: flex; align - items: center; box - shadow: 0 2px 8px rgba(244, 67, 54, 0.3); `;
-                            }
+                            optStyle = `padding: 12px; border: 2px solid ${Number(p) === 1 ? '#4CAF50' : '#F44336'}; border-radius: 8px; background: ${Number(p) === 1 ? '#e8f5e9' : '#ffebee'}; display: flex; align-items: center; box-shadow: 0 2px 8px ${Number(p) === 1 ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'};`;
                         }
 
                         h += `<div style="${optStyle}">
@@ -2001,12 +1989,12 @@
                         cevaplar.forEach((txt, i) => {
                             if (txt && txt.trim() !== "") {
                                 const convertedTxt = linkleriDonustur(txt);
-                                h += `< div class="deg-cevap-item" ondblclick = "DegerlendirmeApp.hizliGecBos(event, '${txt || ''}')" >
+                                h += `<div class="deg-cevap-item" ondblclick="DegerlendirmeApp.hizliGecBos(event, '${txt || ''}')">
                                     <div class="deg-cevap-metin">${convertedTxt}</div>
                                     <div class="deg-buton-grubu">
                                         <button class="deg-btn-puan deg-dogru ${puanlar[i] === 1 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},1)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},1)">D</button>
                                         <button class="deg-btn-puan deg-yanlis ${puanlar[i] === 0 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},0)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},0)">Y</button>
-                                    </div></div > `;
+                                    </div></div>`;
                             }
                         });
                     }
