@@ -1084,6 +1084,27 @@
                     <textarea class="soru-input" style="width:100%; padding:15px; border-radius:8px; border:1px solid #ccc; resize:vertical; min-height:80px; font-size:1.05rem; box-sizing:border-box; box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);" placeholder="Soru Metni">${soruMetni}</textarea>
                     <input type="hidden" class="soru-type" value="${isTest ? 'coktan_secmeli' : 'text'}">`;
 
+            if (!isTest) {
+                // Determine predefined answer state for text questions
+                let cevabiVar = false;
+                let kesinCevap = "";
+                if (typeof payload === 'object' && payload.cevabiVar) {
+                    cevabiVar = true;
+                    kesinCevap = payload.dogruCevap || "";
+                }
+
+                html += `
+                <div style="background:#f1f8e9; padding:10px 15px; border-radius:8px; border:1px solid #c5e1a5;">
+                    <label style="display:flex; align-items:center; cursor:pointer; font-weight:bold; color:#33691e; font-size:0.95rem;">
+                        <input type="checkbox" class="chk-cevabi-var" style="margin-right:8px; transform:scale(1.2);" ${cevabiVar ? 'checked' : ''} onchange="this.parentElement.nextElementSibling.style.display = this.checked ? 'block' : 'none';"> 
+                        Cevabı Gir (Otomatik Puanlama İçin)
+                    </label>
+                    <div style="margin-top:10px; display:${cevabiVar ? 'block' : 'none'};">
+                        <input type="text" class="kesin-cevap-input" value="${kesinCevap}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc; font-size:1rem; box-sizing:border-box;" placeholder="Öğrencinin girmesi beklenen tam metin (Örn: Ankara)">
+                    </div>
+                </div>`;
+            }
+
             if (isTest) {
                 let optionsHtml = `<div class="secenek-container" id="opts_${uid}" style="width:100%; padding:15px 20px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px; box-sizing:border-box;">`;
                 optionsHtml += `<div style="font-weight:bold; color:#512DA8; margin-bottom:12px; font-size:0.95rem;">Doğru cevabı işaretleyin:</div>`;
@@ -1186,7 +1207,18 @@
                         dogruCevap: dogruCevap
                     });
                 } else {
-                    sorularArr.push(soruMetni); // Legacy simple string format
+                    const chk = item.querySelector('.chk-cevabi-var');
+                    if (chk && chk.checked) {
+                        const kesinCevap = item.querySelector('.kesin-cevap-input').value.trim();
+                        sorularArr.push({
+                            type: 'text',
+                            soru: soruMetni,
+                            cevabiVar: true,
+                            dogruCevap: kesinCevap
+                        });
+                    } else {
+                        sorularArr.push(soruMetni); // Legacy simple string format
+                    }
                 }
             });
 
@@ -1841,19 +1873,23 @@
                     (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
 
                 this.sorular.forEach((soru, sIdx) => {
+                    const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
+                    if (!sAnsObj || !sAnsObj.cevaplar || sAnsObj.cevaplar.length === 0) return;
+
+                    const studentAnsStr = sAnsObj.cevaplar[0];
+                    if (studentAnsStr === undefined || studentAnsStr === "") return;
+
                     if (typeof soru === 'object' && soru.type === 'coktan_secmeli') {
-                        // Find student's answer for this specific question index
-                        const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
-                        if (sAnsObj && sAnsObj.cevaplar && sAnsObj.cevaplar.length > 0) {
-                            const studentAnsStr = sAnsObj.cevaplar[0];
-                            if (studentAnsStr !== undefined && studentAnsStr !== "") {
-                                if (!this.anlikPuanlar[sIdx]) this.anlikPuanlar[sIdx] = [];
-                                // If already manually evaluated, skip auto-grading for this attempt
-                                if (this.anlikPuanlar[sIdx][0] === undefined) {
-                                    const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
-                                    this.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
-                                }
-                            }
+                        if (!this.anlikPuanlar[sIdx]) this.anlikPuanlar[sIdx] = [];
+                        if (this.anlikPuanlar[sIdx][0] === undefined) {
+                            const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
+                            this.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
+                        }
+                    } else if (typeof soru === 'object' && soru.type === 'text' && soru.cevabiVar) {
+                        if (!this.anlikPuanlar[sIdx]) this.anlikPuanlar[sIdx] = [];
+                        if (this.anlikPuanlar[sIdx][0] === undefined) {
+                            const isCorrect = studentAnsStr.trim().toLowerCase() === String(soru.dogruCevap || "").trim().toLowerCase();
+                            this.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
                         }
                     }
                 });

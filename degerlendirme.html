@@ -699,17 +699,23 @@
                     (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
 
                 State.sorular.forEach((soru, sIdx) => {
+                    const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
+                    if (!sAnsObj || !sAnsObj.cevaplar || sAnsObj.cevaplar.length === 0) return;
+
+                    const studentAnsStr = sAnsObj.cevaplar[0];
+                    if (studentAnsStr === undefined || studentAnsStr === "") return;
+
                     if (typeof soru === 'object' && soru.type === 'coktan_secmeli') {
-                        const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
-                        if (sAnsObj && sAnsObj.cevaplar && sAnsObj.cevaplar.length > 0) {
-                            const studentAnsStr = sAnsObj.cevaplar[0];
-                            if (studentAnsStr !== undefined && studentAnsStr !== "") {
-                                if (!State.anlikPuanlar[sIdx]) State.anlikPuanlar[sIdx] = [];
-                                if (State.anlikPuanlar[sIdx][0] === undefined) {
-                                    const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
-                                    State.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
-                                }
-                            }
+                        if (!State.anlikPuanlar[sIdx]) State.anlikPuanlar[sIdx] = [];
+                        if (State.anlikPuanlar[sIdx][0] === undefined) {
+                            const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
+                            State.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
+                        }
+                    } else if (typeof soru === 'object' && soru.type === 'text' && soru.cevabiVar) {
+                        if (!State.anlikPuanlar[sIdx]) State.anlikPuanlar[sIdx] = [];
+                        if (State.anlikPuanlar[sIdx][0] === undefined) {
+                            const isCorrect = studentAnsStr.trim().toLowerCase() === String(soru.dogruCevap || "").trim().toLowerCase();
+                            State.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
                         }
                     }
                 });
@@ -1000,17 +1006,23 @@
                     (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
 
                 State.sorular.forEach((soru, sIdx) => {
+                    const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
+                    if (!sAnsObj || !sAnsObj.cevaplar || sAnsObj.cevaplar.length === 0) return;
+
+                    const studentAnsStr = sAnsObj.cevaplar[0];
+                    if (studentAnsStr === undefined || studentAnsStr === "") return;
+
                     if (typeof soru === 'object' && soru.type === 'coktan_secmeli') {
-                        const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
-                        if (sAnsObj && sAnsObj.cevaplar && sAnsObj.cevaplar.length > 0) {
-                            const studentAnsStr = sAnsObj.cevaplar[0];
-                            if (studentAnsStr !== undefined && studentAnsStr !== "") {
-                                if (!State.anlikPuanlar[sIdx]) State.anlikPuanlar[sIdx] = [];
-                                if (State.anlikPuanlar[sIdx][0] === undefined) {
-                                    const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
-                                    State.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
-                                }
-                            }
+                        if (!State.anlikPuanlar[sIdx]) State.anlikPuanlar[sIdx] = [];
+                        if (State.anlikPuanlar[sIdx][0] === undefined) {
+                            const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
+                            State.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
+                        }
+                    } else if (typeof soru === 'object' && soru.type === 'text' && soru.cevabiVar) {
+                        if (!State.anlikPuanlar[sIdx]) State.anlikPuanlar[sIdx] = [];
+                        if (State.anlikPuanlar[sIdx][0] === undefined) {
+                            const isCorrect = studentAnsStr.trim().toLowerCase() === String(soru.dogruCevap || "").trim().toLowerCase();
+                            State.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
                         }
                     }
                 });
