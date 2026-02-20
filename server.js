@@ -148,14 +148,14 @@ app.get("/grupListesiGetir", async (req, res) => {
 });
 
 // Değerlendirmeyi Sıfırla
-app.post("/degerlendirmeSifirla", async (req, res) => {
+// Değerlendirmeyi Sıfırla (GET or POST for flexibility)
+app.all("/degerlendirmeSifirla", async (req, res) => {
   try {
-    const { dosyaAdi, sinif } = req.body;
-    // dosyaAdi = "www_StudyName", we need StudyName
-    const studyName = dosyaAdi.replace("www_", "");
+    const { calisma, dosyaAdi, sinif } = { ...req.query, ...req.body };
+    const name = calisma || (dosyaAdi ? dosyaAdi.replace("www_", "") : null);
+    if (!name || !sinif) return res.status(400).json({ status: "eksik_parametre" });
 
-    // Find study ID
-    const studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
+    const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
     if (studyRes.rows.length === 0) return res.status(404).json({ status: "dosya_yok" });
     const studyId = studyRes.rows[0].id;
 
@@ -215,7 +215,7 @@ app.post("/puanKaydet", async (req, res) => {
 
 // Değerlendirme Bitir
 app.post("/degerlendirmeBitir", async (req, res) => {
-  const { dosyaAdi, ogrenciNo, sinif } = req.body;
+  const { dosyaAdi, ogrenciNo, sinif, toplam: bodyToplam, degerlendirildi: bodyDegerlendirildi } = req.body;
   const studyName = dosyaAdi.replace("www_", "");
 
   try {
@@ -223,24 +223,28 @@ app.post("/degerlendirmeBitir", async (req, res) => {
     if (studyRes.rows.length === 0) return res.status(404).send();
     const studyId = studyRes.rows[0].id;
 
-    const evalRes = await query(
-      "SELECT scores FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
-      [studyId, String(ogrenciNo)]
-    );
+    let toplam = bodyToplam;
 
-    if (evalRes.rows.length === 0) return res.status(404).send();
-
-    const scores = evalRes.rows[0].scores || {};
-    let toplam = 0;
-    Object.values(scores).forEach((soruDizisi) => {
-      if (Array.isArray(soruDizisi)) {
-        soruDizisi.forEach((p) => { if (p) toplam += parseInt(p); });
+    // If toplam is not provided in body, calculate it from existing scores
+    if (typeof toplam === 'undefined' || toplam === null) {
+      const evalRes = await query(
+        "SELECT scores FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
+        [studyId, String(ogrenciNo)]
+      );
+      if (evalRes.rows.length > 0) {
+        const scores = evalRes.rows[0].scores || {};
+        toplam = 0;
+        Object.values(scores).forEach((soruDizisi) => {
+          if (Array.isArray(soruDizisi)) {
+            soruDizisi.forEach((p) => { if (p) toplam += parseInt(p); });
+          }
+        });
+      } else {
+        toplam = 0;
       }
-    });
+    }
 
-    const evaluation = { toplam: toplam, degerlendirildi: true };
-
-    // JSON.stringify for PostgreSQL JSONB
+    const evaluation = { toplam: toplam, degerlendirildi: (typeof bodyDegerlendirildi !== 'undefined' ? bodyDegerlendirildi : true) };
     const evaluationJson = JSON.stringify(evaluation);
 
     await query(
@@ -248,7 +252,7 @@ app.post("/degerlendirmeBitir", async (req, res) => {
       [evaluationJson, studyId, String(ogrenciNo)]
     );
 
-    res.json({ status: "ok", toplam });
+    res.json({ status: "ok" });
   } catch (e) { console.error(e); res.status(500).send(); }
 });
 
@@ -718,19 +722,15 @@ app.post("/kaydet", async (req, res) => {
               if (item.degerlendirme !== undefined) {
                 const existingEval = existingRes.rows[0].evaluation || {};
 
-                // KORUMA MANTIĞI: Eğer veritabanında sınav BİTMİŞ olarak işaretliyse (örneğin odak modu veya süre bitimi),
-                // öğrenci istemcisinden gelen gecikmeli bir "bitti: false" isteğinin bunu ezmesini engelle!
-                if (existingEval.bitti === true) {
-                  item.degerlendirme.bitti = true;
-                  // Eğer veritabanında "Odak Koptu" gibi özel bir uyarı varsa ve yeni gelen veride yoksa, eskisini koru
-                  if (existingEval.OA && (!item.degerlendirme.OA || !item.degerlendirme.OA.includes("Odak Koptu"))) {
-                    item.degerlendirme.OA = existingEval.OA;
-                  }
-                }
+                // KORUMA MANTIĞI: Bazı bayrakları (bitti gibi) koru ancak toplam/degerlendirildi gibi alanların silinmesine (reset) izin ver.
+                let newEval = { ...item.degerlendirme };
+                if (existingEval.bitti === true) newEval.bitti = true;
 
-                // SAFE MERGE for Evaluation (OA is here)
-                updateFields.push(`evaluation = COALESCE(evaluation::jsonb, '{}'::jsonb) || $${pIdx++}::jsonb`);
-                updateParams.push(JSON.stringify(item.degerlendirme));
+                // Eğer gelen nesnede bir alan eksikse ve silinmesi istenmişse (reset durumu), merge değil direkt atama yapmalıyız.
+                // Ancak jsonb || operatörü sadece ekleme yapar.
+                // Bu yüzden direkt yeni nesneyi atıyoruz (bazı kritik alanları koruyarak).
+                updateFields.push(`evaluation = $${pIdx++}::jsonb`);
+                updateParams.push(JSON.stringify(newEval));
               }
 
               if (item.girisSayisi !== undefined) {
@@ -767,17 +767,42 @@ app.post("/kaydet", async (req, res) => {
           }
         }
 
+        // 3. File System Sync (Fall-back and legacy compatibility)
+        try {
+          const allEvalsRes = await query(`
+              SELECT se.*, s.name as student_name 
+              FROM student_evaluations se
+              LEFT JOIN students s ON se.student_school_no = s.school_no
+              WHERE se.study_id = $1
+          `, [studyId]);
+
+          const mapped = allEvalsRes.rows.map(row => {
+            if (row.student_school_no === 'AYARLAR') return row.answers;
+            return {
+              ogrenciNo: row.student_school_no,
+              adSoyad: row.student_name,
+              sinif: row.class_name,
+              cevaplar: (row.answers ? (row.answers.cevaplar || []) : []),
+              puanlar: row.scores || {},
+              girisSayisi: row.entry_count || 0,
+              degerlendirme: row.evaluation || {}
+            };
+          });
+
+          const fs = require('fs');
+          const path = require('path');
+          fs.writeFileSync(path.join(__dirname, `www_${studyName}.json`), JSON.stringify(mapped, null, 2));
+          console.log(`✅ [www_ Kaydet] FS Sync Tamamlandı: www_${studyName}.json`);
+        } catch (fsErr) {
+          console.error(`[www_ Kaydet] FS Sync Error:`, fsErr.message);
+        }
+
         console.log(`✅ [www_ Kaydet] Tamamlandı: ${dosyaAdi}, ${items.length} kayıt`);
         return res.json({ status: "ok" });
       } else {
         // Generic file save (mostly admin uploads or creating legacy files via upload)
-        // Handle importing legacy files dynamically?
-        // If uploading "veritabani.json" -> imports students
         if (dosyaAdi === "veritabani.json") {
-          // ... Logic to import students ...
-          // Simplified for now: just save? No, DB doesn't have a "veritabani.json" file.
-          // We need to parse and insert into `students` table.
-          const data = veri; // object or array
+          const data = veri;
           const allStudents = [];
           Object.values(data).forEach(g => { if (Array.isArray(g)) allStudents.push(...g); });
 
@@ -786,16 +811,7 @@ app.post("/kaydet", async (req, res) => {
                     INSERT INTO students (school_no, name, class_name, phone, parent_phone, email, drive_link, extra_info)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     ON CONFLICT (school_no) DO UPDATE SET name=$2, class_name=$3
-                 `, [
-              String(s["Okul Numaranız"]),
-              s["Adınız Soyadınız"],
-              s["Sınıfınız"],
-              s["Telefon numaranız"],
-              s["Velinizin telefon numarası"],
-              s["E-Posta Adresiniz"],
-              s["Drive Klasörünüzün linki"],
-              s
-            ]);
+                 `, [String(s["Okul Numaranız"]), s["Adınız Soyadınız"], s["Sınıfınız"], s["Telefon numaranız"], s["Velinizin telefon numarası"], s["E-Posta Adresiniz"], s["Drive Klasörünüzün linki"], s]);
           }
           return res.json({ status: "ok" });
         }
@@ -806,7 +822,7 @@ app.post("/kaydet", async (req, res) => {
       return res.status(500).json({ status: "error", message: e.message });
     }
   }
-  res.status(400).json({ status: "eksik" });
+  return res.status(400).json({ status: "eksik" });
 });
 
 // Listeleme

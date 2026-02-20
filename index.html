@@ -1023,7 +1023,9 @@
         async function veritabaniniYukle() {
             const res = await fetch("veritabani.json");
             const data = await res.json();
-            globalData = Object.values(data)[0].map(ogrenci => {
+            // Data is grouped by class: { "9A": [...], "9B": [...] }
+            // Flatten to get all students
+            globalData = Object.values(data).flat().map(ogrenci => {
                 if (ogrenci["Adınız Soyadınız"]) ogrenci["Adınız Soyadınız"] = ogrenci["Adınız Soyadınız"].toLocaleUpperCase("tr-TR");
                 return ogrenci;
             });
