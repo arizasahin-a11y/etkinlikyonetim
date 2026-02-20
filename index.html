@@ -1905,10 +1905,14 @@
                 this.renderSoru();
             },
             renderSoru: function () {
-                document.getElementById("degSoruNo").textContent = this.sIdx + 1;
-                document.getElementById("degSoruMetin").innerHTML = linkleriDonustur(this.sorular[this.sIdx]);
+                const sObj = this.sorular[this.sIdx];
+                const soruMetni = (typeof sObj === 'object') ? sObj.soru : sObj;
+                const isMCQ = (typeof sObj === 'object' && sObj.type === 'coktan_secmeli');
 
-                const cevapObj = (this.activeVeri.cevaplar || []).find(c => c.soruIndex === this.sIdx);
+                document.getElementById("degSoruNo").textContent = this.sIdx + 1;
+                document.getElementById("degSoruMetin").innerHTML = linkleriDonustur(soruMetni);
+
+                const cevapObj = (this.activeVeri.cevaplar || []).find(c => Number(c.soruIndex) === Number(this.sIdx));
 
                 // Robust handling for answers structure in frontend
                 let cevaplar = [];
@@ -1926,20 +1930,61 @@
                 const puanlar = this.anlikPuanlar[this.sIdx] || [];
                 let h = "";
 
-                if (cevaplar.length === 0) {
-                    h = "<div style='padding:20px; color:#999; font-style:italic;'>Bu soruya cevap verilmemiş.</div>";
-                } else {
-                    cevaplar.forEach((txt, i) => {
-                        if (txt && txt.trim() !== "") {
-                            const convertedTxt = linkleriDonustur(txt);
-                            h += `<div class="deg-cevap-item" ondblclick="DegerlendirmeApp.hizliGecBos(event, '${txt || ''}')">
-                                <div class="deg-cevap-metin">${convertedTxt}</div>
-                                <div class="deg-buton-grubu">
-                                    <button class="deg-btn-puan deg-dogru ${puanlar[i] === 1 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},1)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},1)">D</button>
-                                    <button class="deg-btn-puan deg-yanlis ${puanlar[i] === 0 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},0)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},0)">Y</button>
-                                </div></div>`;
+                if (isMCQ) {
+                    const studentChoiceIndex = (cevaplar && cevaplar.length > 0) ? parseInt(cevaplar[0]) : -1;
+                    const p = puanlar[0];
+
+                    h += `<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; width:100%;">`;
+                    (sObj.secenekler || []).forEach((sec, idx) => {
+                        const char = String.fromCharCode(65 + idx);
+                        const isSelected = (idx === studentChoiceIndex);
+                        const isCorrectAnswer = (idx === sObj.dogruCevap);
+
+                        let optStyle = `padding:12px; border:2px solid #e0e0e0; border-radius:8px; background:#f9f9f9; display:flex; align-items:center;`;
+
+                        // Highlight student's choice
+                        if (isSelected) {
+                            if (Number(p) === 1) {
+                                optStyle = `padding:12px; border:2px solid #4CAF50; border-radius:8px; background:#e8f5e9; display:flex; align-items:center; box-shadow:0 2px 8px rgba(76,175,80,0.3);`;
+                            } else {
+                                optStyle = `padding:12px; border:2px solid #F44336; border-radius:8px; background:#ffebee; display:flex; align-items:center; box-shadow:0 2px 8px rgba(244,67,54,0.3);`;
+                            }
                         }
+
+                        h += `<div style="${optStyle}">
+                            <strong style="margin-right:15px; font-size:1.1rem; color:#555;">${char})</strong>
+                            <span style="flex:1; font-size:1rem; color:#333;">${sec}</span>
+                            ${isSelected ? `<span style="font-size:0.8rem; font-weight:bold; color:white; background:${Number(p) === 1 ? '#4CAF50' : '#F44336'}; padding:3px 8px; border-radius:12px; margin-left:10px;">Öğrenci Seçimi</span>` : ''}
+                        </div>`;
                     });
+                    h += `</div>`;
+
+                    if (studentChoiceIndex === -1 && cevaplar.length === 0) {
+                        h += `<div style="padding:20px; color:#999; font-style:italic; text-align:center;">Öğrenci bu soruyu boş bırakmış.</div>`;
+                    }
+
+                    h += `<div class="deg-cevap-item" style="justify-content:center; background:none; border:none; box-shadow:none; padding-top:10px;">
+                        <div class="deg-buton-grubu">
+                            <button class="deg-btn-puan deg-dogru ${Number(p) === 1 ? 'aktif' : ''}" onclick="DegerlendirmeApp.puanla(0,1)">D</button>
+                            <button class="deg-btn-puan deg-yanlis ${Number(p) === 0 ? 'aktif' : ''}" onclick="DegerlendirmeApp.puanla(0,0)">Y</button>
+                        </div>
+                    </div>`;
+                } else {
+                    if (cevaplar.length === 0) {
+                        h = "<div style='padding:20px; color:#999; font-style:italic;'>Bu soruya cevap verilmemiş.</div>";
+                    } else {
+                        cevaplar.forEach((txt, i) => {
+                            if (txt && txt.trim() !== "") {
+                                const convertedTxt = linkleriDonustur(txt);
+                                h += `<div class="deg-cevap-item" ondblclick="DegerlendirmeApp.hizliGecBos(event, '${txt || ''}')">
+                                    <div class="deg-cevap-metin">${convertedTxt}</div>
+                                    <div class="deg-buton-grubu">
+                                        <button class="deg-btn-puan deg-dogru ${puanlar[i] === 1 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},1)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},1)">D</button>
+                                        <button class="deg-btn-puan deg-yanlis ${puanlar[i] === 0 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},0)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},0)">Y</button>
+                                    </div></div>`;
+                            }
+                        });
+                    }
                 }
 
                 document.getElementById("degCevapListesi").innerHTML = h;

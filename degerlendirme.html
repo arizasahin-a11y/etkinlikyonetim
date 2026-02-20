@@ -406,8 +406,12 @@
                 }
             },
             renderSoru: () => {
+                const sObj = State.sorular[State.sIdx];
+                const soruMetni = (typeof sObj === 'object') ? sObj.soru : sObj;
+                const isMCQ = (typeof sObj === 'object' && sObj.type === 'coktan_secmeli');
+
                 document.getElementById('s_no').textContent = State.sIdx + 1;
-                document.getElementById('s_metin').textContent = State.sorular[State.sIdx];
+                document.getElementById('s_metin').textContent = soruMetni;
                 // Fix: Robust match for soruIndex (string vs number)
                 const cObj = (State.activeVeri.cevaplar || []).find(c => Number(c.soruIndex) === Number(State.sIdx));
                 const liste = cObj ? cObj.cevaplar : [];
@@ -417,32 +421,74 @@
                 const degerlendirmeBitti = State.activeVeri?.degerlendirme?.bitti === true;
 
                 let h = "";
-                liste.forEach((txt, i) => {
-                    const p = puanlar[i]; // Can be string "G" or "M" now
-                    const disabled = degerlendirmeBitti ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '';
 
+                if (isMCQ) {
+                    const studentChoiceIndex = (liste && liste.length > 0) ? parseInt(liste[0]) : -1;
+                    const p = puanlar[0];
+                    const disabled = degerlendirmeBitti ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '';
                     let btnDClass = (Number(p) === 1) ? 'btn-dogru-aktif' : '';
                     let btnYClass = (Number(p) === 0) ? 'btn-yanlis-aktif' : '';
 
-                    // Special visual for G/M?
-                    // Maybe just highlight Y if G/M/0? No, specifically G/M might need attention.
-                    // For now, let's just show them as "Incorrect" (Y) since they are 0 points effectively,
-                    // BUT detecting them is useful.
-                    // User said "Çalışmadı için D0 puan olarak girilmeli". I auto-set to "0".
-                    // "Girmedi/Mazeretli" -> G/M.
-                    // Let's make "Y" button distinct if it's G or M.
-
                     let yText = "Y";
                     if (p === "G" || p === "M") {
-                        yText = p; // Show G or M on the button
-                        btnYClass = 'btn-yanlis-aktif'; // Highlight as wrong/special
+                        yText = p;
+                        btnYClass = 'btn-yanlis-aktif';
                     }
 
-                    h += `<div class="cevap-item"><div class="cevap-metin">${txt}</div>
-                    <button class="cevap-puan-btn ${btnDClass}" onclick="App.puanla(${i},1)" ${disabled}>D</button>
-                    <button class="cevap-puan-btn ${btnYClass}" onclick="App.puanla(${i},0)" ${disabled} title="${p === 'G' ? 'Girmedi' : (p === 'M' ? 'Mazeretli' : 'Yanlış')}">${yText}</button></div>`;
-                });
-                document.getElementById('cevap_listesi').innerHTML = h || "<i>Cevap yok.</i>";
+                    h += `<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; width:100%;">`;
+                    (sObj.secenekler || []).forEach((sec, idx) => {
+                        const char = String.fromCharCode(65 + idx);
+                        const isSelected = (idx === studentChoiceIndex);
+                        const isCorrectAnswer = (idx === sObj.dogruCevap);
+
+                        let optStyle = `padding:12px; border:2px solid #e0e0e0; border-radius:8px; background:#f9f9f9; display:flex; align-items:center;`;
+
+                        // Highlight student's choice
+                        if (isSelected) {
+                            if (Number(p) === 1) {
+                                optStyle = `padding:12px; border:2px solid #4CAF50; border-radius:8px; background:#e8f5e9; display:flex; align-items:center; box-shadow:0 2px 8px rgba(76,175,80,0.3);`;
+                            } else {
+                                optStyle = `padding:12px; border:2px solid #F44336; border-radius:8px; background:#ffebee; display:flex; align-items:center; box-shadow:0 2px 8px rgba(244,67,54,0.3);`;
+                            }
+                        }
+
+                        h += `<div style="${optStyle}">
+                            <strong style="margin-right:15px; font-size:1.1rem; color:#555;">${char})</strong>
+                            <span style="flex:1; font-size:1rem; color:#333;">${sec}</span>
+                            ${isSelected ? `<span style="font-size:0.8rem; font-weight:bold; color:white; background:${Number(p) === 1 ? '#4CAF50' : '#F44336'}; padding:3px 8px; border-radius:12px; margin-left:10px;">Öğrenci Seçimi</span>` : ''}
+                        </div>`;
+                    });
+                    h += `</div>`;
+
+                    if (studentChoiceIndex === -1 && liste.length === 0) {
+                        h += `<div style="font-style:italic; color:#999; margin-bottom:15px; text-align:center;">Öğrenci bu soruyu boş bırakmış.</div>`;
+                    }
+
+                    h += `<div class="cevap-item" style="justify-content:center; background:none; border:none; padding-top:10px;">
+                        <button class="cevap-puan-btn ${btnDClass}" onclick="App.puanla(0,1)" ${disabled}>D</button>
+                        <button class="cevap-puan-btn ${btnYClass}" onclick="App.puanla(0,0)" ${disabled} title="${p === 'G' ? 'Girmedi' : (p === 'M' ? 'Mazeretli' : 'Yanlış')}">${yText}</button>
+                    </div>`;
+                } else {
+                    liste.forEach((txt, i) => {
+                        const p = puanlar[i]; // Can be string "G" or "M" now
+                        const disabled = degerlendirmeBitti ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '';
+
+                        let btnDClass = (Number(p) === 1) ? 'btn-dogru-aktif' : '';
+                        let btnYClass = (Number(p) === 0) ? 'btn-yanlis-aktif' : '';
+
+                        let yText = "Y";
+                        if (p === "G" || p === "M") {
+                            yText = p; // Show G or M on the button
+                            btnYClass = 'btn-yanlis-aktif'; // Highlight as wrong/special
+                        }
+
+                        h += `<div class="cevap-item"><div class="cevap-metin">${txt}</div>
+                        <button class="cevap-puan-btn ${btnDClass}" onclick="App.puanla(${i},1)" ${disabled}>D</button>
+                        <button class="cevap-puan-btn ${btnYClass}" onclick="App.puanla(${i},0)" ${disabled} title="${p === 'G' ? 'Girmedi' : (p === 'M' ? 'Mazeretli' : 'Yanlış')}">${yText}</button></div>`;
+                    });
+                }
+
+                document.getElementById('cevap_listesi').innerHTML = h || `<div style="font-style:italic; color:#999; text-align:center; padding:20px;">Cevap yok.</div>`;
 
                 document.getElementById('btn_geri').disabled = (State.sIdx === 0);
                 const son = (State.sIdx === State.sorular.length - 1);
