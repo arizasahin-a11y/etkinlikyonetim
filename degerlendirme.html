@@ -693,6 +693,27 @@
                 if (!State.pSinif && State.activeVeri.sinif) State.pSinif = State.activeVeri.sinif;
                 State.anlikPuanlar = State.activeVeri.puanlar || {};
 
+                // --- AUTO-EVALUATE MULTIPLE CHOICE QUESTIONS (STUDENT PEER EVAL) ---
+                const rawAnswers = State.activeVeri.cevaplar || [];
+                const normalizedAnswers = Array.isArray(rawAnswers) && rawAnswers.length > 0 && typeof rawAnswers[0] === 'object' && rawAnswers[0].cevaplar ? rawAnswers :
+                    (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
+
+                State.sorular.forEach((soru, sIdx) => {
+                    if (typeof soru === 'object' && soru.type === 'coktan_secmeli') {
+                        const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
+                        if (sAnsObj && sAnsObj.cevaplar && sAnsObj.cevaplar.length > 0) {
+                            const studentAnsStr = sAnsObj.cevaplar[0];
+                            if (studentAnsStr !== undefined && studentAnsStr !== "") {
+                                if (!State.anlikPuanlar[sIdx]) State.anlikPuanlar[sIdx] = [];
+                                if (State.anlikPuanlar[sIdx][0] === undefined) {
+                                    const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
+                                    State.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
+                                }
+                            }
+                        }
+                    }
+                });
+
                 // --- OA AUTO-CORRECT LOGIC ---
                 // "Girmedi"/"Gelmedi" -> "G"
                 // "Mazeretli" -> "M"
@@ -972,6 +993,28 @@
                 State.activeVeri = item.kayit;
                 State.pOgrenci = State.activeVeri.ogrenciNo;
                 State.anlikPuanlar = State.activeVeri.puanlar || {};
+
+                // --- AUTO-EVALUATE MULTIPLE CHOICE QUESTIONS (TEACHER EVAL) ---
+                const rawAnswers = State.activeVeri.cevaplar || [];
+                const normalizedAnswers = Array.isArray(rawAnswers) && rawAnswers.length > 0 && typeof rawAnswers[0] === 'object' && rawAnswers[0].cevaplar ? rawAnswers :
+                    (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
+
+                State.sorular.forEach((soru, sIdx) => {
+                    if (typeof soru === 'object' && soru.type === 'coktan_secmeli') {
+                        const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
+                        if (sAnsObj && sAnsObj.cevaplar && sAnsObj.cevaplar.length > 0) {
+                            const studentAnsStr = sAnsObj.cevaplar[0];
+                            if (studentAnsStr !== undefined && studentAnsStr !== "") {
+                                if (!State.anlikPuanlar[sIdx]) State.anlikPuanlar[sIdx] = [];
+                                if (State.anlikPuanlar[sIdx][0] === undefined) {
+                                    const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
+                                    State.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
+                                }
+                            }
+                        }
+                    }
+                });
+
                 State.sIdx = 0;
 
                 // Başlık güncelleme

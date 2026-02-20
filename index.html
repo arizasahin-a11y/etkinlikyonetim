@@ -582,6 +582,10 @@
                 <div id="soruAlani"></div>
                 <div class="button-group">
                     <button id="btnSoruEkle" class="action blue">+ Yeni Soru</button>
+                    <label class="chk-container"
+                        style="background:#f0f0f0; padding:8px 12px; border-radius:6px; cursor:pointer;"
+                        title="Yeni eklenecek sorunun çoktan seçmeli (test) olmasını sağlar."><input type="checkbox"
+                            id="chkCoktanSecmeli"> Çoktan Seçmeli</label>
                     <button id="btnKaydet" class="action">💾 Kaydet</button>
                     <button onclick="location.reload()" class="action red">İptal</button>
                 </div>
@@ -714,8 +718,11 @@
                             // CSV İçeriği Hazırla (Excel için BOM ekle)
                             let csvContent = "\uFEFF"; // UTF-8 BOM
 
+                            // Kontrol Et: Bu çalışmada çoktan seçmeli soru var mı?
+                            const hasMCQ = sorular.some(s => typeof s === 'object' && s.type === 'coktan_secmeli');
+
                             // Başlık Satırı
-                            csvContent += "Sınıf;Öğrenci No;Ad Soyad;Toplam Puan";
+                            csvContent += `Sınıf;Öğrenci No;Ad Soyad;Toplam Puan${hasMCQ ? ';Doğru;Yanlış;Boş;Net Puan' : ''}`;
                             sorular.forEach((s, i) => csvContent += `;Soru ${i + 1}`);
                             csvContent += "\n";
 
@@ -725,6 +732,11 @@
 
                             cevaplar.forEach(row => {
                                 let toplamPuan = 0;
+                                let dogruCevaplar = 0;
+                                let yanlisCevaplar = 0;
+                                let bosCevaplar = 0;
+                                let netPuanStr = "";
+
                                 let soruPuanlari = [];
                                 let hasSpecialCode = false;
                                 let specialCodeVal = "";
@@ -761,10 +773,24 @@
                                     }
                                 }
 
-                                sorular.forEach((_, sIdx) => {
+                                const rawAnswers = row.cevaplar || [];
+                                const normalizedAnswers = Array.isArray(rawAnswers) && rawAnswers.length > 0 && typeof rawAnswers[0] === 'object' && rawAnswers[0].cevaplar ? rawAnswers :
+                                    (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
+
+
+                                sorular.forEach((soru, sIdx) => {
                                     const pArr = puanObj[sIdx];
                                     let sPuan = 0; // Default numeric 0
                                     let sVal = "0"; // Display value
+                                    const isTest = typeof soru === 'object' && soru.type === 'coktan_secmeli';
+
+                                    // Blank check via answers if it's a test
+                                    let isBlank = false;
+                                    if (isTest) {
+                                        const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
+                                        isBlank = (!sAnsObj || !sAnsObj.cevaplar || sAnsObj.cevaplar.length === 0 || sAnsObj.cevaplar[0] === "");
+                                        if (isBlank) bosCevaplar++;
+                                    }
 
                                     if (Array.isArray(pArr)) {
                                         // Check if any value is a special code string
@@ -778,6 +804,9 @@
                                             sPuan = pArr.reduce((a, b) => a + (Number(b) || 0), 0);
                                             sVal = sPuan.toString();
                                             toplamPuan += sPuan;
+                                            if (isTest && !isBlank) {
+                                                if (sPuan > 0) dogruCevaplar++; else yanlisCevaplar++;
+                                            }
                                         }
                                     } else if (typeof pArr === 'string') {
                                         // Handle legacy/buggy case where pArr is direct string "G"/"M"
@@ -793,11 +822,17 @@
                                                 sPuan = n;
                                                 sVal = n.toString();
                                                 toplamPuan += sPuan;
+                                                if (isTest && !isBlank) {
+                                                    if (sPuan > 0) dogruCevaplar++; else yanlisCevaplar++;
+                                                }
                                             } else {
                                                 sVal = pArr; // literal value
                                             }
                                         }
+                                    } else if (isTest && !isBlank) {
+                                        yanlisCevaplar++; // Answered but no points array means wrong/0
                                     }
+
                                     soruPuanlari.push(sVal);
                                 });
 
@@ -811,7 +846,28 @@
                                     toplamPuan = specialCodeVal;
                                 }
 
-                                csvContent += `${row.sinif || ""};${row.ogrenciNo};${row.adSoyad || ""};${toplamPuan}`;
+                                if (hasMCQ && !hasSpecialCode && (row.degerlendirme && row.degerlendirme.toplam !== "G")) {
+                                    // Calculate Net - average options count or strict per question
+                                    // Simplification: Assume all MCQs have same option count, or find the standard one.
+                                    // Default option count is 5, meaning penalty is 1/(5-1) = 0.25 (4 yanlis = 1 dogru)
+                                    // We will calculate exact net based on penalty
+                                    let penalSum = 0;
+                                    sorular.forEach((soru) => {
+                                        if (typeof soru === 'object' && soru.type === 'coktan_secmeli' && soru.secenekler && soru.secenekler.length > 1) {
+                                            penalSum += 1.0 / (soru.secenekler.length - 1);
+                                        }
+                                    });
+                                    // Average penalty per wrong answer for this study
+                                    const testQCount = sorular.filter(s => typeof s === 'object' && s.type === 'coktan_secmeli').length;
+                                    const avgPenalty = testQCount > 0 ? (penalSum / testQCount) : 0.25;
+
+                                    const netPuan = dogruCevaplar - (yanlisCevaplar * avgPenalty);
+                                    netPuanStr = `;${dogruCevaplar};${yanlisCevaplar};${bosCevaplar};${netPuan.toFixed(2).replace('.', ',')}`; // comma separator for Turkish excel
+                                } else if (hasMCQ) {
+                                    netPuanStr = `;${specialCodeVal || "-"};${specialCodeVal || "-"};${specialCodeVal || "-"};${specialCodeVal || "-"}`;
+                                }
+
+                                csvContent += `${row.sinif || ""};${row.ogrenciNo};${row.adSoyad || ""};${toplamPuan}${netPuanStr}`;
                                 soruPuanlari.forEach(p => csvContent += `;${p}`);
                                 csvContent += "\n";
                             });
@@ -999,13 +1055,90 @@
                 .then(res => res.json()).then(data => { if (data.status === "ok") { document.getElementById("arsivModal").style.display = "none"; listeyiYukle(); } });
         }
 
-        function soruEkle(val = "") {
+        function soruEkle(payload = "") {
             const div = document.createElement("div"); div.className = "soru-item";
-            div.innerHTML = `<span class="soru-no"></span><input type="text" style="flex:1; padding:10px;" value="${val}"><button onclick="this.parentElement.remove(); yenileSoruNumaralari();" class="action red" style="min-width:40px; padding:5px;">X</button>`;
-            document.getElementById("soruAlani").appendChild(div); yenileSoruNumaralari();
+            div.style.marginBottom = "15px"; div.style.padding = "10px"; div.style.border = "1px solid #ddd"; div.style.borderRadius = "8px"; div.style.background = "#fafafa";
+
+            let isTest = false;
+            let secenekler = ["", "", "", "", ""];
+            let dogruCevap = 0;
+            let soruMetni = "";
+            let uid = "q_" + Date.now() + Math.floor(Math.random() * 1000);
+
+            if (typeof payload === 'object') {
+                isTest = payload.type === 'coktan_secmeli';
+                soruMetni = payload.soru || "";
+                if (isTest) {
+                    secenekler = payload.secenekler || ["", "", "", "", ""];
+                    dogruCevap = payload.dogruCevap || 0;
+                }
+            } else {
+                // Determine structure based on checkbox if adding new
+                isTest = document.getElementById("chkCoktanSecmeli") && document.getElementById("chkCoktanSecmeli").checked;
+                soruMetni = payload;
+            }
+
+            let html = `<div style="display:flex; align-items:flex-start; margin-bottom:10px;">
+                <span class="soru-no" style="font-weight:bold; margin-right:10px; width:65px; margin-top:10px;"></span>
+                <textarea class="soru-input" style="flex:1; padding:10px; border-radius:6px; border:1px solid #ccc; resize:vertical; min-height:40px;" placeholder="Soru Metni">${soruMetni}</textarea>
+                <input type="hidden" class="soru-type" value="${isTest ? 'coktan_secmeli' : 'text'}">
+                <button onclick="this.parentElement.parentElement.remove(); yenileSoruNumaralari();" class="action red" style="min-width:40px; padding:8px; margin-left:10px;" title="Soruyu Sil">X</button>
+            </div>`;
+
+            if (isTest) {
+                let optionsHtml = `<div class="secenek-container" id="opts_${uid}" style="margin-left:75px; padding:10px; background:#fff; border:1px solid #eee; border-radius:6px;">`;
+                optionsHtml += `<div style="font-weight:bold; color:#512DA8; margin-bottom:10px; font-size:0.9rem;">Doğru cevabı işaretleyin:</div>`;
+                optionsHtml += `<div class="opts-list">`;
+
+                secenekler.forEach((sec, idx) => {
+                    const char = String.fromCharCode(65 + idx); // A, B, C...
+                    optionsHtml += `
+                    <div class="opt-row" style="display:flex; align-items:center; margin-bottom:8px;">
+                        <input type="radio" name="correct_${uid}" value="${idx}" class="opt-radio" ${idx === dogruCevap ? 'checked' : ''} style="margin-right:10px; transform:scale(1.2);">
+                        <span style="font-weight:bold; margin-right:5px; width:20px;">${char})</span>
+                        <input type="text" class="opt-text" value="${sec}" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;" placeholder="${char} seçeneği">
+                        ${idx > 1 ? `<button onclick="this.parentElement.remove();" class="action red" style="padding:2px 6px; font-size:10px; margin-left:5px; min-width:auto;" title="Seçeneği Sil">X</button>` : `<span style="width:25px; margin-left:5px;"></span>`}
+                    </div>`;
+                });
+                optionsHtml += `</div>`;
+                optionsHtml += `<button onclick="addOptionTo('${uid}')" class="action blue" style="padding:4px 10px; font-size:12px; margin-top:8px;">+ Seçenek Ekle</button>`;
+                optionsHtml += `</div>`;
+                html += optionsHtml;
+            }
+
+            div.innerHTML = html;
+            document.getElementById("soruAlani").appendChild(div);
+            yenileSoruNumaralari();
         }
         function yenileSoruNumaralari() {
             document.querySelectorAll("#soruAlani .soru-item").forEach((item, index) => { item.querySelector(".soru-no").textContent = (index + 1) + ". Soru:"; });
+        }
+
+        function addOptionTo(uid) {
+            const container = document.querySelector(`#opts_${uid} .opts-list`);
+            const count = container.querySelectorAll('.opt-row').length;
+            if (count >= 10) return alert("Maksimum 10 şık eklenebilir.");
+            const char = String.fromCharCode(65 + count);
+            const div = document.createElement('div');
+            div.className = "opt-row";
+            div.style.display = "flex"; div.style.alignItems = "center"; div.style.marginBottom = "8px";
+            div.innerHTML = `
+                <input type="radio" name="correct_${uid}" value="${count}" class="opt-radio" style="margin-right:10px; transform:scale(1.2);">
+                <span style="font-weight:bold; margin-right:5px; width:20px;">${char})</span>
+                <input type="text" class="opt-text" value="" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;" placeholder="${char} seçeneği">
+                <button onclick="this.parentElement.remove(); updateOptionLabels('${uid}');" class="action red" style="padding:2px 6px; font-size:10px; margin-left:5px; min-width:auto;">X</button>`;
+            container.appendChild(div);
+            updateOptionLabels(uid);
+        }
+
+        function updateOptionLabels(uid) {
+            const rows = document.querySelectorAll(`#opts_${uid} .opts-list .opt-row`);
+            rows.forEach((row, idx) => {
+                const char = String.fromCharCode(65 + idx);
+                row.querySelector('span').textContent = char + ")";
+                row.querySelector('.opt-radio').value = idx;
+                row.querySelector('.opt-text').placeholder = char + " seçeneği";
+            });
         }
 
         document.getElementById("btnSoruEkle").onclick = () => soruEkle();
@@ -1025,7 +1158,34 @@
             });
         };
         document.getElementById("btnKaydet").onclick = () => {
-            const v = { aciklama: document.getElementById("calismaAciklama").value, sorular: Array.from(document.querySelectorAll("#soruAlani input")).map(i => i.value).filter(x => x.trim()) };
+            const sorularArr = [];
+            document.querySelectorAll("#soruAlani .soru-item").forEach(item => {
+                const type = item.querySelector('.soru-type').value;
+                const soruMetni = item.querySelector('.soru-input').value.trim();
+                if (!soruMetni) return;
+
+                if (type === 'coktan_secmeli') {
+                    const secenekler = Array.from(item.querySelectorAll('.opt-text')).map(inp => inp.value).filter(v => v.trim() !== "");
+                    // Get the selected radio button for this specific question
+                    const radioName = item.querySelector('.opt-radio') ? item.querySelector('.opt-radio').name : null;
+                    const checkedRadio = radioName ? document.querySelector(`input[name="${radioName}"]:checked`) : null;
+                    const dogruCevap = checkedRadio ? parseInt(checkedRadio.value) : 0;
+
+                    sorularArr.push({
+                        type: 'coktan_secmeli',
+                        soru: soruMetni,
+                        secenekler: secenekler,
+                        dogruCevap: dogruCevap
+                    });
+                } else {
+                    sorularArr.push(soruMetni); // Legacy simple string format
+                }
+            });
+
+            const v = {
+                aciklama: document.getElementById("calismaAciklama").value,
+                sorular: sorularArr
+            };
             fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: seciliDosyaAdi.replace(".json", ""), sorular: v }) }).then(() => location.reload());
         };
         document.getElementById("btnSilDosya").onclick = () => { if (seciliDosyaAdi && confirm("Sil?")) fetch("/calismaSil", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: seciliDosyaAdi.replace(".json", "") }) }).then(() => listeyiYukle()); };
@@ -1665,6 +1825,31 @@
 
                 document.getElementById("degOgrenciBaslik").textContent = item.baslik;
                 this.anlikPuanlar = (item.kayit && item.kayit.puanlar) ? item.kayit.puanlar : {};
+
+                // --- AUTO-EVALUATE MULTIPLE CHOICE QUESTIONS ---
+                const rawAnswers = item.kayit.cevaplar || [];
+                // Handle different answer array structures
+                const normalizedAnswers = Array.isArray(rawAnswers) && rawAnswers.length > 0 && typeof rawAnswers[0] === 'object' && rawAnswers[0].cevaplar ? rawAnswers :
+                    (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
+
+                this.sorular.forEach((soru, sIdx) => {
+                    if (typeof soru === 'object' && soru.type === 'coktan_secmeli') {
+                        // Find student's answer for this specific question index
+                        const sAnsObj = normalizedAnswers.find(c => c.soruIndex === sIdx);
+                        if (sAnsObj && sAnsObj.cevaplar && sAnsObj.cevaplar.length > 0) {
+                            const studentAnsStr = sAnsObj.cevaplar[0];
+                            if (studentAnsStr !== undefined && studentAnsStr !== "") {
+                                if (!this.anlikPuanlar[sIdx]) this.anlikPuanlar[sIdx] = [];
+                                // If already manually evaluated, skip auto-grading for this attempt
+                                if (this.anlikPuanlar[sIdx][0] === undefined) {
+                                    const isCorrect = parseInt(studentAnsStr) === parseInt(soru.dogruCevap);
+                                    this.anlikPuanlar[sIdx][0] = isCorrect ? 1 : 0;
+                                }
+                            }
+                        }
+                    }
+                });
+
                 document.getElementById("degNormalPanel").style.display = "flex";
                 this.activeVeri = item.kayit;
                 this.sIdx = 0;
