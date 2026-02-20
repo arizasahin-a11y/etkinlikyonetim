@@ -1485,7 +1485,7 @@
                         <label style="cursor:pointer; color:#1976d2; font-weight:bold;" title="Sınav esnasında sekme değişimini engelle (Kopya Koruması)"><input type="checkbox" ${a.odakModu ? 'checked' : ''} onchange="s3Upd('${a.id}','odakModu',this.checked)"> Odak Modu</label>
                     </div>
                 </td>
-                <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>`;
+                <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
                 <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>
                 <td><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px" min="0"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px;">OK</button></td>
                 <td><span class="timer-text" id="t_${a.id}">${(!a.yapma && a.sure > 0) ? "BİTTİ" : "--:--"}</span></td>
@@ -1564,7 +1564,7 @@
                 if (!a.bitis) return;
 
                 const diff = a.bitis - Date.now();
-                if (diff > 0) { el.textContent = `${ Math.floor(diff / 60000).toString().padStart(2, '0') }:${ Math.floor((diff % 60000) / 1000).toString().padStart(2, '0') } `; }
+                if (diff > 0) { el.textContent = `${Math.floor(diff / 60000).toString().padStart(2, '0')}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')} `; }
                 else { el.textContent = "BİTTİ"; if (a.yapma) { a.yapma = false; s3Upd(a.id, 'yapma', false); } }
             });
         }, 1000);
@@ -1617,7 +1617,7 @@
             try {
                 const [dosyalar, rW] = await Promise.all([
                     (await fetch("/listeCalismalar")).json(),
-                    fetch(`/ calismaGetir ? isim = www_${ calisma } `).catch(() => null)
+                    fetch(`/ calismaGetir ? isim = www_${calisma} `).catch(() => null)
                 ]);
 
                 let wwwData = [];
@@ -1632,7 +1632,7 @@
                 sinifSel.innerHTML = '<option value="">-- Seç --</option>';
 
                 for (let f of atananlar) {
-                    const data = await (await fetch(`/ calismaGetir ? isim = ${ f.replace(".json", "") } `)).json();
+                    const data = await (await fetch(`/ calismaGetir ? isim = ${f.replace(".json", "")} `)).json();
                     if (data.sinif) {
                         const buSinifinTumCevaplari = wwwData.filter(r => r.sinif === data.sinif);
                         const buSinifinBitmisCevaplari = buSinifinTumCevaplari.filter(r => r.degerlendirme && r.degerlendirme.bitti);
@@ -1706,7 +1706,7 @@
                 this.seciliSinif = document.getElementById("s4SinifSec").value.replace(" (Bitti)", "");
                 if (!this.seciliCalisma || !this.seciliSinif) return alert("Seçim yapın.");
                 try {
-                    const rW = await fetch(`/ calismaGetir ? isim = www_${ this.seciliCalisma } `);
+                    const rW = await fetch(`/ calismaGetir ? isim = www_${this.seciliCalisma} `);
                     if (!rW.ok) throw new Error("Dosya Yok");
                     const tumCevaplar = await rW.json();
                     const sinifKaydiVarMi = tumCevaplar.some(x => x.sinif === this.seciliSinif);
@@ -1734,22 +1734,22 @@
                 } catch (e) { alert("Şu an bu Çalışmayı Değerlendiremezsiniz (Kayıt yok veya Hata)."); return; }
 
                 const qName = "qqq" + this.seciliSinif.replace(/\s/g, '') + this.seciliCalisma;
-                const dQ = await (await fetch(`/ calismaGetir ? isim = ${ qName } `)).json();
+                const dQ = await (await fetch(`/ calismaGetir ? isim = ${qName} `)).json();
                 document.getElementById("degSecimPaneli").style.display = "none"; document.getElementById("degerlendirmeContainer").style.display = "block";
                 document.getElementById("degBilgiUst").textContent = this.seciliCalisma;
-                this.sorular = (await (await fetch(`/ calismaGetir ? isim = qwx${ this.seciliCalisma } `)).json()).sorular || [];
-                const cevaplarVerisi = await (await fetch(`/ calismaGetir ? isim = www_${ this.seciliCalisma } `)).json();
+                this.sorular = (await (await fetch(`/ calismaGetir ? isim = qwx${this.seciliCalisma} `)).json()).sorular || [];
+                const cevaplarVerisi = await (await fetch(`/ calismaGetir ? isim = www_${this.seciliCalisma} `)).json();
                 this.kuyruk = [];
 
                 if (dQ.yontem === "Grup") {
-                    const gruplar = await (await fetch(`/ grupListesiGetir ? sinif = ${ encodeURIComponent(this.seciliSinif) }& calisma=${ encodeURIComponent(this.seciliCalisma) } `)).json();
+                    const gruplar = await (await fetch(`/ grupListesiGetir ? sinif = ${encodeURIComponent(this.seciliSinif)}& calisma=${encodeURIComponent(this.seciliCalisma)} `)).json();
                     gruplar.forEach((grp, idx) => {
                         const kayit = cevaplarVerisi.find(tv => grp.some(u => String(tv.ogrenciNo) === String(u["Okul Numaranız"])));
                         if (kayit && kayit.degerlendirme && kayit.degerlendirme.bitti) return;
 
                         // Cevap olmasa bile listeye ekle (Sıfırlandıktan sonra erişim için)
                         const safeKayit = kayit || { ogrenciNo: grp[0]["Okul Numaranız"], cevaplar: [], puanlar: {} };
-                        this.kuyruk.push({ baslik: `${ this.seciliSinif } - ${ idx + 1 }.GRUP`, kayit: safeKayit, katilmadi: false, members: grp.map(u => String(u["Okul Numaranız"])) });
+                        this.kuyruk.push({ baslik: `${this.seciliSinif} - ${idx + 1}.GRUP`, kayit: safeKayit, katilmadi: false, members: grp.map(u => String(u["Okul Numaranız"])) });
                     });
                 } else {
                     globalData.filter(u => u["Sınıfınız"] === this.seciliSinif).forEach(ogr => {
@@ -1778,7 +1778,7 @@
                             };
                         }
 
-                        this.kuyruk.push({ baslik: `${ no } - ${ ogr["Adınız Soyadınız"] } `, kayit: safeKayit, katilmadi: false, members: [no] });
+                        this.kuyruk.push({ baslik: `${no} - ${ogr["Adınız Soyadınız"]} `, kayit: safeKayit, katilmadi: false, members: [no] });
                     });
                 }
                 this.kuyrukIndex = 0;
@@ -1797,7 +1797,7 @@
 
                 try {
                     // 1. Mevcut cevapları çek
-                    const res = await fetch(`/ calismaGetir ? isim = www_${ calisma } `);
+                    const res = await fetch(`/ calismaGetir ? isim = www_${calisma} `);
                     const data = await res.json();
 
                     const promises = [];
@@ -1850,7 +1850,7 @@
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                dosyaAdi: `www_${ this.seciliCalisma } `,
+                                dosyaAdi: `www_${this.seciliCalisma} `,
                                 ogrenciNo: ogrNo,
                                 sinif: this.seciliSinif,
                                 puan: "G" // Server bunu 'evaluation' içine 'toplam: "G"' olarak kaydedecek şekilde güncellenmeli veya server zaten toplam'ı alıyor mu?
@@ -1959,7 +1959,7 @@
                         h += `< div style = "${optStyle}" >
                             <strong style="margin-right:15px; font-size:1.1rem; color:#555;">${char})</strong>
                             <span style="flex:1; font-size:1rem; color:#333;">${sec}</span>
-                            ${ isSelected ? `<span style="font-size:0.8rem; font-weight:bold; color:white; background:${Number(p) === 1 ? '#4CAF50' : '#F44336'}; padding:3px 8px; border-radius:12px; margin-left:10px;">Öğrenci Seçimi</span>` : '' }
+                            ${isSelected ? `<span style="font-size:0.8rem; font-weight:bold; color:white; background:${Number(p) === 1 ? '#4CAF50' : '#F44336'}; padding:3px 8px; border-radius:12px; margin-left:10px;">Öğrenci Seçimi</span>` : ''}
                         </div > `;
                     });
                     h += `</div > `;
@@ -2018,7 +2018,7 @@
                             if (cevaplar) {
                                 cevaplar.forEach((p, cIx) => {
                                     if (p !== undefined && p !== null) {
-                                        puanPromises.push(fetch("/puanKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${ this.seciliCalisma } `, ogrenciNo: ogrNo, sinif: this.seciliSinif, soruIndex: parseInt(sIx), cevapIndex: cIx, puan: p }) }));
+                                        puanPromises.push(fetch("/puanKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma} `, ogrenciNo: ogrNo, sinif: this.seciliSinif, soruIndex: parseInt(sIx), cevapIndex: cIx, puan: p }) }));
                                     }
                                 });
                             }
@@ -2029,7 +2029,7 @@
                     const bitirPromises = [];
                     for (const ogrNo of item.members) {
                         // Toplam puanı gönder
-                        bitirPromises.push(fetch("/degerlendirmeBitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${ this.seciliCalisma }`, ogrenciNo: ogrNo, sinif: this.seciliSinif, toplam: toplamPuan }) }));
+                        bitirPromises.push(fetch("/degerlendirmeBitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif, toplam: toplamPuan }) }));
                     }
                     await Promise.all(bitirPromises);
                 }
