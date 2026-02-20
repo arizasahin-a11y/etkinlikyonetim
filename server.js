@@ -695,7 +695,7 @@ app.post("/kaydet", async (req, res) => {
 
             // Önce mevcut kaydı kontrol et
             const existingRes = await query(
-              "SELECT answers FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
+              "SELECT answers, evaluation FROM student_evaluations WHERE study_id = $1 AND student_school_no = $2",
               [studyId, studentNo]
             );
 
@@ -706,10 +706,6 @@ app.post("/kaydet", async (req, res) => {
               let pIdx = 1;
 
               if (answersJson !== null) {
-                // Remove strict ::jsonb cast on param to be safe, but cast column to jsonb for merge if needed?
-                // Actually, simply overwriting answers is safer if we sending full list.
-                // But for OA and Eval, we MUST merge.
-                // Let's stick to overwrite for answers (users re-save all answers usually)
                 updateFields.push(`answers = $${pIdx++}::jsonb`);
                 updateParams.push(answersJson);
               }
@@ -720,8 +716,19 @@ app.post("/kaydet", async (req, res) => {
               }
 
               if (item.degerlendirme !== undefined) {
+                const existingEval = existingRes.rows[0].evaluation || {};
+
+                // KORUMA MANTIĞI: Eğer veritabanında sınav BİTMİŞ olarak işaretliyse (örneğin odak modu veya süre bitimi),
+                // öğrenci istemcisinden gelen gecikmeli bir "bitti: false" isteğinin bunu ezmesini engelle!
+                if (existingEval.bitti === true) {
+                  item.degerlendirme.bitti = true;
+                  // Eğer veritabanında "Odak Koptu" gibi özel bir uyarı varsa ve yeni gelen veride yoksa, eskisini koru
+                  if (existingEval.OA && (!item.degerlendirme.OA || !item.degerlendirme.OA.includes("Odak Koptu"))) {
+                    item.degerlendirme.OA = existingEval.OA;
+                  }
+                }
+
                 // SAFE MERGE for Evaluation (OA is here)
-                // COALESCE(evaluation, '{}') || $N
                 updateFields.push(`evaluation = COALESCE(evaluation::jsonb, '{}'::jsonb) || $${pIdx++}::jsonb`);
                 updateParams.push(JSON.stringify(item.degerlendirme));
               }
