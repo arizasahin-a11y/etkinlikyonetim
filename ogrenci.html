@@ -1504,7 +1504,14 @@
         }
 
         const visibilityListener = () => { if (document.hidden) odakModuIhlal(); };
-        const blurListener = () => { odakModuIhlal(); };
+        const blurListener = () => {
+            // Add a small delay to prevent false positives (e.g., clicking an input or iframe inside the page)
+            setTimeout(() => {
+                if (!document.hasFocus() || document.hidden) {
+                    odakModuIhlal();
+                }
+            }, 200);
+        };
 
         function odakModuAktiflestir() {
             if (odakModuAktif) return;

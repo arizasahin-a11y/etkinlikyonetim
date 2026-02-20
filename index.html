@@ -1482,12 +1482,16 @@
                     </div>
                     <div>
                         <label style="margin-right:10px; cursor:pointer; color:#d32f2f; font-weight:bold;" title="Öğrenci sorulara çalışırken soruların sırasını karıştır"><input type="checkbox" ${a.karisikSoru ? 'checked' : ''} onchange="s3Upd('${a.id}','karisikSoru',this.checked)"> Karışık</label>
-                        <label style="cursor:pointer; color:#1976d2; font-weight:bold;" title="Sınav esnasında sekme değişimini engelle (Kopya Koruması)"><input type="checkbox" ${a.odakModu ? 'checked' : ''} onchange="s3Upd('${a.id}','odakModu',this.checked)"> Odak Modu</label>
                     </div>
                 </td>
-                <td><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"></td>
+                <td style="white-space:nowrap;">
+                    <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
+                        <label style="cursor:pointer;" title="Öğrencinin çalışmayı yapmasına izin ver"><input type="checkbox" id="chk_${a.id}" ${a.yapma ? 'checked' : ''} onchange="s3Upd('${a.id}','yapma',this.checked)"> İzin</label>
+                        <label style="cursor:pointer; color:#1976d2; font-size:0.85em; font-weight:bold; background:#e3f2fd; padding:3px 6px; border-radius:4px;" title="Sınav esnasında sekme değişimini engelle (Kopya Koruması)"><input type="checkbox" ${a.odakModu ? 'checked' : ''} onchange="s3Upd('${a.id}','odakModu',this.checked)"> Odak</label>
+                    </div>
+                </td>
                 <td><input type="checkbox" ${a.degerl ? 'checked' : ''} onchange="s3Upd('${a.id}','degerl',this.checked)"></td>
-                <td><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px" min="0"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px;">OK</button></td>
+                <td style="white-space:nowrap;"><input type="number" id="inp_${a.id}" value="${a.sure || 0}" style="width:40px" min="0"><button onclick="s3Start('${a.id}')" class="action blue" style="min-width:auto; padding:5px; margin-left:2px;">OK</button></td>
                 <td><span class="timer-text" id="t_${a.id}">${(!a.yapma && a.sure > 0) ? "BİTTİ" : "--:--"}</span></td>
                 <td><button onclick="s3Del('${a.id}')" class="action red" style="min-width:auto; padding:5px;">Sil</button></td>`;
                 b.appendChild(tr);
