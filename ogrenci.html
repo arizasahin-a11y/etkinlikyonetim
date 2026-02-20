@@ -1303,7 +1303,14 @@
                                     if (pVal === 1) cls = "cevap-dogru";
                                     else if (pVal === 0) cls = "cevap-yanlis";
                                 }
-                                return `<div class="cevap-alt ${cls}">${linkleriDonustur(val)}</div>`;
+                                let textToShow = linkleriDonustur(val);
+                                if (typeof s === 'object' && s.type === 'coktan_secmeli' && s.secenekler) {
+                                    const optIdx = parseInt(val);
+                                    if (!isNaN(optIdx) && optIdx >= 0 && optIdx < s.secenekler.length) {
+                                        textToShow = "<strong>" + String.fromCharCode(65 + optIdx) + ")</strong> " + linkleriDonustur(s.secenekler[optIdx]);
+                                    }
+                                }
+                                return `<div class="cevap-alt ${cls}">${textToShow}</div>`;
                             }).join('');
                         }
 
@@ -1503,15 +1510,42 @@
             const oIdx = (sorular[sIdx] && sorular[sIdx].originalIndex !== undefined) ? sorular[sIdx].originalIndex : sIdx;
             const kayit = cevaplar.find(c => Number(c.soruIndex) === Number(oIdx));
             const satirlar = (kayit && kayit.cevaplar.length > 0) ? kayit.cevaplar : [""];
-            if (full) {
-                satirlar.forEach(v => yeniSatirEkle(v));
-                const ilk = cont.querySelector('textarea'); if (ilk) ilk.focus();
-            } else {
-                const inps = cont.querySelectorAll('textarea');
-                if (inps.length === satirlar.length) {
-                    inps.forEach((inp, i) => { if (document.activeElement !== inp) inp.value = satirlar[i]; });
+            const isMCQ = (sorular[sIdx] && sorular[sIdx].type === 'coktan_secmeli');
+
+            const btnYeniSatir = document.querySelector('button[onclick="yeniSatirEkle(\'\')"]');
+            if (btnYeniSatir) btnYeniSatir.style.display = isMCQ ? 'none' : 'block';
+
+            if (isMCQ) {
+                if (full || cont.querySelectorAll('input[type="radio"]').length === 0) {
+                    const secenekler = sorular[sIdx].secenekler || [];
+                    let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
+                    secenekler.forEach((secenek, i) => {
+                        const optLetter = String.fromCharCode(65 + i);
+                        const isChecked = (satirlar[0] === String(i)) ? 'checked' : '';
+                        html += `
+                        <label style="display:flex; align-items:center; padding:12px; background:#f9f9f9; border:1px solid #ddd; border-radius:6px; cursor:pointer; color:#333;">
+                            <input type="radio" onchange="kaydet()" name="mcq_answer" value="${i}" ${isChecked} style="margin-right:10px; transform:scale(1.2);">
+                            <strong style="margin-right:8px;">${optLetter})</strong> 
+                            <span style="flex:1;">${linkleriDonustur(secenek)}</span>
+                        </label>`;
+                    });
+                    html += `</div>`;
+                    cont.innerHTML = html;
                 } else {
+                    const radios = cont.querySelectorAll('input[type="radio"]');
+                    radios.forEach(r => { r.checked = (r.value === satirlar[0]); });
+                }
+            } else {
+                if (full || cont.querySelectorAll('textarea').length === 0) {
                     cont.innerHTML = ""; satirlar.forEach(v => yeniSatirEkle(v));
+                    const ilk = cont.querySelector('textarea'); if (ilk) ilk.focus();
+                } else {
+                    const inps = cont.querySelectorAll('textarea');
+                    if (inps.length === satirlar.length) {
+                        inps.forEach((inp, i) => { if (document.activeElement !== inp) inp.value = satirlar[i]; });
+                    } else {
+                        cont.innerHTML = ""; satirlar.forEach(v => yeniSatirEkle(v));
+                    }
                 }
             }
         }
@@ -1530,8 +1564,16 @@
 
         async function kaydet() {
             if (document.getElementById('p_soru').style.display === "block") {
-                const vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
-                const oIdx = (sorular[sIdx] && sorular[sIdx].originalIndex !== undefined) ? sorular[sIdx].originalIndex : sIdx;
+                const s = sorular[sIdx];
+                const isMCQ = (s && s.type === 'coktan_secmeli');
+                let vals = [];
+                if (isMCQ) {
+                    const checkedOption = document.querySelector('#s_inputs input[type="radio"]:checked');
+                    if (checkedOption) vals = [checkedOption.value];
+                } else {
+                    vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
+                }
+                const oIdx = (s && s.originalIndex !== undefined) ? s.originalIndex : sIdx;
                 const idx = cevaplar.findIndex(c => c.soruIndex === oIdx);
                 if (idx > -1) cevaplar[idx] = { soruIndex: oIdx, cevaplar: vals };
                 else cevaplar.push({ soruIndex: oIdx, cevaplar: vals });
@@ -1661,7 +1703,14 @@
                         if (degBitti && soruPuanlar && soruPuanlar[cIdx] !== undefined) {
                             cls = (Number(soruPuanlar[cIdx]) === 1) ? "cevap-dogru" : "cevap-yanlis";
                         }
-                        return `<span class="cevap-alt ${cls}">${linkleriDonustur(x)}</span>`;
+                        let textToShow = linkleriDonustur(x);
+                        if (typeof s === 'object' && s.type === 'coktan_secmeli' && s.secenekler) {
+                            const optIdx = parseInt(x);
+                            if (!isNaN(optIdx) && optIdx >= 0 && optIdx < s.secenekler.length) {
+                                textToShow = "<strong>" + String.fromCharCode(65 + optIdx) + ")</strong> " + linkleriDonustur(s.secenekler[optIdx]);
+                            }
+                        }
+                        return `<span class="cevap-alt ${cls}">${textToShow}</span>`;
                     }).join('');
                 } else {
                     cvs = `<span class="cevap-alt cevap-bos">BOŞ</span>`;
