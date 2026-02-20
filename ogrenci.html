@@ -1452,6 +1452,74 @@
             }
         }
 
+        // --- ODAK MODU (FOCUS MODE) KORUMASI ---
+        let odakModuAktif = false;
+
+        async function odakModuIhlal() {
+            if (!odakModuAktif || !atan || !atan.yapma) return;
+
+            // 1. Korumayı kapat (tekrarlamasını önle)
+            odakModuKapat();
+
+            // 2. Sınavı sonlandır
+            atan.yapma = false; // Disable locally to block UI
+
+            if (!benimKaydim) benimKaydim = {};
+            if (!benimKaydim.degerlendirme) benimKaydim.degerlendirme = {};
+
+            // Set 0 Score logic / OA tag
+            benimKaydim.degerlendirme.bitti = true;
+            benimKaydim.degerlendirme.OA = "Çalıştı (Odak Koptu)";
+
+            // 3. Sunucuya anında kaydet
+            const payload = {
+                dosyaAdi: `www_${atan.calisma}`,
+                veri: {
+                    ogrenciNo: sess.no,
+                    adSoyad: sess.ad,
+                    sinif: sess.sinif,
+                    cevaplar: (cevaplar && cevaplar.length > 0) ? cevaplar : undefined,
+                    girisSayisi: girisSayisi,
+                    tarih: new Date().toLocaleString(),
+                    degerlendirme: benimKaydim.degerlendirme
+                }
+            };
+
+            try {
+                await fetch("/kaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            } catch (e) { console.error("Odak ihlali kaydedilemedi", e); }
+
+            // 4. Ekrana kilit mesajı bas
+            document.body.innerHTML = `
+                <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background-color:#ffebee; color:#c62828; font-family:sans-serif; text-align:center; padding:20px;">
+                    <h1 style="font-size:3rem; margin-bottom:20px;">🚫 SINAV İPTAL EDİLDİ 🚫</h1>
+                    <p style="font-size:1.5rem; max-width:600px; line-height:1.5;">
+                        Sınav ekranından çıktığınız veya başka bir sekmeye/uygulamaya geçtiğiniz için sistem tarafından kopya girişimi algılandı.<br><br>
+                        <b>Sınavınız sonlandırıldı ve puanınız 0 olarak belirlendi.</b><br><br>
+                        Lütfen öğretmeninizle iletişime geçiniz.
+                    </p>
+                    <button onclick="location.reload()" style="margin-top:30px; padding:15px 30px; font-size:1.2rem; background:#c62828; color:white; border:none; border-radius:8px; cursor:pointer;">Ana Sayfaya Dön</button>
+                </div>
+            `;
+        }
+
+        const visibilityListener = () => { if (document.hidden) odakModuIhlal(); };
+        const blurListener = () => { odakModuIhlal(); };
+
+        function odakModuAktiflestir() {
+            if (odakModuAktif) return;
+            odakModuAktif = true;
+            document.addEventListener("visibilitychange", visibilityListener);
+            window.addEventListener("blur", blurListener);
+        }
+
+        function odakModuKapat() {
+            if (!odakModuAktif) return;
+            odakModuAktif = false;
+            document.removeEventListener("visibilitychange", visibilityListener);
+            window.removeEventListener("blur", blurListener);
+        }
+
         function durumYonetimi() {
             let sureBitti = false;
 
@@ -1525,6 +1593,11 @@
                 if (container) container.style.marginTop = '20px'; // Remove header compensation
                 if (footer) footer.style.display = 'none';
 
+                // --- ODAK MODU AKTİFLEŞTİR ---
+                if (atan && atan.odakModu && atan.yapma) {
+                    odakModuAktiflestir();
+                }
+
                 // Populate Question Page Header
                 let baslikHtml = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">`;
 
@@ -1553,6 +1626,9 @@
                 if (sHeader) sHeader.innerHTML = baslikHtml;
 
             } else {
+                // --- ODAK MODU KAPAT ---
+                odakModuKapat();
+
                 if (header) header.style.display = 'flex';
                 if (container) container.style.marginTop = '80px';
                 if (footer) footer.style.display = 'block';
