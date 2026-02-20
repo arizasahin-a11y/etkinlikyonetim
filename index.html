@@ -1078,18 +1078,14 @@
                 soruMetni = payload;
             }
 
-            let html = `<div style="display:flex; align-items:flex-start; margin-bottom:10px;">
-                <span class="soru-no" style="font-weight:bold; margin-right:15px; width:70px; margin-top:12px; font-size:1.1rem; color:#333;"></span>
-                <textarea class="soru-input" style="flex:1; padding:15px; border-radius:8px; border:1px solid #ccc; resize:vertical; min-height:80px; font-size:1.05rem; box-sizing:border-box; box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);" placeholder="Soru Metni">${soruMetni}</textarea>
-                <input type="hidden" class="soru-type" value="${isTest ? 'coktan_secmeli' : 'text'}">
-                <button onclick="this.parentElement.parentElement.remove(); yenileSoruNumaralari();" class="action red" style="min-width:44px; padding:12px; margin-left:15px; border-radius:6px; flex-shrink:0;" title="Soruyu Sil">X</button>
-            </div>`;
+            let html = `<div style="display:flex; align-items:flex-start; margin-bottom:15px; padding-bottom:15px; border-bottom:1px dashed #ddd;">
+                <span class="soru-no" style="font-weight:bold; margin-right:15px; width:60px; margin-top:12px; font-size:1.1rem; color:#333; flex-shrink:0;"></span>
+                <div class="soru-content" style="flex:1; display:flex; flex-direction:column; gap:10px;">
+                    <textarea class="soru-input" style="width:100%; padding:15px; border-radius:8px; border:1px solid #ccc; resize:vertical; min-height:80px; font-size:1.05rem; box-sizing:border-box; box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);" placeholder="Soru Metni">${soruMetni}</textarea>
+                    <input type="hidden" class="soru-type" value="${isTest ? 'coktan_secmeli' : 'text'}">`;
 
             if (isTest) {
-                // To perfectly align with flex:1 textarea:
-                // Left margin = Soru-no width (70px) + margin-right (15px) = 85px
-                // Right margin = Delete btn width (44px + pad/bord approx) ~ 44px + margin-left (15px) = 59px. We will use 59px.
-                let optionsHtml = `<div class="secenek-container" id="opts_${uid}" style="margin-left:85px; margin-right:59px; padding:15px 20px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px;">`;
+                let optionsHtml = `<div class="secenek-container" id="opts_${uid}" style="width:100%; padding:15px 20px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px; box-sizing:border-box;">`;
                 optionsHtml += `<div style="font-weight:bold; color:#512DA8; margin-bottom:12px; font-size:0.95rem;">Doğru cevabı işaretleyin:</div>`;
                 optionsHtml += `<div class="opts-list">`;
 
@@ -1109,12 +1105,21 @@
                 html += optionsHtml;
             }
 
+            html += `</div>
+                <button onclick="this.parentElement.remove(); yenileSoruNumaralari();" class="action red" style="min-width:44px; padding:12px; margin-left:15px; border-radius:6px; flex-shrink:0;" title="Soruyu Sil">X</button>
+            </div>`;
+
             div.innerHTML = html;
+            // The previous code had div.style.padding etc. Remove it so we rely on the internal flex.
+            div.style.padding = "0";
+            div.style.border = "none";
+            div.style.background = "transparent";
+
             document.getElementById("soruAlani").appendChild(div);
             yenileSoruNumaralari();
         }
         function yenileSoruNumaralari() {
-            document.querySelectorAll("#soruAlani .soru-item").forEach((item, index) => { item.querySelector(".soru-no").textContent = (index + 1) + ". Soru:"; });
+            document.querySelectorAll("#soruAlani .soru-item").forEach((item, index) => { item.querySelector(".soru-no").textContent = (index + 1) + "."; });
         }
 
         function addOptionTo(uid) {
