@@ -351,12 +351,30 @@
         function guncelleToplamPuan() {
             let t = 0;
             if (State.anlikPuanlar) {
-                Object.values(State.anlikPuanlar).forEach(arr => {
-                    if (Array.isArray(arr)) arr.forEach(p => { if (Number(p) === 1) t++; });
+                Object.entries(State.anlikPuanlar).forEach(([sIdx, arr]) => {
+                    const soru = State.sorular[sIdx];
+                    const isMCQ = (typeof soru === 'object' && soru.type === 'coktan_secmeli');
+
+                    if (Array.isArray(arr)) {
+                        if (isMCQ) {
+                            const p = arr[0];
+                            if (Number(p) === 1) {
+                                t += 1;
+                            } else if (Number(p) === 0) {
+                                const secenekSayisi = (soru.secenekler || []).length;
+                                if (secenekSayisi > 1) {
+                                    t -= 1 / (secenekSayisi - 1);
+                                }
+                            }
+                        } else {
+                            arr.forEach(p => { if (Number(p) === 1) t++; });
+                        }
+                    }
                 });
             }
-            document.getElementById('h_puan').textContent = t;
-            document.getElementById('sonuc_puan_goster').textContent = t;
+            const scoreDisp = Math.max(0, t).toFixed(2).replace(/\.00$/, "");
+            document.getElementById('h_puan').textContent = scoreDisp;
+            document.getElementById('sonuc_puan_goster').textContent = scoreDisp;
         }
 
         const App = {
@@ -527,7 +545,7 @@
                 if (yeni >= 0 && yeni < State.sorular.length) { State.sIdx = yeni; App.renderSoru(); }
             },
             bitir: async () => {
-                const toplamPuan = parseInt(document.getElementById('h_puan').textContent) || 0;
+                const toplamPuan = parseFloat(document.getElementById('h_puan').textContent) || 0;
 
                 let targetMembers = [];
                 // Eğer öğretmen modundaysa ve kuyruk varsa
@@ -648,11 +666,29 @@
                 const pEl = document.getElementById("bitis_puan");
                 if (pEl) {
                     let toplam = 0;
-                    Object.values(State.activeVeri.puanlar || {}).forEach(arr => {
-                        if (Array.isArray(arr)) arr.forEach(p => { if (Number(p) === 1) toplam++; });
+                    Object.entries(State.activeVeri.puanlar || {}).forEach(([sIdx, arr]) => {
+                        const soru = State.sorular[sIdx];
+                        const isMCQ = (typeof soru === 'object' && soru.type === 'coktan_secmeli');
+
+                        if (Array.isArray(arr)) {
+                            if (isMCQ) {
+                                const p = arr[0];
+                                if (Number(p) === 1) {
+                                    toplam += 1;
+                                } else if (Number(p) === 0) {
+                                    const secenekSayisi = (soru.secenekler || []).length;
+                                    if (secenekSayisi > 1) {
+                                        toplam -= 1 / (secenekSayisi - 1);
+                                    }
+                                }
+                            } else {
+                                arr.forEach(p => { if (Number(p) === 1) toplam++; });
+                            }
+                        }
                     });
-                    pEl.textContent = toplam;
-                    document.getElementById('sonuc_puan_goster').textContent = toplam;
+                    const finalScore = Math.max(0, toplam).toFixed(2).replace(/\.00$/, "");
+                    pEl.textContent = finalScore;
+                    document.getElementById('sonuc_puan_goster').textContent = finalScore;
                 }
             }
         };
