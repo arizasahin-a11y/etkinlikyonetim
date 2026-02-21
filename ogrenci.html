@@ -1029,7 +1029,32 @@
             if (yokMsg) yokMsg.style.display = "none";
 
             let h = "";
-            atanlar.forEach((a) => {
+            const sortedAtanlar = [...atanlar].sort((a, b) => {
+                const getPriority = (x) => {
+                    const hasGranular = (typeof x.aciklamaIzni === 'boolean' || typeof x.soruIzni === 'boolean');
+                    const permAciklama = hasGranular ? (x.aciklamaIzni === true) : (x.gorme === true);
+                    const permSoru = hasGranular ? (x.soruIzni === true) : (x.gorme === true);
+                    const isActive = (x.yapma === true && (!x.bitis || (x.bitis - Date.now() > 0)));
+                    const isEvalDone = (x.myRecord && x.myRecord.degerlendirme && x.myRecord.degerlendirme.bitti === true);
+                    const isFinished = (x.bitis && (x.bitis - Date.now() <= 0));
+
+                    if (isActive) return 1;
+                    if (permAciklama || permSoru) {
+                        if (isEvalDone || isFinished) return 3;
+                        return 2;
+                    }
+                    return 3;
+                };
+
+                const pA = getPriority(a);
+                const pB = getPriority(b);
+
+                if (pA !== pB) return pA - pB;
+                // Alphabetical sort within same priority
+                return (a.calisma || "").localeCompare(b.calisma || "", "tr-TR");
+            });
+
+            sortedAtanlar.forEach((a) => {
                 let status = "Beklemede";
                 let badgeClass = "bs-wait";
 

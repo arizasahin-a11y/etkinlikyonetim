@@ -638,8 +638,10 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Sınıf</th>
-                        <th>Çalışma Adı</th>
+                        <th onclick="toggleS3Sort('sinif')" style="cursor:pointer;" title="Sınıfa göre sırala">Sınıf ↕
+                        </th>
+                        <th onclick="toggleS3Sort('calisma')" style="cursor:pointer;" title="Çalışmaya göre sırala">
+                            Çalışma Adı ↕</th>
                         <th>Yöntem</th>
                         <th>Görme</th>
                         <th>Yapma</th>
@@ -958,6 +960,7 @@
 
     <script>
         let globalData, secilenSinif, seciliDosyaAdi = "", aktifAtamalar = [];
+        let s3SortKey = 'id', s3SortDir = 1;
 
         function linkleriDonustur(text) {
             if (!text) return "";
@@ -1485,9 +1488,22 @@
                 setTimeout(s3AtamalariCek, 300);
             });
         };
+        function toggleS3Sort(key) {
+            if (s3SortKey === key) s3SortDir *= -1;
+            else { s3SortKey = key; s3SortDir = 1; }
+            s3TabloCiz();
+        }
         function s3TabloCiz() {
             const b = document.getElementById("atamaBody"); b.innerHTML = "";
-            aktifAtamalar.sort((a, b) => a.id.localeCompare(b.id)).forEach(a => {
+            aktifAtamalar.sort((a, b) => {
+                let valA = a[s3SortKey] || "";
+                let valB = b[s3SortKey] || "";
+                if (typeof valA === 'string') valA = valA.toLocaleLowerCase("tr-TR");
+                if (typeof valB === 'string') valB = valB.toLocaleLowerCase("tr-TR");
+                if (valA < valB) return -1 * s3SortDir;
+                if (valA > valB) return 1 * s3SortDir;
+                return 0;
+            }).forEach(a => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `<td>${a.sinif}</td><td>${a.calisma}</td><td><b>${a.yontem}</b></td>
                 <td style="font-size:0.85em; white-space:nowrap;">

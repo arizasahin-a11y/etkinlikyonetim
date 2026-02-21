@@ -1094,7 +1094,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
       SELECT a.*, s.name as study_name 
       FROM study_assignments a 
       JOIN studies s ON a.study_id = s.id 
-      WHERE a.class_name = $1
+      WHERE a.class_name = $1 AND s.is_archived = FALSE
     `, [sinif]);
 
     const assignments = assignmentsRes.rows;
