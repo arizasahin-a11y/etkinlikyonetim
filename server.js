@@ -247,11 +247,12 @@ app.post("/degerlendirmeBitir", async (req, res) => {
     const evaluation = { toplam: toplam, degerlendirildi: (typeof bodyDegerlendirildi !== 'undefined' ? bodyDegerlendirildi : true) };
     const evaluationJson = JSON.stringify(evaluation);
 
-    // If puanlar (batched scores) provided, update scores too
+    // If puanlar (batch scores) provided, update scores too to prevent UI lag
     if (puanlar) {
+      const scoresJson = JSON.stringify(puanlar);
       await query(
         "UPDATE student_evaluations SET evaluation = COALESCE(evaluation, '{}'::jsonb) || $1::jsonb, scores = $2::jsonb WHERE study_id = $3 AND student_school_no = $4",
-        [evaluationJson, JSON.stringify(puanlar), studyId, String(ogrenciNo)]
+        [evaluationJson, scoresJson, studyId, String(ogrenciNo)]
       );
     } else {
       await query(

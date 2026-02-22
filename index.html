@@ -749,7 +749,8 @@
                             cevaplar.sort((a, b) => (a.sinif || "").localeCompare(b.sinif || ""));
 
                             cevaplar.forEach(row => {
-                                let toplamPuan = 0;
+                                let numericSum = 0;
+                                let toplamPuan = "G"; // Final display variable
                                 let dogruCevaplar = 0;
                                 let yanlisCevaplar = 0;
                                 let bosCevaplar = 0;
@@ -819,12 +820,26 @@
                                             specialCodeVal = rawVal;
                                         } else {
                                             // Normal numeric sum
-                                            sPuan = pArr.reduce((a, b) => a + (Number(b) || 0), 0);
-                                            sVal = sPuan.toString();
-                                            toplamPuan += sPuan;
-                                            if (isTest && !isBlank) {
-                                                if (sPuan > 0) dogruCevaplar++; else yanlisCevaplar++;
+                                            let rawPuan = pArr.reduce((a, b) => a + (Number(b) || 0), 0);
+
+                                            if (isTest) {
+                                                if (isBlank) {
+                                                    sPuan = 0;
+                                                } else if (rawPuan > 0) {
+                                                    sPuan = 1;
+                                                    dogruCevaplar++;
+                                                } else {
+                                                    // NET PENALTY: Apply 1/(N-1) deduction
+                                                    const secenekSayisi = (soru.secenekler || []).length;
+                                                    sPuan = (secenekSayisi > 1) ? -(1 / (secenekSayisi - 1)) : 0;
+                                                    yanlisCevaplar++;
+                                                }
+                                            } else {
+                                                sPuan = rawPuan;
                                             }
+
+                                            sVal = sPuan.toFixed(2).replace('.', ',').replace(/,00$/, "");
+                                            numericSum += sPuan;
                                         }
                                     } else if (typeof pArr === 'string') {
                                         // Handle legacy/buggy case where pArr is direct string "G"/"M"
@@ -833,57 +848,58 @@
                                             hasSpecialCode = true;
                                             specialCodeVal = pArr;
                                         } else {
-                                            // Numeric string?
-                                            // If it looks like number, parse it.
                                             let n = Number(pArr);
                                             if (!isNaN(n)) {
-                                                sPuan = n;
-                                                sVal = n.toString();
-                                                toplamPuan += sPuan;
-                                                if (isTest && !isBlank) {
-                                                    if (sPuan > 0) dogruCevaplar++; else yanlisCevaplar++;
+                                                if (isTest) {
+                                                    if (isBlank) {
+                                                        sPuan = 0;
+                                                    } else if (n > 0) {
+                                                        sPuan = 1;
+                                                        dogruCevaplar++;
+                                                    } else {
+                                                        const secenekSayisi = (soru.secenekler || []).length;
+                                                        sPuan = (secenekSayisi > 1) ? -(1 / (secenekSayisi - 1)) : 0;
+                                                        yanlisCevaplar++;
+                                                    }
+                                                } else {
+                                                    sPuan = n;
                                                 }
+                                                sVal = sPuan.toFixed(2).replace('.', ',').replace(/,00$/, "");
+                                                numericSum += sPuan;
                                             } else {
-                                                sVal = pArr; // literal value
+                                                sVal = pArr;
                                             }
                                         }
                                     } else if (isTest && !isBlank) {
-                                        yanlisCevaplar++; // Answered but no points array means wrong/0
+                                        // No score found but answer exists -> Wrong
+                                        const secenekSayisi = (soru.secenekler || []).length;
+                                        sPuan = (secenekSayisi > 1) ? -(1 / (secenekSayisi - 1)) : 0;
+                                        yanlisCevaplar++;
+                                        sVal = sPuan.toFixed(2).replace('.', ',').replace(/,00$/, "");
+                                        numericSum += sPuan;
                                     }
 
                                     soruPuanlari.push(sVal);
                                 });
 
-                                // Özel durum: Eğer değerlendirme "G" ise toplam puan "G" olsun
-                                // Veya soru bazlı özel kod varsa toplam da o olsun (Genelde hepsi G ise toplam G olur)
+                                // Özel durum: Eğer değerlendirme "G" ise veya hiç değerlendirilmemişse toplam puan "G" olsun
                                 if (row.degerlendirme && row.degerlendirme.toplam === "G") {
                                     toplamPuan = "G";
-                                } else if (hasSpecialCode && toplamPuan === 0) {
-                                    // If all questions are G or M, total should be G or M
-                                    // Use the first found special code as total if numeric sum is 0
-                                    toplamPuan = specialCodeVal;
+                                } else if (row.degerlendirme && row.degerlendirme.degerlendirildi === true) {
+                                    // SADECE değerlendirildiyse sayısal puana izin ver
+                                    toplamPuan = Math.max(0, numericSum).toFixed(2).replace('.', ',').replace(/,00$/, "");
+                                    if (hasSpecialCode && numericSum === 0) {
+                                        toplamPuan = specialCodeVal;
+                                    }
+                                } else {
+                                    toplamPuan = "G";
                                 }
 
-                                if (hasMCQ && !hasSpecialCode && (row.degerlendirme && row.degerlendirme.toplam !== "G")) {
-                                    // Calculate Net - average options count or strict per question
-                                    // Simplification: Assume all MCQs have same option count, or find the standard one.
-                                    // Default option count is 5, meaning penalty is 1/(5-1) = 0.25 (4 yanlis = 1 dogru)
-                                    // We will calculate exact net based on penalty
-                                    let penalSum = 0;
-                                    sorular.forEach((soru) => {
-                                        if (typeof soru === 'object' && soru.type === 'coktan_secmeli' && soru.secenekler && soru.secenekler.length > 1) {
-                                            penalSum += 1.0 / (soru.secenekler.length - 1);
-                                        }
-                                    });
-                                    // Average penalty per wrong answer for this study
-                                    const testQCount = sorular.filter(s => typeof s === 'object' && s.type === 'coktan_secmeli').length;
-                                    const avgPenalty = testQCount > 0 ? (penalSum / testQCount) : 0.25;
-
-                                    const netPuan = dogruCevaplar - (yanlisCevaplar * avgPenalty);
-                                    toplamPuan = Math.max(0, netPuan).toFixed(2).replace('.', ','); // Use net score as total if MCQs exist
-                                    netPuanStr = `;${dogruCevaplar};${yanlisCevaplar};${bosCevaplar};${toplamPuan}`;
-                                } else if (hasMCQ) {
-                                    netPuanStr = `;${specialCodeVal || "-"};${specialCodeVal || "-"};${specialCodeVal || "-"};${specialCodeVal || "-"}`;
+                                if (hasMCQ) {
+                                    // Individual net values are already in columns and sub-totaled
+                                    // For the extra summary columns (Doğru;Yanlış;Boş;Net Puan):
+                                    const summaryNet = (toplamPuan !== "G" && toplamPuan !== "M") ? toplamPuan : specialCodeVal || "-";
+                                    netPuanStr = `;${dogruCevaplar};${yanlisCevaplar};${bosCevaplar};${summaryNet}`;
                                 }
 
                                 csvContent += `${row.sinif || ""};${row.ogrenciNo};${row.adSoyad || ""};${toplamPuan}${netPuanStr}`;
@@ -2088,7 +2104,7 @@
 
                     const bitirPromises = [];
                     for (const ogrNo of item.members) {
-                        // Optimizing: Only one bitir call that effectively 'saves' everything in DB mode
+                        // Batch optimization: Send both evaluation metadata AND all scores in one request
                         bitirPromises.push(fetch("/degerlendirmeBitir", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -2098,7 +2114,7 @@
                                 sinif: this.seciliSinif,
                                 toplam: toplamPuan,
                                 degerlendirildi: true,
-                                puanlar: this.anlikPuanlar // SEND ALL SCORES AT ONCE TO PREVENT LAG
+                                puanlar: this.anlikPuanlar // SEND ALL SCORES AT ONCE
                             })
                         }));
                     }
