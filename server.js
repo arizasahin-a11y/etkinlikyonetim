@@ -950,6 +950,17 @@ app.get("/listeCalismalar", async (req, res) => {
       files.push(`${g.class_name}Grupları.json`);
     });
 
+    // 6. FS Fallback for un-migrated groups
+    const fs = require('fs');
+    const localFiles = fs.readdirSync(__dirname);
+    localFiles.forEach(f => {
+      if ((f.startsWith('ggg') && f.endsWith('.json')) || f.endsWith('Grupları.json')) {
+        if (!files.includes(f) && !files.find(fn => fn.dosya_adi === f)) {
+          files.push(f);
+        }
+      }
+    });
+
     // Map strings to objects for mixed array consistency (admin.html expects objects)
     const formattedFiles = files.map(f => {
       if (typeof f === 'string') {
