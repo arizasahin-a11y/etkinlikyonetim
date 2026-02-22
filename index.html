@@ -880,7 +880,8 @@
                                     const avgPenalty = testQCount > 0 ? (penalSum / testQCount) : 0.25;
 
                                     const netPuan = dogruCevaplar - (yanlisCevaplar * avgPenalty);
-                                    netPuanStr = `;${dogruCevaplar};${yanlisCevaplar};${bosCevaplar};${netPuan.toFixed(2).replace('.', ',')}`; // comma separator for Turkish excel
+                                    toplamPuan = Math.max(0, netPuan).toFixed(2).replace('.', ','); // Use net score as total if MCQs exist
+                                    netPuanStr = `;${dogruCevaplar};${yanlisCevaplar};${bosCevaplar};${toplamPuan}`;
                                 } else if (hasMCQ) {
                                     netPuanStr = `;${specialCodeVal || "-"};${specialCodeVal || "-"};${specialCodeVal || "-"};${specialCodeVal || "-"}`;
                                 }
@@ -2085,25 +2086,21 @@
                     // Toplam Puanı Hesapla
                     let toplamPuan = parseFloat(document.getElementById("degPuanGosterge").textContent) || 0;
 
-                    const puanPromises = [];
-                    for (const ogrNo of item.members) {
-                        Object.keys(this.anlikPuanlar).forEach(sIx => {
-                            const cevaplar = this.anlikPuanlar[sIx];
-                            if (cevaplar) {
-                                cevaplar.forEach((p, cIx) => {
-                                    if (p !== undefined && p !== null) {
-                                        puanPromises.push(fetch("/puanKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif, soruIndex: parseInt(sIx), cevapIndex: cIx, puan: p }) }));
-                                    }
-                                });
-                            }
-                        });
-                    }
-                    await Promise.all(puanPromises);
-
                     const bitirPromises = [];
                     for (const ogrNo of item.members) {
-                        // Toplam puanı ve degerlendirildi bayrağını gönder
-                        bitirPromises.push(fetch("/degerlendirmeBitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dosyaAdi: `www_${this.seciliCalisma}`, ogrenciNo: ogrNo, sinif: this.seciliSinif, toplam: toplamPuan, degerlendirildi: true }) }));
+                        // Optimizing: Only one bitir call that effectively 'saves' everything in DB mode
+                        bitirPromises.push(fetch("/degerlendirmeBitir", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                dosyaAdi: `www_${this.seciliCalisma}`,
+                                ogrenciNo: ogrNo,
+                                sinif: this.seciliSinif,
+                                toplam: toplamPuan,
+                                degerlendirildi: true,
+                                puanlar: this.anlikPuanlar // SEND ALL SCORES AT ONCE TO PREVENT LAG
+                            })
+                        }));
                     }
                     await Promise.all(bitirPromises);
                 }

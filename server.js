@@ -162,7 +162,7 @@ app.all("/degerlendirmeSifirla", async (req, res) => {
     // Reset evaluation for all students in this class for this study
     await query(`
         UPDATE student_evaluations 
-        SET scores = '{}', evaluation = evaluation - 'toplam' - 'degerlendirildi' - 'OA'
+        SET scores = '{}', evaluation = '{}'
         WHERE study_id = $1 AND class_name = $2
     `, [studyId, sinif]);
 
@@ -215,7 +215,7 @@ app.post("/puanKaydet", async (req, res) => {
 
 // Değerlendirme Bitir
 app.post("/degerlendirmeBitir", async (req, res) => {
-  const { dosyaAdi, ogrenciNo, sinif, toplam: bodyToplam, degerlendirildi: bodyDegerlendirildi } = req.body;
+  const { dosyaAdi, ogrenciNo, sinif, toplam: bodyToplam, degerlendirildi: bodyDegerlendirildi, puanlar } = req.body;
   const studyName = dosyaAdi.replace("www_", "");
 
   try {
@@ -247,10 +247,18 @@ app.post("/degerlendirmeBitir", async (req, res) => {
     const evaluation = { toplam: toplam, degerlendirildi: (typeof bodyDegerlendirildi !== 'undefined' ? bodyDegerlendirildi : true) };
     const evaluationJson = JSON.stringify(evaluation);
 
-    await query(
-      "UPDATE student_evaluations SET evaluation = COALESCE(evaluation, '{}'::jsonb) || $1::jsonb WHERE study_id = $2 AND student_school_no = $3",
-      [evaluationJson, studyId, String(ogrenciNo)]
-    );
+    // If puanlar (batched scores) provided, update scores too
+    if (puanlar) {
+      await query(
+        "UPDATE student_evaluations SET evaluation = COALESCE(evaluation, '{}'::jsonb) || $1::jsonb, scores = $2::jsonb WHERE study_id = $3 AND student_school_no = $4",
+        [evaluationJson, JSON.stringify(puanlar), studyId, String(ogrenciNo)]
+      );
+    } else {
+      await query(
+        "UPDATE student_evaluations SET evaluation = COALESCE(evaluation, '{}'::jsonb) || $1::jsonb WHERE study_id = $2 AND student_school_no = $3",
+        [evaluationJson, studyId, String(ogrenciNo)]
+      );
+    }
 
     res.json({ status: "ok" });
   } catch (e) { console.error(e); res.status(500).send(); }
