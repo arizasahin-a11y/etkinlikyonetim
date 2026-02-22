@@ -401,38 +401,104 @@ app.post("/kaydet", async (req, res, next) => {
       return res.json({ status: "ok" });
     }
 
-    // Case 2: Admin File Upload (e.g., studies)
+    // Case 2: Admin File Upload (e.g., studies, assignments, groups)
     if (req.body.dosyaAdi && req.body.veri) {
       const { dosyaAdi, veri } = req.body;
 
-      // www_ files are handled by the SECOND /kaydet handler below
-      if (dosyaAdi.startsWith('www_')) {
-        return next(); // Pass to second /kaydet handler
+      // www_ files and veritabani.json are handled by the SECOND /kaydet handler below
+      if (dosyaAdi.startsWith('www_') || dosyaAdi === 'veritabani.json') {
+        return next();
       }
 
-      console.log(`[Admin Upload] ${dosyaAdi}`);
+      console.log(`[Admin Upload Route] ${dosyaAdi}`);
 
-      // If it's a study file (starts with qwx or just handled as study)
-      // Check if it matches study naming convention? 
-      // Admin usually uploads study files (qwx....json)
-
-      if (dosyaAdi.startsWith('qwx') || dosyaAdi.endsWith('.json')) {
+      if (dosyaAdi.startsWith('qwx')) {
         const name = dosyaAdi.replace(/^qwx/, "").replace(".json", "");
         const contentJson = JSON.stringify(veri);
-
         await query(`
-                INSERT INTO studies (name, content)
-                VALUES ($1, $2::jsonb)
-                ON CONFLICT (name) 
-                DO UPDATE SET content = $2::jsonb
-            `, [name, contentJson]);
-
+            INSERT INTO studies (name, content)
+            VALUES ($1, $2::jsonb)
+            ON CONFLICT (name) DO UPDATE SET content = $2::jsonb
+        `, [name, contentJson]);
         console.log(`✅ [Admin Upload] Study saved/updated: ${name}`);
+        return res.json({ status: "ok" });
+      }
+
+      if (dosyaAdi.startsWith('qqq')) {
+        // qqq[Class][Study].json -> To parse this, we need to know the Class.
+        // Usually, the JSON content for an assignment contains 'sinif' and 'calisma'
+        const assignmentContent = veri;
+        if (assignmentContent.sinif && assignmentContent.calisma) {
+          const studyName = assignmentContent.calisma;
+          const className = assignmentContent.sinif;
+
+          // Ensure study exists to satisfy FK constraint
+          let studyRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
+          if (studyRes.rows.length === 0) {
+            const insertRes = await query("INSERT INTO studies (name) VALUES ($1) RETURNING id", [studyName]);
+            studyRes = { rows: [{ id: insertRes.rows[0].id }] };
+          }
+          const studyId = studyRes.rows[0].id;
+
+          await query(`
+                 INSERT INTO study_assignments (study_id, class_name, method, settings)
+                 VALUES ($1, $2, $3, $4::jsonb)
+                 ON CONFLICT (study_id, class_name) 
+                 DO UPDATE SET method = $3, settings = $4::jsonb
+             `, [studyId, className, assignmentContent.yontem || 'tum', JSON.stringify({
+            baslangicSecenek: assignmentContent.baslangicSecenek,
+            bitisSecenek: assignmentContent.bitisSecenek,
+            baslangicZamani: assignmentContent.baslangicZamani,
+            bitisZamani: assignmentContent.bitisZamani,
+            harfSirasi: assignmentContent.harfSirasi
+          })]);
+          console.log(`✅ [Admin Upload] Assignment saved/updated: ${className} -> ${studyName}`);
+          return res.json({ status: "ok" });
+        }
+      }
+
+      if (dosyaAdi.startsWith('ggg')) {
+        // Contains study groups. Format implies we might need to parse name or rely on content.
+        // The downloaded ggg file is just an array. We cannot easily parse sinif/calisma from array content.
+        // We must parse 'ggg[Study][Class].json'. This is tricky without delimiters.
+        // Fortunately, if they upload a study-specific group, it usually has the name format perfectly.
+        // Instead of complex parsing, let's look at the database to see if we can match it.
+        // OR better: if they upload it and we can't parse it reliably without user context, 
+        // fallback to file system write with the exact same name, as 'calismaGetir' can read from FS fallback.
+        const fs = require('fs');
+        const path = require('path');
+        fs.writeFileSync(path.join(__dirname, dosyaAdi), JSON.stringify(veri, null, 2));
+        console.log(`✅ [Admin Upload] Study Group Fallback Saved directly to FS: ${dosyaAdi}`);
+        return res.json({ status: "ok" });
+      }
+
+      if (dosyaAdi.endsWith('Grupları.json')) {
+        const className = dosyaAdi.replace("Grupları.json", "");
+        await query(`
+            INSERT INTO class_groups (class_name, groups_data)
+            VALUES ($1, $2::jsonb)
+            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
+        `, [className, JSON.stringify(veri)]);
+        console.log(`✅ [Admin Upload] Class Group saved/updated: ${className}`);
+        return res.json({ status: "ok" });
+      }
+
+      // If it doesn't match specific prefixes but still JSON, maybe it's an old study?
+      // Assuming it's a study if no other prefix matched.
+      if (dosyaAdi.endsWith('.json') && !dosyaAdi.startsWith('www_')) {
+        const name = dosyaAdi.replace(".json", "");
+        await query(`
+              INSERT INTO studies (name, content)
+              VALUES ($1, $2::jsonb)
+              ON CONFLICT (name) DO UPDATE SET content = $2::jsonb
+          `, [name, JSON.stringify(veri)]);
+        console.log(`✅ [Admin Upload] Generic JSON saved as Study: ${name}`);
         return res.json({ status: "ok" });
       }
     }
 
-    return res.status(400).json({ status: "hata", message: "Geçersiz veri veya format." });
+    // If it reaches here without matching, let the next handler try (e.g. for non-standard files or specific generic logic)
+    return next();
 
   } catch (e) {
     console.error("Grup kaydet hatası:", e);
@@ -859,7 +925,41 @@ app.get("/listeCalismalar", async (req, res) => {
       files.push(`qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`);
     });
 
-    res.json(files);
+    // 3. Evaluations
+    const evals = await query(`
+        SELECT DISTINCT s.name as study_name, s.is_archived
+        FROM student_evaluations se
+        JOIN studies s ON se.study_id = s.id
+      `);
+    evals.rows.forEach(e => {
+      files.push({
+        dosya_adi: `www_${e.study_name}.json`,
+        arsivde: e.is_archived
+      });
+    });
+
+    // 4. Study Groups
+    const sGroups = await query(`SELECT study_name, class_name FROM study_groups`);
+    sGroups.rows.forEach(g => {
+      files.push(`ggg${g.study_name}${g.class_name}.json`);
+    });
+
+    // 5. Generic Class Groups
+    const cGroups = await query(`SELECT class_name FROM class_groups`);
+    cGroups.rows.forEach(g => {
+      files.push(`${g.class_name}Grupları.json`);
+    });
+
+    // Map strings to objects for mixed array consistency (admin.html expects objects)
+    const formattedFiles = files.map(f => {
+      if (typeof f === 'string') {
+        const isArchived = studies.rows.find(s => `qwx${s.name}.json` === f)?.is_archived || false;
+        return { dosya_adi: f, arsivde: isArchived };
+      }
+      return f; // Already an object (from Evaluations mapping)
+    });
+
+    res.json(formattedFiles);
   } catch (e) { console.error(e); res.json([]); }
 });
 
