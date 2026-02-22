@@ -1011,7 +1011,7 @@ app.get("/calismaGetir", async (req, res) => {
 
     } else if (isim.startsWith("www_")) {
       // Fetch Evaluations (All students for a study)
-      const name = isim.replace("www_", "");
+      const name = isim.replace("www_", "").replace(".json", "");
       console.log(`[www_ Getir] İstek: ${isim}, Study adı: ${name}`);
 
       const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
@@ -1089,7 +1089,7 @@ app.get("/calismaGetir", async (req, res) => {
       console.log(`✅ [www_ Getir] ${mapped.length} kayıt döndürülüyor`);
       res.json(mapped);
 
-    } else if (isim.endsWith("Grupları.json")) {
+    } else if (isim.endsWith("Grupları.json") || isim.startsWith("ggg")) {
       // Fetch Groups (ggg[Study][Class].json OR [Class]Grupları.json)
       // Request format: ggg[Study][Class].json  OR  [Class]Grupları.json
 
