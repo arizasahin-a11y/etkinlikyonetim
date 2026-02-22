@@ -305,6 +305,9 @@
             margin-top: 15px;
             border-top: 2px solid #673AB7;
             padding-top: 15px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .deg-card {
@@ -1897,13 +1900,27 @@
                 document.getElementById("degOgrenciBaslik").textContent = item.baslik;
                 this.anlikPuanlar = (item.kayit && item.kayit.puanlar) ? item.kayit.puanlar : {};
 
-                // --- AUTO-EVALUATE MULTIPLE CHOICE QUESTIONS ---
+                // --- OA AUTO-EVALUATE LOGIC ---
+                if (item.kayit && item.kayit.degerlendirme && item.kayit.degerlendirme.OA) {
+                    const oa = item.kayit.degerlendirme.OA.toLowerCase().trim();
+                    let autoCode = null;
+                    if (oa.includes("girmedi") || oa.includes("gelmedi")) autoCode = "G";
+                    else if (oa.includes("mazeretli")) autoCode = "M";
+                    else if (oa.includes("çalışmadı") || oa.includes("calismadi")) autoCode = "0";
+
+                    if (autoCode) {
+                        this.sorular.forEach((_, i) => {
+                            this.anlikPuanlar[i] = [autoCode];
+                        });
+                    }
+                }
+
+                // --- AUTO-EVALUATE MULTIPLE CHOICE AND TEXT QUESTIONS ---
                 const rawAnswers = item.kayit.cevaplar || [];
                 const normalizedAnswers = Array.isArray(rawAnswers) && rawAnswers.length > 0 && typeof rawAnswers[0] === 'object' && rawAnswers[0].cevaplar ? rawAnswers :
                     (Array.isArray(rawAnswers) && rawAnswers.answers ? rawAnswers.answers : rawAnswers);
 
-                // Ensure activeVeri has normalized answers for renderSoru
-                this.activeVeri = item.kayit; // Ensure activeVeri is set before assigning cevaplar
+                this.activeVeri = item.kayit;
                 this.activeVeri.cevaplar = normalizedAnswers;
 
                 this.sorular.forEach((soru, sIdx) => {
@@ -1929,7 +1946,6 @@
                 });
 
                 document.getElementById("degNormalPanel").style.display = "flex";
-                this.activeVeri = item.kayit;
                 this.sIdx = 0;
                 this.soruKontrolEtVeRender(1);
             },
@@ -1988,30 +2004,41 @@
                             ${(!isSelected && isCorrectAnswer && Number(p) === 0) ? `<span style="font-size:0.8rem; font-weight:bold; color:#4CAF50; border:1px solid #4CAF50; padding:2px 8px; border-radius:12px; margin-left:10px;">Doğru Cevap</span>` : ''}
                         </div>`;
                     });
-                    h += `</div > `;
+                    h += `</div>`;
 
                     if (studentChoiceIndex === -1 && cevaplar.length === 0) {
-                        h += `< div style = "padding:20px; color:#999; font-style:italic; text-align:center;" > Öğrenci bu soruyu boş bırakmış.</div > `;
+                        h += `<div style="padding:20px; color:#999; font-style:italic; text-align:center;">Öğrenci bu soruyu boş bırakmış.</div>`;
                     }
 
-                    h += `< div class="deg-cevap-item" style = "justify-content:center; background:none; border:none; box-shadow:none; padding-top:10px;" >
+                    const btnDClass = (Number(p) === 1) ? 'aktif' : '';
+                    const btnYClass = (Number(p) === 0 || p === "G" || p === "M") ? 'aktif' : '';
+                    const yTitle = (p === "G" ? "Girmedi" : (p === "M" ? "Mazeretli" : "Yanlış"));
+                    const yText = (p === "G" || p === "M") ? p : "Y";
+
+                    h += `<div class="deg-cevap-item" style="justify-content:center; background:none; border:none; box-shadow:none; padding-top:10px;">
                     <div class="deg-buton-grubu">
-                        <button class="deg-btn-puan deg-dogru ${Number(p) === 1 ? 'aktif' : ''}" onclick="DegerlendirmeApp.puanla(0,1)">D</button>
-                        <button class="deg-btn-puan deg-yanlis ${Number(p) === 0 ? 'aktif' : ''}" onclick="DegerlendirmeApp.puanla(0,0)">Y</button>
+                        <button class="deg-btn-puan deg-dogru ${btnDClass}" onclick="DegerlendirmeApp.puanla(0,1)">D</button>
+                        <button class="deg-btn-puan deg-yanlis ${btnYClass}" onclick="DegerlendirmeApp.puanla(0,0)" title="${yTitle}">${yText}</button>
                     </div>
-                    </div > `;
+                    </div>`;
                 } else {
                     if (cevaplar.length === 0) {
                         h = "<div style='padding:20px; color:#999; font-style:italic;'>Bu soruya cevap verilmemiş.</div>";
                     } else {
                         cevaplar.forEach((txt, i) => {
                             if (txt && txt.trim() !== "") {
+                                const p = puanlar[i];
                                 const convertedTxt = linkleriDonustur(txt);
+                                const btnDClass = (Number(p) === 1) ? 'aktif' : '';
+                                const btnYClass = (Number(p) === 0 || p === "G" || p === "M") ? 'aktif' : '';
+                                const yTitle = (p === "G" ? "Girmedi" : (p === "M" ? "Mazeretli" : "Yanlış"));
+                                const yText = (p === "G" || p === "M") ? p : "Y";
+
                                 h += `<div class="deg-cevap-item" ondblclick="DegerlendirmeApp.hizliGecBos(event, '${txt || ''}')">
                                     <div class="deg-cevap-metin">${convertedTxt}</div>
                                     <div class="deg-buton-grubu">
-                                        <button class="deg-btn-puan deg-dogru ${puanlar[i] === 1 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},1)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},1)">D</button>
-                                        <button class="deg-btn-puan deg-yanlis ${puanlar[i] === 0 ? 'aktif' : ''}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},0)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},0)">Y</button>
+                                        <button class="deg-btn-puan deg-dogru ${btnDClass}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},1)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},1)">D</button>
+                                        <button class="deg-btn-puan deg-yanlis ${btnYClass}" onclick="event.stopPropagation(); DegerlendirmeApp.puanla(${i},0)" ondblclick="event.stopPropagation(); DegerlendirmeApp.hizliGec(${i},0)" title="${yTitle}">${yText}</button>
                                     </div></div>`;
                             }
                         });
@@ -2026,16 +2053,37 @@
             puanla: function (cIdx, p) { if (!this.anlikPuanlar[this.sIdx]) this.anlikPuanlar[this.sIdx] = []; this.anlikPuanlar[this.sIdx][cIdx] = p; this.renderSoru(); },
             hizliGec: function (cIdx, p) { this.puanla(cIdx, p); if (this.sIdx < this.sorular.length - 1) this.nav(1); },
             hizliGecBos: function (e, metin) { if (!metin || metin.trim() === "" || e.offsetX > (e.currentTarget.offsetWidth * 0.6)) { if (this.sIdx < this.sorular.length - 1) this.nav(1); } },
-            guncellePuan: function () { let t = 0; Object.values(this.anlikPuanlar).forEach(arr => { if (Array.isArray(arr)) t += arr.reduce((a, b) => a + (b || 0), 0) }); document.getElementById("degPuanGosterge").textContent = t; },
+            guncellePuan: function () {
+                let t = 0;
+                Object.entries(this.anlikPuanlar).forEach(([sIx, arr]) => {
+                    const soru = this.sorular[sIx];
+                    const isMCQ = (typeof soru === 'object' && soru.type === 'coktan_secmeli');
+
+                    if (Array.isArray(arr)) {
+                        if (isMCQ) {
+                            const p = arr[0];
+                            if (Number(p) === 1) {
+                                t += 1;
+                            } else if (Number(p) === 0) {
+                                const secenekSayisi = (soru.secenekler || []).length;
+                                if (secenekSayisi > 1) {
+                                    t -= 1 / (secenekSayisi - 1);
+                                }
+                            }
+                        } else {
+                            arr.forEach(p => { if (Number(p) === 1) t++; });
+                        }
+                    }
+                });
+                const scoreDisp = Math.max(0, t).toFixed(2).replace(/\.00$/, "");
+                document.getElementById("degPuanGosterge").textContent = scoreDisp;
+            },
             nav: function (n) { let nextIdx = this.sIdx + n; if (nextIdx < 0) return; this.sIdx = nextIdx; this.soruKontrolEtVeRender(n); },
             sonrakiKisi: async function () {
                 const item = this.kuyruk[this.kuyrukIndex];
                 if (!item.katilmadi) {
                     // Toplam Puanı Hesapla
-                    let toplamPuan = 0;
-                    Object.values(this.anlikPuanlar).forEach(arr => {
-                        if (Array.isArray(arr)) toplamPuan += arr.reduce((a, b) => a + (b || 0), 0)
-                    });
+                    let toplamPuan = parseFloat(document.getElementById("degPuanGosterge").textContent) || 0;
 
                     const puanPromises = [];
                     for (const ogrNo of item.members) {
