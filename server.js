@@ -1107,8 +1107,8 @@ app.get("/calismaGetir", async (req, res) => {
 
         // Find the matching group by reconstructing the requested filename format
         const foundGroup = resDb.rows.find(row => {
-          const constructed = \`ggg\${row.study_name}\${row.class_name}.json\`;
-            return constructed === searchKey || constructed.toLowerCase() === searchKey.toLowerCase() || \`ggg\${row.study_name}\${sinifIsmiTemizle(row.class_name)}.json\` === searchKey;
+          const constructed = `ggg${row.study_name}${row.class_name}.json`;
+          return constructed === searchKey || constructed.toLowerCase() === searchKey.toLowerCase() || `ggg${row.study_name}${sinifIsmiTemizle(row.class_name)}.json` === searchKey;
         });
 
         if (foundGroup) {
@@ -1129,7 +1129,7 @@ app.get("/calismaGetir", async (req, res) => {
             const filePath = path.join(__dirname, matchingFile);
             try { res.json(JSON.parse(fs.readFileSync(filePath, 'utf-8'))); } catch (e) { res.status(404).send(); }
           } else {
-            console.log(`[DEBUG] / calismaGetir - File not found: ${ searchKey } `);
+            console.log(`[DEBUG] / calismaGetir - File not found: ${searchKey} `);
             res.status(404).send();
           }
         }
@@ -1304,7 +1304,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
 app.get("/arsivListesi", async (req, res) => {
   try {
     const resDb = await query("SELECT name FROM studies WHERE is_archived = TRUE");
-    res.json(resDb.rows.map(r => `qwx${ r.name }.json`));
+    res.json(resDb.rows.map(r => `qwx${r.name}.json`));
   } catch (e) { res.json([]); }
 });
 
@@ -1318,14 +1318,14 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
     const studies = await query("SELECT name, is_archived FROM studies");
     studies.rows.forEach(s => {
       result.push({
-        dosya_adi: `qwx${ s.name }.json`,
+        dosya_adi: `qwx${s.name}.json`,
         arsivde: s.is_archived
       });
       // Legacy also had www_ files for each study if answers existed
       // We can assume if study exists, www might exist in virtual list for admin to "manage" (delete/archive)?
       // Actually admin usually manages Studies (qwx).
       // But if user wants to see "all files", we should add them.
-      result.push({ dosya_adi: `www_${ s.name }.json`, arsivde: false });
+      result.push({ dosya_adi: `www_${s.name}.json`, arsivde: false });
     });
 
     // 2. Assignments (qqq)
@@ -1337,14 +1337,14 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
     assigns.rows.forEach(a => {
       // qqqClassNameStudyName.json
       result.push({
-        dosya_adi: `qqq${ a.class_name.replace(/\s/g, '') }${ a.study_name }.json`,
+        dosya_adi: `qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`,
         arsivde: false
       });
     });
 
     // 3. Class Groups (Combine DB and File System for robustness)
     const groups = await query("SELECT class_name FROM class_groups");
-    const dbGroupNames = groups.rows.map(g => `${ g.class_name } Grupları.json`);
+    const dbGroupNames = groups.rows.map(g => `${g.class_name} Grupları.json`);
 
     // Also check file system for immediate visibility
     let fsGroupFiles = [];
@@ -1451,7 +1451,7 @@ app.get("/migrateGroupsToStudies", async (req, res) => {
 
       // 2. Check if Generic Group File exists
       const normClass = sinifIsmiTemizle(className);
-      const legacyGroupFile = `${ normClass } Grupları.json`;
+      const legacyGroupFile = `${normClass} Grupları.json`;
 
       if (!fs.existsSync(path.join(__dirname, legacyGroupFile))) continue;
 
@@ -1462,10 +1462,10 @@ app.get("/migrateGroupsToStudies", async (req, res) => {
       } catch (e) { continue; }
 
       // 3. Create Study-Specific Group File (FS)
-      const newFileName = `ggg${ studyName }${ className }.json`; // .json added below usually? No, full name
+      const newFileName = `ggg${studyName}${className}.json`; // .json added below usually? No, full name
       // Wait, index.html says: `ggg${ study }${ class} ` (no json?) -> server adds .json
       // Let's create `ggg[Study][Class].json`.
-      const newFilePath = path.join(__dirname, `ggg${ studyName }${ className }.json`);
+      const newFilePath = path.join(__dirname, `ggg${studyName}${className}.json`);
 
       if (!fs.existsSync(newFilePath)) {
         fs.writeFileSync(newFilePath, JSON.stringify(groupsData, null, 2));
@@ -1487,7 +1487,7 @@ app.get("/migrateGroupsToStudies", async (req, res) => {
 
     res.json({
       status: "ok",
-      message: `Migration verified.FS Created: ${ fsCreated }, DB Migrated: ${ migratedCount } `
+      message: `Migration verified.FS Created: ${fsCreated}, DB Migrated: ${migratedCount} `
     });
 
   } catch (e) {
@@ -1558,7 +1558,7 @@ async function autoMigrate() {
       try {
         content = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf-8'));
       } catch (err) {
-        console.error(`Error reading ${ file }: `, err);
+        console.error(`Error reading ${file}: `, err);
         continue;
       }
 
@@ -1569,7 +1569,7 @@ async function autoMigrate() {
           VALUES($1, $2:: jsonb)
             ON CONFLICT(class_name) DO UPDATE SET groups_data = $2:: jsonb
         `, [className, jsonData]);
-      console.log(`Migrated generic group: ${ file } (Class: ${ className })`);
+      console.log(`Migrated generic group: ${file} (Class: ${className})`);
     }
 
     // 2. Study-Specific Groups (ggg*)
@@ -1608,9 +1608,9 @@ async function autoMigrate() {
           VALUES($1, $2, $3:: jsonb)
                     ON CONFLICT(study_name, class_name) DO UPDATE SET groups_data = $3:: jsonb
                 `, [foundStudy, foundClass, JSON.stringify(content)]);
-          console.log(`Migrated study group: ${ file } (Study: ${ foundStudy }, Class: ${ foundClass })`);
+          console.log(`Migrated study group: ${file} (Study: ${foundStudy}, Class: ${foundClass})`);
         } else {
-          console.warn(`Could not parse Study / Class from filename: ${ file } `);
+          console.warn(`Could not parse Study / Class from filename: ${file} `);
         }
       }
     }
@@ -1626,11 +1626,11 @@ async function autoMigrate() {
     const fs = require('fs');
 
     for (const cls of siviClasses) {
-      const fName = `${ cls } Grupları.json`;
+      const fName = `${cls} Grupları.json`;
       const fPath = path.join(__dirname, fName);
 
       if (fs.existsSync(fPath)) {
-        console.log(`[SPECIAL IMPORT] Found ${ fName } for ${ siviStudy }.Importing...`);
+        console.log(`[SPECIAL IMPORT] Found ${fName} for ${siviStudy}.Importing...`);
         try {
           const content = JSON.parse(fs.readFileSync(fPath, 'utf-8'));
           const jsonStr = JSON.stringify(content);
@@ -1643,17 +1643,17 @@ async function autoMigrate() {
                       DO UPDATE SET groups_data = $3:: jsonb
           `, [siviStudy, cls, jsonStr]);
 
-          console.log(`✅[SPECIAL IMPORT] Imported ${ cls } into ${ siviStudy }.`);
+          console.log(`✅[SPECIAL IMPORT] Imported ${cls} into ${siviStudy}.`);
 
           // Rename to prevent overwrite on next restart
           // We append ".imported"
           const newPath = fPath + ".imported";
           if (fs.existsSync(newPath)) fs.unlinkSync(newPath); // Remove old imported if exists
           fs.renameSync(fPath, newPath);
-          console.log(`   -> Renamed file to ${ fName }.imported`);
+          console.log(`   -> Renamed file to ${fName}.imported`);
 
         } catch (err) {
-          console.error(`❌[SPECIAL IMPORT] Error importing ${ cls }: `, err.message);
+          console.error(`❌[SPECIAL IMPORT] Error importing ${cls}: `, err.message);
         }
       }
     }
@@ -1674,7 +1674,7 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
       logs.push("✅ DB Connection OK");
       dbConnected = true;
     } catch (dbErr) {
-      logs.push(`⚠️ DB Connection FAILED: ${ dbErr.message || dbErr }.Will use File System fallback.`);
+      logs.push(`⚠️ DB Connection FAILED: ${dbErr.message || dbErr}.Will use File System fallback.`);
     }
 
     const siviClasses = ["9A", "9B", "9C"];
@@ -1683,20 +1683,20 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
     const path = require('path');
 
     for (const cls of siviClasses) {
-      let fName = `${ cls }Grupları.json`;
+      let fName = `${cls}Grupları.json`;
       let fPath = path.join(__dirname, fName);
 
       if (!fs.existsSync(fPath)) {
         if (fs.existsSync(fPath + ".imported")) {
-          logs.push(`Original ${ fName } not found, but found.imported.Using it.`);
+          logs.push(`Original ${fName} not found, but found.imported.Using it.`);
           fPath = fPath + ".imported";
         } else {
-          logs.push(`Skipping ${ cls }: File not found.`);
+          logs.push(`Skipping ${cls}: File not found.`);
           continue;
         }
       }
 
-      logs.push(`Importing ${ cls } from ${ fPath }...`);
+      logs.push(`Importing ${cls} from ${fPath}...`);
       try {
         const content = JSON.parse(fs.readFileSync(fPath, 'utf-8'));
         const jsonStr = JSON.stringify(content);
@@ -1712,22 +1712,22 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
                           ON CONFLICT(study_name, class_name) 
                           DO UPDATE SET groups_data = $3:: jsonb
           `, [siviStudy, cls, jsonStr]);
-            logs.push(`✅ DB Insert Success for ${ cls }.`);
+            logs.push(`✅ DB Insert Success for ${cls}.`);
             imported = true;
           } catch (sqlErr) {
-            logs.push(`❌ DB Insert Failed for ${ cls }: ${ sqlErr.message } `);
+            logs.push(`❌ DB Insert Failed for ${cls}: ${sqlErr.message} `);
           }
         }
 
         // B. File System Fallback (gggSıvı Basıncı9A.json)
         try {
-          const targetFileName = `ggg${ siviStudy }${ cls }.json`;
+          const targetFileName = `ggg${siviStudy}${cls}.json`;
           const targetPath = path.join(__dirname, targetFileName);
           fs.writeFileSync(targetPath, jsonStr);
-          logs.push(`✅ FS Write Success: ${ targetFileName } `);
+          logs.push(`✅ FS Write Success: ${targetFileName} `);
           imported = true;
         } catch (fsErr) {
-          logs.push(`❌ FS Write Failed for ${ cls }: ${ fsErr.message } `);
+          logs.push(`❌ FS Write Failed for ${cls}: ${fsErr.message} `);
         }
 
         // Renaming Logic
@@ -1742,8 +1742,8 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
 
       } catch (err) {
         const util = require('util');
-        logs.push(`❌ Critical Error ${ cls }: ${ err.message } `);
-        logs.push(`   -> Details: ${ util.format(err) } `);
+        logs.push(`❌ Critical Error ${cls}: ${err.message} `);
+        logs.push(`   -> Details: ${util.format(err)} `);
       }
     }
     res.json({ status: "ok", logs });
@@ -1785,18 +1785,18 @@ app.get('/yedekAl', async (req, res) => {
     try {
       const groups = await query("SELECT class_name, groups_data FROM class_groups");
       groups.rows.forEach(g => {
-        zip.addFile(`${ g.class_name } Grupları.json`, Buffer.from(JSON.stringify(g.groups_data, null, 2)));
+        zip.addFile(`${g.class_name} Grupları.json`, Buffer.from(JSON.stringify(g.groups_data, null, 2)));
       });
-      console.log(`[BACKUP] Added ${ groups.rows.length } group files`);
+      console.log(`[BACKUP] Added ${groups.rows.length} group files`);
     } catch (e) { console.error("[BACKUP] Groups error:", e); }
 
     // 3. STUDIES -> qwx[Name].json
     try {
       const studies = await query("SELECT name, content FROM studies");
       studies.rows.forEach(s => {
-        zip.addFile(`qwx${ s.name }.json`, Buffer.from(JSON.stringify(s.content, null, 2)));
+        zip.addFile(`qwx${s.name}.json`, Buffer.from(JSON.stringify(s.content, null, 2)));
       });
-      console.log(`[BACKUP] Added ${ studies.rows.length } study files`);
+      console.log(`[BACKUP] Added ${studies.rows.length} study files`);
     } catch (e) { console.error("[BACKUP] Studies error:", e); }
 
     // 4. ASSIGNMENTS -> qqq[Class][Study].json
@@ -1807,7 +1807,7 @@ app.get('/yedekAl', async (req, res) => {
                 JOIN studies s ON a.study_id = s.id
           `);
       assigns.rows.forEach(a => {
-        const filename = `qqq${ a.class_name.replace(/\s/g, '') }${ a.study_name }.json`;
+        const filename = `qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`;
         // Construct legacy assignment object
         const data = {
           id: filename.replace(".json", ""),
@@ -1818,7 +1818,7 @@ app.get('/yedekAl', async (req, res) => {
         };
         zip.addFile(filename, Buffer.from(JSON.stringify(data, null, 2)));
       });
-      console.log(`[BACKUP] Added ${ assigns.rows.length } assignment files`);
+      console.log(`[BACKUP] Added ${assigns.rows.length} assignment files`);
     } catch (e) { console.error("[BACKUP] Assignments error:", e); }
 
     // 5. STUDENT EVALUATIONS (Answers) -> www_[Study].json
@@ -1857,18 +1857,18 @@ app.get('/yedekAl', async (req, res) => {
       });
 
       Object.keys(studyGroups).forEach(studyName => {
-        zip.addFile(`www_${ studyName }.json`, Buffer.from(JSON.stringify(studyGroups[studyName], null, 2)));
+        zip.addFile(`www_${studyName}.json`, Buffer.from(JSON.stringify(studyGroups[studyName], null, 2)));
       });
-      console.log(`[BACKUP] Added ${ Object.keys(studyGroups).length } answer files(www_)`);
+      console.log(`[BACKUP] Added ${Object.keys(studyGroups).length} answer files(www_)`);
 
     } catch (e) { console.error("[BACKUP] Answers error:", e); }
 
 
     const zipBuffer = zip.toBuffer();
-    const fileName = `Yedek_${ new Date().toISOString().replace(/[:.]/g, '-') }.zip`;
+    const fileName = `Yedek_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
 
     res.set('Content-Type', 'application/octet-stream');
-    res.set('Content-Disposition', `attachment; filename = ${ fileName } `);
+    res.set('Content-Disposition', `attachment; filename = ${fileName} `);
     res.set('Content-Length', zipBuffer.length);
     res.send(zipBuffer);
     console.log("[BACKUP] Complete.");
@@ -1887,7 +1887,7 @@ app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ status: "error", message: "Dosya yüklenmedi." });
 
-    console.log(`[RESTORE] Yedek yükleniyor: ${ req.file.originalname } (${ req.file.size } bytes)`);
+    console.log(`[RESTORE] Yedek yükleniyor: ${req.file.originalname} (${req.file.size} bytes)`);
     const zip = new AdmZip(req.file.buffer);
     const zipEntries = zip.getEntries();
 
@@ -1958,7 +1958,7 @@ name = EXCLUDED.name,
           if (studyRes.rows.length === 0) {
             // Create dummy study if missing? No, safer to log error. 
             // Or create placeholder study.
-            stats.errors.push(`${ name }: Study '${content.calisma}' not found.`);
+            stats.errors.push(`${name}: Study '${content.calisma}' not found.`);
             continue;
           }
           const studyId = studyRes.rows[0].id;
@@ -1991,7 +1991,7 @@ VALUES($1, $2, $3, $4:: jsonb)
             // Re-fetch
             const sRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
             if (sRes.rows.length === 0) {
-              stats.errors.push(`${ name }: Could not create / find study '${studyName}'.`);
+              stats.errors.push(`${name}: Could not create / find study '${studyName}'.`);
               continue;
             }
             // Use found ID
@@ -2035,18 +2035,18 @@ answers = EXCLUDED.answers,
         }
 
       } catch (entryErr) {
-        console.error(`[RESTORE] Error processing ${ entry.entryName }: `, entryErr);
-        stats.errors.push(`${ entry.entryName }: ${ entryErr.message } `);
+        console.error(`[RESTORE] Error processing ${entry.entryName}: `, entryErr);
+        stats.errors.push(`${entry.entryName}: ${entryErr.message} `);
       }
     }
 
     const msg = `
-Öğrenciler: ${ stats.students }
-            Sınıf Grupları: ${ stats.groups }
-Çalışmalar: ${ stats.studies }
-Atamalar: ${ stats.assignments }
-            Öğrenci Cevap Kayıtları: ${ stats.answers }
-Hatalar: ${ stats.errors.length }
+Öğrenciler: ${stats.students}
+            Sınıf Grupları: ${stats.groups}
+Çalışmalar: ${stats.studies}
+Atamalar: ${stats.assignments}
+            Öğrenci Cevap Kayıtları: ${stats.answers}
+Hatalar: ${stats.errors.length}
 `;
 
     console.log("[RESTORE] Completed.", stats);
@@ -2060,7 +2060,7 @@ Hatalar: ${ stats.errors.length }
 
 // --- SUNUCUYU BAŞLAT ---
 app.listen(PORT, "0.0.0.0", async () => {
-  console.log(`Sunucu ${ PORT } portunda hazır!(SQL Modu)`);
+  console.log(`Sunucu ${PORT} portunda hazır!(SQL Modu)`);
   logToFile("SERVER RESTARTED - LOGGING INITIALIZED");
   await autoMigrate();
 });
