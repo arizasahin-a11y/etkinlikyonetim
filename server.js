@@ -900,7 +900,7 @@ app.post("/kaydet", async (req, res) => {
   return res.status(400).json({ status: "eksik" });
 });
 
-// Listeleme
+// Listeleme (Ogrenci Arayüzü İçin - Sadece metin array'i döner)
 app.get("/listeCalismalar", async (req, res) => {
   try {
     // Need to return array of filenames simulating legacy format:
@@ -932,6 +932,62 @@ app.get("/listeCalismalar", async (req, res) => {
         JOIN studies s ON se.study_id = s.id
       `);
     evals.rows.forEach(e => {
+      files.push(`www_${e.study_name}.json`);
+    });
+
+    // 4. Study Groups
+    const sGroups = await query(`SELECT study_name, class_name FROM study_groups`);
+    sGroups.rows.forEach(g => {
+      files.push(`ggg${g.study_name}${g.class_name}.json`);
+    });
+
+    // 5. Generic Class Groups
+    const cGroups = await query(`SELECT class_name FROM class_groups`);
+    cGroups.rows.forEach(g => {
+      files.push(`${g.class_name}Grupları.json`);
+    });
+
+    // 6. FS Fallback for un-migrated groups
+    const fs = require('fs');
+    const localFiles = fs.readdirSync(__dirname);
+    localFiles.forEach(f => {
+      if ((f.startsWith('ggg') && f.endsWith('.json')) || f.endsWith('Grupları.json')) {
+        if (!files.includes(f)) {
+          files.push(f);
+        }
+      }
+    });
+
+    res.json(files); // Öğrenci tarafı string beklediği için raw list gönderiyoruz
+  } catch (e) { console.error(e); res.json([]); }
+});
+
+// Yönetim Paneli İçin Listeleme (Arşiv bilgisi eklenmiş obje listesi döner)
+app.get("/yonetimDosyaListesi", async (req, res) => {
+  try {
+    const files = [];
+
+    // 1. Studies
+    const studies = await query("SELECT id, name, is_archived FROM studies"); // Yönetimde tüm studies listelenir
+    studies.rows.forEach(s => files.push(`qwx${s.name}.json`));
+
+    // 2. Assignments
+    const assigns = await query(`
+        SELECT a.class_name, s.name as study_name 
+        FROM study_assignments a 
+        JOIN studies s ON a.study_id = s.id
+      `); // Yönetimde arşivliler de listelenebilir
+    assigns.rows.forEach(a => {
+      files.push(`qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`);
+    });
+
+    // 3. Evaluations
+    const evals = await query(`
+        SELECT DISTINCT s.name as study_name, s.is_archived
+        FROM student_evaluations se
+        JOIN studies s ON se.study_id = s.id
+      `);
+    evals.rows.forEach(e => {
       files.push({
         dosya_adi: `www_${e.study_name}.json`,
         arsivde: e.is_archived
@@ -950,13 +1006,24 @@ app.get("/listeCalismalar", async (req, res) => {
       files.push(`${g.class_name}Grupları.json`);
     });
 
+    // 6. FS Fallback for un-migrated groups
+    const fs = require('fs');
+    const localFiles = fs.readdirSync(__dirname);
+    localFiles.forEach(f => {
+      if ((f.startsWith('ggg') && f.endsWith('.json')) || f.endsWith('Grupları.json')) {
+        if (!files.includes(f) && !files.find(fn => fn.dosya_adi === f)) {
+          files.push(f);
+        }
+      }
+    });
+
     // Map strings to objects for mixed array consistency (admin.html expects objects)
     const formattedFiles = files.map(f => {
       if (typeof f === 'string') {
         const isArchived = studies.rows.find(s => `qwx${s.name}.json` === f)?.is_archived || false;
         return { dosya_adi: f, arsivde: isArchived };
       }
-      return f; // Already an object (from Evaluations mapping)
+      return f; // Zaten obje formunda
     });
 
     res.json(formattedFiles);
@@ -1011,7 +1078,7 @@ app.get("/calismaGetir", async (req, res) => {
 
     } else if (isim.startsWith("www_")) {
       // Fetch Evaluations (All students for a study)
-      const name = isim.replace("www_", "");
+      const name = isim.replace("www_", "").replace(".json", "");
       console.log(`[www_ Getir] İstek: ${isim}, Study adı: ${name}`);
 
       const studyRes = await query("SELECT id FROM studies WHERE name = $1", [name]);
@@ -1089,7 +1156,7 @@ app.get("/calismaGetir", async (req, res) => {
       console.log(`✅ [www_ Getir] ${mapped.length} kayıt döndürülüyor`);
       res.json(mapped);
 
-    } else if (isim.endsWith("Grupları.json")) {
+    } else if (isim.endsWith("Grupları.json") || isim.startsWith("ggg")) {
       // Fetch Groups (ggg[Study][Class].json OR [Class]Grupları.json)
       // Request format: ggg[Study][Class].json  OR  [Class]Grupları.json
 
@@ -1102,13 +1169,17 @@ app.get("/calismaGetir", async (req, res) => {
 
         const normalized = sinifIsmiTemizle(isim.replace("ggg", "").replace(".json", ""));
         const resDb = await query(`
-            SELECT groups_data FROM study_groups 
-            WHERE ('ggg' || study_name || class_name || '.json' = $1)
-               OR ('ggg' || study_name || $2 || '.json' = $1)
-        `, [searchKey, normalized]);
+            SELECT groups_data, study_name, class_name FROM study_groups 
+        `);
 
-        if (resDb.rows.length > 0) {
-          res.json(resDb.rows[0].groups_data);
+        // Find the matching group by reconstructing the requested filename format
+        const foundGroup = resDb.rows.find(row => {
+          const constructed = `ggg${row.study_name}${row.class_name}.json`;
+          return constructed === searchKey || constructed.toLowerCase() === searchKey.toLowerCase() || `ggg${row.study_name}${sinifIsmiTemizle(row.class_name)}.json` === searchKey;
+        });
+
+        if (foundGroup) {
+          res.json(foundGroup.groups_data);
         } else {
           // Fallback to file system (Fuzzy)
           const fs = require("fs");
@@ -1125,7 +1196,7 @@ app.get("/calismaGetir", async (req, res) => {
             const filePath = path.join(__dirname, matchingFile);
             try { res.json(JSON.parse(fs.readFileSync(filePath, 'utf-8'))); } catch (e) { res.status(404).send(); }
           } else {
-            console.log(`[DEBUG] /calismaGetir - File not found: ${searchKey}`);
+            console.log(`[DEBUG] / calismaGetir - File not found: ${searchKey} `);
             res.status(404).send();
           }
         }
@@ -1204,7 +1275,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
       FROM study_assignments a 
       JOIN studies s ON a.study_id = s.id 
       WHERE a.class_name = $1 AND s.is_archived = FALSE
-    `, [sinif]);
+            `, [sinif]);
 
     const assignments = assignmentsRes.rows;
     if (assignments.length === 0) return res.json({ assignments: [] });
@@ -1216,7 +1287,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
       SELECT study_id, answers 
       FROM student_evaluations 
       WHERE student_school_no = 'AYARLAR' AND study_id = ANY($1)
-    `, [studyIds]);
+            `, [studyIds]);
 
     const permsMap = {};
     permsRes.rows.forEach(r => {
@@ -1228,7 +1299,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
       SELECT study_id, answers, scores, evaluation, entry_count
       FROM student_evaluations
       WHERE student_school_no = $1 AND study_id = ANY($2)
-    `, [schoolNo, studyIds]);
+            `, [schoolNo, studyIds]);
 
     const recordsMap = {};
     myRecordsRes.rows.forEach(r => {
@@ -1240,7 +1311,7 @@ app.get("/api/ogrenciPaneli", async (req, res) => {
         SELECT study_name, groups_data
         FROM study_groups
         WHERE class_name = $1
-    `, [sinif]);
+            `, [sinif]);
 
     const groupsByStudy = {};
     groupsRes.rows.forEach(r => {
@@ -1329,7 +1400,7 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
         SELECT a.class_name, s.name as study_name 
         FROM study_assignments a 
         JOIN studies s ON a.study_id = s.id
-    `);
+            `);
     assigns.rows.forEach(a => {
       // qqqClassNameStudyName.json
       result.push({
@@ -1340,7 +1411,7 @@ app.get("/yonetimDosyaListesi", async (req, res) => {
 
     // 3. Class Groups (Combine DB and File System for robustness)
     const groups = await query("SELECT class_name FROM class_groups");
-    const dbGroupNames = groups.rows.map(g => `${g.class_name}Grupları.json`);
+    const dbGroupNames = groups.rows.map(g => `${g.class_name} Grupları.json`);
 
     // Also check file system for immediate visibility
     let fsGroupFiles = [];
@@ -1447,7 +1518,7 @@ app.get("/migrateGroupsToStudies", async (req, res) => {
 
       // 2. Check if Generic Group File exists
       const normClass = sinifIsmiTemizle(className);
-      const legacyGroupFile = `${normClass}Grupları.json`;
+      const legacyGroupFile = `${normClass} Grupları.json`;
 
       if (!fs.existsSync(path.join(__dirname, legacyGroupFile))) continue;
 
@@ -1459,7 +1530,7 @@ app.get("/migrateGroupsToStudies", async (req, res) => {
 
       // 3. Create Study-Specific Group File (FS)
       const newFileName = `ggg${studyName}${className}.json`; // .json added below usually? No, full name
-      // Wait, index.html says: `ggg${study}${class}` (no json?) -> server adds .json
+      // Wait, index.html says: `ggg${ study }${ class} ` (no json?) -> server adds .json
       // Let's create `ggg[Study][Class].json`.
       const newFilePath = path.join(__dirname, `ggg${studyName}${className}.json`);
 
@@ -1471,9 +1542,9 @@ app.get("/migrateGroupsToStudies", async (req, res) => {
       // 4. Try DB Insert (Best Effort)
       try {
         await query(`
-                INSERT INTO study_groups (study_name, class_name, groups_data)
-                VALUES ($1, $2, $3::jsonb)
-                ON CONFLICT (study_name, class_name) DO NOTHING
+                INSERT INTO study_groups(study_name, class_name, groups_data)
+          VALUES($1, $2, $3:: jsonb)
+                ON CONFLICT(study_name, class_name) DO NOTHING
              `, [studyName, className, JSON.stringify(groupsData)]);
         migratedCount++;
       } catch (e) {
@@ -1483,7 +1554,7 @@ app.get("/migrateGroupsToStudies", async (req, res) => {
 
     res.json({
       status: "ok",
-      message: `Migration verified. FS Created: ${fsCreated}, DB Migrated: ${migratedCount}`
+      message: `Migration verified.FS Created: ${fsCreated}, DB Migrated: ${migratedCount} `
     });
 
   } catch (e) {
@@ -1508,10 +1579,10 @@ app.get("/adminMigration", async (req, res) => {
       // JSON.stringify for PostgreSQL JSONB
       const jsonData = JSON.stringify(content);
       await query(`
-            INSERT INTO class_groups (class_name, groups_data)
-            VALUES ($1, $2::jsonb)
-            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
-        `, [className, jsonData]);
+            INSERT INTO class_groups(class_name, groups_data)
+          VALUES($1, $2:: jsonb)
+            ON CONFLICT(class_name) DO UPDATE SET groups_data = $2:: jsonb
+            `, [className, jsonData]);
     }
     res.json({ status: "ok", migrated: counting });
   } catch (e) {
@@ -1529,20 +1600,20 @@ async function autoMigrate() {
 
     // 0. Ensure Tables Exists (Robustness)
     await query(`
-        CREATE TABLE IF NOT EXISTS class_groups (
-            class_name VARCHAR(255) PRIMARY KEY,
-            groups_data JSONB
-        );
-    `);
+        CREATE TABLE IF NOT EXISTS class_groups(
+              class_name VARCHAR(255) PRIMARY KEY,
+              groups_data JSONB
+            );
+          `);
 
     await query(`
-        CREATE TABLE IF NOT EXISTS study_groups (
+        CREATE TABLE IF NOT EXISTS study_groups(
             study_name VARCHAR(255),
             class_name VARCHAR(255),
             groups_data JSONB,
-            PRIMARY KEY (study_name, class_name)
-        );
-    `);
+            PRIMARY KEY(study_name, class_name)
+          );
+          `);
 
     // 1. Class Groups (More robust check)
     console.log("Files in directory:", files); // Debugging
@@ -1554,16 +1625,16 @@ async function autoMigrate() {
       try {
         content = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf-8'));
       } catch (err) {
-        console.error(`Error reading ${file}:`, err);
+        console.error(`Error reading ${file}: `, err);
         continue;
       }
 
       // JSON.stringify for PostgreSQL JSONB
       const jsonData = JSON.stringify(content);
       await query(`
-            INSERT INTO class_groups (class_name, groups_data)
-            VALUES ($1, $2::jsonb)
-            ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
+            INSERT INTO class_groups(class_name, groups_data)
+          VALUES($1, $2:: jsonb)
+            ON CONFLICT(class_name) DO UPDATE SET groups_data = $2:: jsonb
         `, [className, jsonData]);
       console.log(`Migrated generic group: ${file} (Class: ${className})`);
     }
@@ -1600,13 +1671,13 @@ async function autoMigrate() {
 
         if (foundStudy && foundClass) {
           await query(`
-                    INSERT INTO study_groups (study_name, class_name, groups_data)
-                    VALUES ($1, $2, $3::jsonb)
-                    ON CONFLICT (study_name, class_name) DO UPDATE SET groups_data = $3::jsonb
+                    INSERT INTO study_groups(study_name, class_name, groups_data)
+          VALUES($1, $2, $3:: jsonb)
+                    ON CONFLICT(study_name, class_name) DO UPDATE SET groups_data = $3:: jsonb
                 `, [foundStudy, foundClass, JSON.stringify(content)]);
           console.log(`Migrated study group: ${file} (Study: ${foundStudy}, Class: ${foundClass})`);
         } else {
-          console.warn(`Could not parse Study/Class from filename: ${file}`);
+          console.warn(`Could not parse Study / Class from filename: ${file} `);
         }
       }
     }
@@ -1622,24 +1693,24 @@ async function autoMigrate() {
     const fs = require('fs');
 
     for (const cls of siviClasses) {
-      const fName = `${cls}Grupları.json`;
+      const fName = `${cls} Grupları.json`;
       const fPath = path.join(__dirname, fName);
 
       if (fs.existsSync(fPath)) {
-        console.log(`[SPECIAL IMPORT] Found ${fName} for ${siviStudy}. Importing...`);
+        console.log(`[SPECIAL IMPORT] Found ${fName} for ${siviStudy}.Importing...`);
         try {
           const content = JSON.parse(fs.readFileSync(fPath, 'utf-8'));
           const jsonStr = JSON.stringify(content);
 
           // Insert into study_groups
           await query(`
-                      INSERT INTO study_groups (study_name, class_name, groups_data)
-                      VALUES ($1, $2, $3::jsonb)
-                      ON CONFLICT (study_name, class_name) 
-                      DO UPDATE SET groups_data = $3::jsonb
-                  `, [siviStudy, cls, jsonStr]);
+                      INSERT INTO study_groups(study_name, class_name, groups_data)
+                      VALUES($1, $2, $3:: jsonb)
+                      ON CONFLICT(study_name, class_name) 
+                      DO UPDATE SET groups_data = $3:: jsonb
+          `, [siviStudy, cls, jsonStr]);
 
-          console.log(`✅ [SPECIAL IMPORT] Imported ${cls} into ${siviStudy}.`);
+          console.log(`✅[SPECIAL IMPORT] Imported ${cls} into ${siviStudy}.`);
 
           // Rename to prevent overwrite on next restart
           // We append ".imported"
@@ -1649,7 +1720,7 @@ async function autoMigrate() {
           console.log(`   -> Renamed file to ${fName}.imported`);
 
         } catch (err) {
-          console.error(`❌ [SPECIAL IMPORT] Error importing ${cls}:`, err.message);
+          console.error(`❌[SPECIAL IMPORT] Error importing ${cls}: `, err.message);
         }
       }
     }
@@ -1670,7 +1741,7 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
       logs.push("✅ DB Connection OK");
       dbConnected = true;
     } catch (dbErr) {
-      logs.push(`⚠️ DB Connection FAILED: ${dbErr.message || dbErr}. Will use File System fallback.`);
+      logs.push(`⚠️ DB Connection FAILED: ${dbErr.message || dbErr}.Will use File System fallback.`);
     }
 
     const siviClasses = ["9A", "9B", "9C"];
@@ -1684,7 +1755,7 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
 
       if (!fs.existsSync(fPath)) {
         if (fs.existsSync(fPath + ".imported")) {
-          logs.push(`Original ${fName} not found, but found .imported. Using it.`);
+          logs.push(`Original ${fName} not found, but found.imported.Using it.`);
           fPath = fPath + ".imported";
         } else {
           logs.push(`Skipping ${cls}: File not found.`);
@@ -1703,15 +1774,15 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
         if (dbConnected) {
           try {
             await query(`
-                          INSERT INTO study_groups (study_name, class_name, groups_data)
-                          VALUES ($1, $2, $3::jsonb)
-                          ON CONFLICT (study_name, class_name) 
-                          DO UPDATE SET groups_data = $3::jsonb
-                      `, [siviStudy, cls, jsonStr]);
+                          INSERT INTO study_groups(study_name, class_name, groups_data)
+                          VALUES($1, $2, $3:: jsonb)
+                          ON CONFLICT(study_name, class_name) 
+                          DO UPDATE SET groups_data = $3:: jsonb
+          `, [siviStudy, cls, jsonStr]);
             logs.push(`✅ DB Insert Success for ${cls}.`);
             imported = true;
           } catch (sqlErr) {
-            logs.push(`❌ DB Insert Failed for ${cls}: ${sqlErr.message}`);
+            logs.push(`❌ DB Insert Failed for ${cls}: ${sqlErr.message} `);
           }
         }
 
@@ -1720,10 +1791,10 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
           const targetFileName = `ggg${siviStudy}${cls}.json`;
           const targetPath = path.join(__dirname, targetFileName);
           fs.writeFileSync(targetPath, jsonStr);
-          logs.push(`✅ FS Write Success: ${targetFileName}`);
+          logs.push(`✅ FS Write Success: ${targetFileName} `);
           imported = true;
         } catch (fsErr) {
-          logs.push(`❌ FS Write Failed for ${cls}: ${fsErr.message}`);
+          logs.push(`❌ FS Write Failed for ${cls}: ${fsErr.message} `);
         }
 
         // Renaming Logic
@@ -1732,14 +1803,14 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
             const newPath = fPath + ".imported";
             if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
             fs.renameSync(fPath, newPath);
-            logs.push(`Renamed source file to .imported`);
+            logs.push(`Renamed source file to.imported`);
           }
         }
 
       } catch (err) {
         const util = require('util');
-        logs.push(`❌ Critical Error ${cls}: ${err.message}`);
-        logs.push(`   -> Details: ${util.format(err)}`);
+        logs.push(`❌ Critical Error ${cls}: ${err.message} `);
+        logs.push(`   -> Details: ${util.format(err)} `);
       }
     }
     res.json({ status: "ok", logs });
@@ -1781,7 +1852,7 @@ app.get('/yedekAl', async (req, res) => {
     try {
       const groups = await query("SELECT class_name, groups_data FROM class_groups");
       groups.rows.forEach(g => {
-        zip.addFile(`${g.class_name}Grupları.json`, Buffer.from(JSON.stringify(g.groups_data, null, 2)));
+        zip.addFile(`${g.class_name} Grupları.json`, Buffer.from(JSON.stringify(g.groups_data, null, 2)));
       });
       console.log(`[BACKUP] Added ${groups.rows.length} group files`);
     } catch (e) { console.error("[BACKUP] Groups error:", e); }
@@ -1801,7 +1872,7 @@ app.get('/yedekAl', async (req, res) => {
                 SELECT a.*, s.name as study_name 
                 FROM study_assignments a 
                 JOIN studies s ON a.study_id = s.id
-            `);
+          `);
       assigns.rows.forEach(a => {
         const filename = `qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`;
         // Construct legacy assignment object
@@ -1825,7 +1896,7 @@ app.get('/yedekAl', async (req, res) => {
                 FROM student_evaluations se
                 JOIN studies s ON se.study_id = s.id
                 LEFT JOIN students st ON se.student_school_no = st.school_no
-            `);
+          `);
 
       // Group by study_name
       const studyGroups = {};
@@ -1855,7 +1926,7 @@ app.get('/yedekAl', async (req, res) => {
       Object.keys(studyGroups).forEach(studyName => {
         zip.addFile(`www_${studyName}.json`, Buffer.from(JSON.stringify(studyGroups[studyName], null, 2)));
       });
-      console.log(`[BACKUP] Added ${Object.keys(studyGroups).length} answer files (www_)`);
+      console.log(`[BACKUP] Added ${Object.keys(studyGroups).length} answer files(www_)`);
 
     } catch (e) { console.error("[BACKUP] Answers error:", e); }
 
@@ -1864,7 +1935,7 @@ app.get('/yedekAl', async (req, res) => {
     const fileName = `Yedek_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
 
     res.set('Content-Type', 'application/octet-stream');
-    res.set('Content-Disposition', `attachment; filename=${fileName}`);
+    res.set('Content-Disposition', `attachment; filename = ${fileName} `);
     res.set('Content-Length', zipBuffer.length);
     res.send(zipBuffer);
     console.log("[BACKUP] Complete.");
@@ -1904,17 +1975,17 @@ app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
 
           for (const s of allStudents) {
             await query(`
-                            INSERT INTO students (school_no, name, class_name, phone, parent_phone, email, drive_link, extra_info)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                            ON CONFLICT (school_no) DO UPDATE SET 
-                                name = EXCLUDED.name, 
-                                class_name = EXCLUDED.class_name,
-                                phone = EXCLUDED.phone,
-                                parent_phone = EXCLUDED.parent_phone,
-                                email = EXCLUDED.email,
-                                drive_link = EXCLUDED.drive_link,
-                                extra_info = EXCLUDED.extra_info
-                         `, [
+                            INSERT INTO students(school_no, name, class_name, phone, parent_phone, email, drive_link, extra_info)
+VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+                            ON CONFLICT(school_no) DO UPDATE SET
+name = EXCLUDED.name,
+  class_name = EXCLUDED.class_name,
+  phone = EXCLUDED.phone,
+  parent_phone = EXCLUDED.parent_phone,
+  email = EXCLUDED.email,
+  drive_link = EXCLUDED.drive_link,
+  extra_info = EXCLUDED.extra_info
+    `, [
               String(s["Okul Numaranız"]),
               s["Adınız Soyadınız"],
               s["Sınıfınız"],
@@ -1931,17 +2002,17 @@ app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
         else if (name.endsWith("Grupları.json")) {
           const className = name.replace("Grupları.json", "");
           await query(`
-                        INSERT INTO class_groups (class_name, groups_data) VALUES ($1, $2::jsonb)
-                        ON CONFLICT (class_name) DO UPDATE SET groups_data = $2::jsonb
-                    `, [className, JSON.stringify(content)]);
+                        INSERT INTO class_groups(class_name, groups_data) VALUES($1, $2:: jsonb)
+                        ON CONFLICT(class_name) DO UPDATE SET groups_data = $2:: jsonb
+  `, [className, JSON.stringify(content)]);
           stats.groups++;
         }
         // 3. STUDIES (qwx)
         else if (name.startsWith("qwx")) {
           const studyName = name.replace("qwx", "").replace(".json", "");
           await query(`
-                        INSERT INTO studies (name, content) VALUES ($1, $2::jsonb)
-                        ON CONFLICT (name) DO UPDATE SET content = $2::jsonb
+                        INSERT INTO studies(name, content) VALUES($1, $2:: jsonb)
+                        ON CONFLICT(name) DO UPDATE SET content = $2:: jsonb
                     `, [studyName, JSON.stringify(content)]);
           stats.studies++;
         }
@@ -1970,9 +2041,9 @@ app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
           };
 
           await query(`
-                        INSERT INTO study_assignments (study_id, class_name, method, settings)
-                        VALUES ($1, $2, $3, $4::jsonb)
-                        ON CONFLICT (study_id, class_name) DO UPDATE SET method = $3, settings = $4::jsonb
+                        INSERT INTO study_assignments(study_id, class_name, method, settings)
+VALUES($1, $2, $3, $4:: jsonb)
+                        ON CONFLICT(study_id, class_name) DO UPDATE SET method = $3, settings = $4:: jsonb
                      `, [studyId, content.sinif, content.yontem, JSON.stringify(settings)]);
           stats.assignments++;
         }
@@ -1987,7 +2058,7 @@ app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
             // Re-fetch
             const sRes = await query("SELECT id FROM studies WHERE name = $1", [studyName]);
             if (sRes.rows.length === 0) {
-              stats.errors.push(`${name}: Could not create/find study '${studyName}'.`);
+              stats.errors.push(`${name}: Could not create / find study '${studyName}'.`);
               continue;
             }
             // Use found ID
@@ -2006,18 +2077,18 @@ app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
 
             // Upsert Student Evaluation
             // Ensure student exists
-            await query(`INSERT INTO students (school_no, name, class_name) VALUES ($1, $2, $3) ON CONFLICT (school_no) DO NOTHING`,
+            await query(`INSERT INTO students(school_no, name, class_name) VALUES($1, $2, $3) ON CONFLICT(school_no) DO NOTHING`,
               [String(ans.ogrenciNo), ans.adSoyad || 'Yedek', ans.sinif || '']);
 
             await query(`
-                            INSERT INTO student_evaluations (study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
-                            VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, NOW())
-                            ON CONFLICT (study_id, student_school_no) DO UPDATE SET 
-                                answers = EXCLUDED.answers,
-                                scores = EXCLUDED.scores,
-                                evaluation = EXCLUDED.evaluation,
-                                entry_count = EXCLUDED.entry_count
-                        `, [
+                            INSERT INTO student_evaluations(study_id, student_school_no, class_name, answers, scores, entry_count, evaluation, last_updated)
+VALUES($1, $2, $3, $4:: jsonb, $5:: jsonb, $6, $7:: jsonb, NOW())
+                            ON CONFLICT(study_id, student_school_no) DO UPDATE SET
+answers = EXCLUDED.answers,
+  scores = EXCLUDED.scores,
+  evaluation = EXCLUDED.evaluation,
+  entry_count = EXCLUDED.entry_count
+    `, [
               studyId,
               String(ans.ogrenciNo),
               ans.sinif || '',
@@ -2031,19 +2102,19 @@ app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
         }
 
       } catch (entryErr) {
-        console.error(`[RESTORE] Error processing ${entry.entryName}:`, entryErr);
-        stats.errors.push(`${entry.entryName}: ${entryErr.message}`);
+        console.error(`[RESTORE] Error processing ${entry.entryName}: `, entryErr);
+        stats.errors.push(`${entry.entryName}: ${entryErr.message} `);
       }
     }
 
     const msg = `
-            Öğrenciler: ${stats.students}
+Öğrenciler: ${stats.students}
             Sınıf Grupları: ${stats.groups}
-            Çalışmalar: ${stats.studies}
-            Atamalar: ${stats.assignments}
+Çalışmalar: ${stats.studies}
+Atamalar: ${stats.assignments}
             Öğrenci Cevap Kayıtları: ${stats.answers}
-            Hatalar: ${stats.errors.length}
-        `;
+Hatalar: ${stats.errors.length}
+`;
 
     console.log("[RESTORE] Completed.", stats);
     res.json({ status: "ok", message: msg });
@@ -2056,7 +2127,7 @@ app.post('/yedekYukle', upload.single('yedekDosyasi'), async (req, res) => {
 
 // --- SUNUCUYU BAŞLAT ---
 app.listen(PORT, "0.0.0.0", async () => {
-  console.log(`Sunucu ${PORT} portunda hazır! (SQL Modu)`);
+  console.log(`Sunucu ${PORT} portunda hazır!(SQL Modu)`);
   logToFile("SERVER RESTARTED - LOGGING INITIALIZED");
   await autoMigrate();
 });
