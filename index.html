@@ -1629,7 +1629,9 @@
                 document.getElementById("s4DosyaSec").innerHTML = '<option value="">-- Seç --</option>';
                 document.getElementById("sinifCalismaSec").innerHTML = '<option value="">-- Çalışma Seçin --</option>';
 
-                dosyalar.filter(d => d.startsWith("qwx")).forEach(d => {
+                const safeDosyalar = dosyalar.map(d => typeof d === 'string' ? d : d.dosya_adi);
+
+                safeDosyalar.filter(d => d.startsWith("qwx")).forEach(d => {
                     const name = d.replace("qwx", "").replace(".json", "");
                     // S3
                     const opt3 = document.createElement("option"); opt3.value = name; opt3.textContent = name;
