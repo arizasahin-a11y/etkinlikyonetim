@@ -932,10 +932,7 @@ app.get("/listeCalismalar", async (req, res) => {
         JOIN studies s ON se.study_id = s.id
       `);
     evals.rows.forEach(e => {
-      files.push({
-        dosya_adi: `www_${e.study_name}.json`,
-        arsivde: e.is_archived
-      });
+      files.push(`www_${e.study_name}.json`);
     });
 
     // 4. Study Groups
@@ -955,7 +952,7 @@ app.get("/listeCalismalar", async (req, res) => {
     const localFiles = fs.readdirSync(__dirname);
     localFiles.forEach(f => {
       if ((f.startsWith('ggg') && f.endsWith('.json')) || f.endsWith('Grupları.json')) {
-        if (!files.includes(f) && !files.find(fn => fn.dosya_adi === f)) {
+        if (!files.includes(f)) {
           files.push(f);
         }
       }
