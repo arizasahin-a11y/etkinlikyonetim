@@ -900,7 +900,7 @@ app.post("/kaydet", async (req, res) => {
   return res.status(400).json({ status: "eksik" });
 });
 
-// Listeleme
+// Listeleme (Ogrenci Arayüzü İçin - Sadece metin array'i döner)
 app.get("/listeCalismalar", async (req, res) => {
   try {
     // Need to return array of filenames simulating legacy format:
@@ -961,13 +961,72 @@ app.get("/listeCalismalar", async (req, res) => {
       }
     });
 
+    res.json(files); // Öğrenci tarafı string beklediği için raw list gönderiyoruz
+  } catch (e) { console.error(e); res.json([]); }
+});
+
+// Yönetim Paneli İçin Listeleme (Arşiv bilgisi eklenmiş obje listesi döner)
+app.get("/yonetimDosyaListesi", async (req, res) => {
+  try {
+    const files = [];
+
+    // 1. Studies
+    const studies = await query("SELECT id, name, is_archived FROM studies"); // Yönetimde tüm studies listelenir
+    studies.rows.forEach(s => files.push(`qwx${s.name}.json`));
+
+    // 2. Assignments
+    const assigns = await query(`
+        SELECT a.class_name, s.name as study_name 
+        FROM study_assignments a 
+        JOIN studies s ON a.study_id = s.id
+      `); // Yönetimde arşivliler de listelenebilir
+    assigns.rows.forEach(a => {
+      files.push(`qqq${a.class_name.replace(/\s/g, '')}${a.study_name}.json`);
+    });
+
+    // 3. Evaluations
+    const evals = await query(`
+        SELECT DISTINCT s.name as study_name, s.is_archived
+        FROM student_evaluations se
+        JOIN studies s ON se.study_id = s.id
+      `);
+    evals.rows.forEach(e => {
+      files.push({
+        dosya_adi: `www_${e.study_name}.json`,
+        arsivde: e.is_archived
+      });
+    });
+
+    // 4. Study Groups
+    const sGroups = await query(`SELECT study_name, class_name FROM study_groups`);
+    sGroups.rows.forEach(g => {
+      files.push(`ggg${g.study_name}${g.class_name}.json`);
+    });
+
+    // 5. Generic Class Groups
+    const cGroups = await query(`SELECT class_name FROM class_groups`);
+    cGroups.rows.forEach(g => {
+      files.push(`${g.class_name}Grupları.json`);
+    });
+
+    // 6. FS Fallback for un-migrated groups
+    const fs = require('fs');
+    const localFiles = fs.readdirSync(__dirname);
+    localFiles.forEach(f => {
+      if ((f.startsWith('ggg') && f.endsWith('.json')) || f.endsWith('Grupları.json')) {
+        if (!files.includes(f) && !files.find(fn => fn.dosya_adi === f)) {
+          files.push(f);
+        }
+      }
+    });
+
     // Map strings to objects for mixed array consistency (admin.html expects objects)
     const formattedFiles = files.map(f => {
       if (typeof f === 'string') {
         const isArchived = studies.rows.find(s => `qwx${s.name}.json` === f)?.is_archived || false;
         return { dosya_adi: f, arsivde: isArchived };
       }
-      return f; // Already an object (from Evaluations mapping)
+      return f; // Zaten obje formunda
     });
 
     res.json(formattedFiles);
