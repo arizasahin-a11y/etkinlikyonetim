@@ -1682,7 +1682,8 @@
                 chkOgr.checked = ayar ? ayar.degerlendirmeIzni : false;
                 chkOgrt.checked = ayar ? ayar.izin : false;
 
-                const atananlar = dosyalar.filter(f => f.startsWith("qqq") && f.replace(".json", "").endsWith(calisma));
+                const safeDosyalar = dosyalar.map(d => typeof d === 'string' ? d : d.dosya_adi);
+                const atananlar = safeDosyalar.filter(f => f.startsWith("qqq") && f.replace(".json", "").endsWith(calisma));
 
                 sinifSel.innerHTML = '<option value="">-- Seç --</option>';
 
