@@ -1610,14 +1610,20 @@
 
                 // Priority: If yapma is false -> BİTTİ (only if duration > 0)
                 if (!a.yapma) {
-                    el.textContent = (a.sure > 0) ? "BİTTİ" : "--:--";
+                    el.textContent = (a.sure > 0) ? "BİTTİ" : "0:00:00:00";
                     return;
                 }
 
                 if (!a.bitis) return;
 
                 const diff = a.bitis - Date.now();
-                if (diff > 0) { el.textContent = `${Math.floor(diff / 60000).toString().padStart(2, '0')}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')} `; }
+                if (diff > 0) {
+                    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const s = Math.floor((diff % (1000 * 60)) / 1000);
+                    el.textContent = `${d}:${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                }
                 else { el.textContent = "BİTTİ"; if (a.yapma) { a.yapma = false; s3Upd(a.id, 'yapma', false); } }
             });
         }, 1000);

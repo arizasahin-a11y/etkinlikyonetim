@@ -891,9 +891,11 @@
                             timerEl.textContent = "Süre Doldu";
                             timerEl.className = "timer-badge badge-red";
                         } else {
-                            const m = Math.floor(diff / 60000);
-                            const s = Math.floor((diff % 60000) / 1000);
-                            timerEl.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+                            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                            const s = Math.floor((diff % (1000 * 60)) / 1000);
+                            timerEl.textContent = `${d}:${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                             timerEl.className = "timer-badge badge-green";
                         }
                     } else {
@@ -914,9 +916,11 @@
                             tText = "Süre Doldu";
                             tColor = "#c62828";
                         } else {
-                            const m = Math.floor(diff / 60000);
-                            const s = Math.floor((diff % 60000) / 1000);
-                            tText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                            const s = Math.floor((diff % (1000 * 60)) / 1000);
+                            tText = `${d}:${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                             tColor = "#2e7d32"; // Green
                         }
 
@@ -1894,11 +1898,13 @@
                     // Timer logic will need to update this, but for static render:
                     // actually, let's just put a placeholder ID and let updateTimer/durumYonetimi handle it if possible?
                     // Or just render once.
-                    const min = Math.floor(diff / 60000);
-                    const sec = Math.floor((diff % 60000) / 1000);
-                    timerHtml = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+                    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const s = Math.floor((diff % (1000 * 60)) / 1000);
+                    timerHtml = `${d}:${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                 } else {
-                    timerHtml = "0:00";
+                    timerHtml = "0:00:00:00";
                 }
             }
             // Use same ID as focus timer so if we have global timer logic it might update? 
