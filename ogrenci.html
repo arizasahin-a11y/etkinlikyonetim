@@ -1748,9 +1748,10 @@
             const kayit = cevaplar.find(c => Number(c.soruIndex) === Number(oIdx));
             const satirlar = (kayit && kayit.cevaplar.length > 0) ? kayit.cevaplar : [""];
             const isMCQ = (sorular[sIdx] && sorular[sIdx].type === 'coktan_secmeli');
+            const isLocked = (atan && atan.cevapKilidi === true);
 
             const btnYeniSatir = document.querySelector('button[onclick="yeniSatirEkle(\'\')"]');
-            if (btnYeniSatir) btnYeniSatir.style.display = isMCQ ? 'none' : 'block';
+            if (btnYeniSatir) btnYeniSatir.style.display = (isMCQ || isLocked) ? 'none' : 'block';
 
             if (isMCQ) {
                 if (full || cont.querySelectorAll('input[type="radio"]').length === 0) {
@@ -1760,8 +1761,8 @@
                         const optLetter = String.fromCharCode(65 + i);
                         const isChecked = (satirlar[0] === String(i)) ? 'checked' : '';
                         html += `
-                        <label class="mcq-option">
-                            <input type="radio" onchange="kaydet()" name="mcq_answer" value="${i}" ${isChecked} class="mcq-radio">
+                        <label class="mcq-option" ${isLocked ? 'style="pointer-events:none; opacity:0.8;"' : ''}>
+                            <input type="radio" onchange="kaydet()" name="mcq_answer" value="${i}" ${isChecked} ${isLocked ? 'disabled' : ''} class="mcq-radio">
                             <div class="mcq-content">
                                 <div class="mcq-letter">${optLetter}</div>
                                 <div class="mcq-text">${linkleriDonustur(secenek)}</div>
@@ -1790,18 +1791,25 @@
         }
 
         function yeniSatirEkle(v) {
+            const isLocked = (atan && atan.cevapKilidi === true);
             const div = document.createElement('div'); div.className = "cevap-konteynir";
-            const t = document.createElement('textarea'); t.rows = 2; t.value = v; t.placeholder = "Cevap...";
+            const t = document.createElement('textarea'); t.rows = 2; t.value = v; t.placeholder = isLocked ? "" : "Cevap...";
+            if (isLocked) t.disabled = true;
             t.onfocus = () => { isTyping = true; document.getElementById('s_durum').textContent = "Yazıyor..."; };
             t.onblur = () => { isTyping = false; kaydet(); };
             const sBtn = document.createElement('button'); sBtn.className = "satir-sil"; sBtn.innerHTML = "X";
+            if (isLocked) sBtn.style.display = "none";
             sBtn.onclick = () => { if (confirm("Sil?")) { div.remove(); kaydet(); } };
             div.appendChild(t); div.appendChild(sBtn);
             document.getElementById('s_inputs').appendChild(div);
-            if (!v) t.focus();
+            if (!v && !isLocked) t.focus();
         }
 
         async function kaydet() {
+            if (atan && atan.cevapKilidi === true) {
+                console.log("[Kilit] Cevaplar kilitli, kayıt engellendi.");
+                return;
+            }
             if (document.getElementById('p_soru').style.display === "block") {
                 const s = sorular[sIdx];
                 const isMCQ = (s && s.type === 'coktan_secmeli');
@@ -1872,7 +1880,14 @@
             if (document.getElementById('p_soru').style.display === "block" && atan.yapma) kaydet();
             ['p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
             document.getElementById('p_ozet').style.display = "block";
-            const canEdit = atan && atan.yapma;
+            const isLocked = (atan && atan.cevapKilidi === true);
+            const canEdit = atan && atan.yapma && !isLocked;
+            
+            if (isLocked) {
+                document.getElementById('ozet_don_btn').style.display = "none";
+            } else {
+                document.getElementById('ozet_don_btn').style.display = "block";
+            }
 
             // --- HEADER INFO (New) ---
             let baslikHtml = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">`;

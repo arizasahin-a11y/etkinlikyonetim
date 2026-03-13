@@ -1502,7 +1502,7 @@
             if (!sn || !cl || !yn) return alert("Eksik seçim!");
             const dId = "qqq" + sn.replace(/\s/g, '') + cl.replace("qwx", "");
             // Initializing new permissions
-            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, aciklamaIzni: false, soruIzni: false, yapma: false, degerl: false, sure: 0, bitis: null, karisikSoru: karisik, odakModu: false };
+            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, aciklamaIzni: false, soruIzni: false, cevapKilidi: false, yapma: false, degerl: false, sure: 0, bitis: null, karisikSoru: karisik, odakModu: false };
             fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: dId, sorular: obj }) }).then(() => {
                 document.getElementById("chkKarisikSoru").checked = false; // Reset checkbox after apply
                 setTimeout(s3AtamalariCek, 300);
@@ -1530,6 +1530,7 @@
                     <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
                         <label style="cursor:pointer;" title="Açıklama metnini ve Grup listesini göster"><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açıklama</label>
                         <label style="cursor:pointer;" title="Soruları ve öğrenci cavaplarını göster (Salt Okunur)"><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
+                        <label style="cursor:pointer; color:#7B1FA2;" title="Öğrenci cevap girişi yapamaz (Kilitle)"><input type="checkbox" ${a.cevapKilidi ? 'checked' : ''} onchange="s3Upd('${a.id}','cevapKilidi',this.checked)"> 🔒 Kilit</label>
                         <label style="cursor:pointer; color:#d32f2f; font-weight:bold;" title="Öğrenci sorulara çalışırken soruların sırasını karıştır"><input type="checkbox" ${a.karisikSoru ? 'checked' : ''} onchange="s3Upd('${a.id}','karisikSoru',this.checked)"> Karışık</label>
                     </div>
                 </td>
