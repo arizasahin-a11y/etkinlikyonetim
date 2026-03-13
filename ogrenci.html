@@ -1748,9 +1748,10 @@
             const kayit = cevaplar.find(c => Number(c.soruIndex) === Number(oIdx));
             const satirlar = (kayit && kayit.cevaplar.length > 0) ? kayit.cevaplar : [""];
             const isMCQ = (sorular[sIdx] && sorular[sIdx].type === 'coktan_secmeli');
+            const isLocked = (sorular[sIdx] && sorular[sIdx].locked === true);
 
             const btnYeniSatir = document.querySelector('button[onclick="yeniSatirEkle(\'\')"]');
-            if (btnYeniSatir) btnYeniSatir.style.display = isMCQ ? 'none' : 'block';
+            if (btnYeniSatir) btnYeniSatir.style.display = (isMCQ || isLocked) ? 'none' : 'block';
 
             if (isMCQ) {
                 if (full || cont.querySelectorAll('input[type="radio"]').length === 0) {
@@ -1760,8 +1761,8 @@
                         const optLetter = String.fromCharCode(65 + i);
                         const isChecked = (satirlar[0] === String(i)) ? 'checked' : '';
                         html += `
-                        <label class="mcq-option">
-                            <input type="radio" onchange="kaydet()" name="mcq_answer" value="${i}" ${isChecked} class="mcq-radio">
+                        <label class="mcq-option" ${isLocked ? 'style="pointer-events:none; opacity:0.8;"' : ''}>
+                            <input type="radio" onchange="kaydet()" name="mcq_answer" value="${i}" ${isChecked} ${isLocked ? 'disabled' : ''} class="mcq-radio">
                             <div class="mcq-content">
                                 <div class="mcq-letter">${optLetter}</div>
                                 <div class="mcq-text">${linkleriDonustur(secenek)}</div>
@@ -1772,16 +1773,22 @@
                     cont.innerHTML = html;
                 } else {
                     const radios = cont.querySelectorAll('input[type="radio"]');
-                    radios.forEach(r => { r.checked = (r.value === satirlar[0]); });
+                    radios.forEach(r => { 
+                        r.checked = (r.value === satirlar[0]); 
+                        r.disabled = isLocked;
+                    });
                 }
             } else {
                 if (full || cont.querySelectorAll('textarea').length === 0) {
                     cont.innerHTML = ""; satirlar.forEach(v => yeniSatirEkle(v));
-                    const ilk = cont.querySelector('textarea'); if (ilk) ilk.focus();
+                    const ilk = cont.querySelector('textarea'); if (ilk && !isLocked) ilk.focus();
                 } else {
                     const inps = cont.querySelectorAll('textarea');
                     if (inps.length === satirlar.length) {
-                        inps.forEach((inp, i) => { if (document.activeElement !== inp) inp.value = satirlar[i]; });
+                        inps.forEach((inp, i) => { 
+                            if (document.activeElement !== inp) inp.value = satirlar[i]; 
+                            inp.disabled = isLocked;
+                        });
                     } else {
                         cont.innerHTML = ""; satirlar.forEach(v => yeniSatirEkle(v));
                     }
@@ -1790,32 +1797,40 @@
         }
 
         function yeniSatirEkle(v) {
+            const isLocked = (sorular[sIdx] && sorular[sIdx].locked === true);
             const div = document.createElement('div'); div.className = "cevap-konteynir";
-            const t = document.createElement('textarea'); t.rows = 2; t.value = v; t.placeholder = "Cevap...";
+            const t = document.createElement('textarea'); t.rows = 2; t.value = v; t.placeholder = isLocked ? "" : "Cevap...";
+            if (isLocked) t.disabled = true;
             t.onfocus = () => { isTyping = true; document.getElementById('s_durum').textContent = "Yazıyor..."; };
             t.onblur = () => { isTyping = false; kaydet(); };
             const sBtn = document.createElement('button'); sBtn.className = "satir-sil"; sBtn.innerHTML = "X";
+            if (isLocked) sBtn.style.display = "none";
             sBtn.onclick = () => { if (confirm("Sil?")) { div.remove(); kaydet(); } };
             div.appendChild(t); div.appendChild(sBtn);
             document.getElementById('s_inputs').appendChild(div);
-            if (!v) t.focus();
+            if (!v && !isLocked) t.focus();
         }
 
         async function kaydet() {
             if (document.getElementById('p_soru').style.display === "block") {
                 const s = sorular[sIdx];
-                const isMCQ = (s && s.type === 'coktan_secmeli');
-                let vals = [];
-                if (isMCQ) {
-                    const checkedOption = document.querySelector('#s_inputs input[type="radio"]:checked');
-                    if (checkedOption) vals = [checkedOption.value];
+                const isLocked = (s && s.locked === true);
+                if (!isLocked) {
+                    const isMCQ = (s && s.type === 'coktan_secmeli');
+                    let vals = [];
+                    if (isMCQ) {
+                        const checkedOption = document.querySelector('#s_inputs input[type="radio"]:checked');
+                        if (checkedOption) vals = [checkedOption.value];
+                    } else {
+                        vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
+                    }
+                    const oIdx = (s && s.originalIndex !== undefined) ? s.originalIndex : sIdx;
+                    const idx = cevaplar.findIndex(c => c.soruIndex === oIdx);
+                    if (idx > -1) cevaplar[idx] = { soruIndex: oIdx, cevaplar: vals };
+                    else cevaplar.push({ soruIndex: oIdx, cevaplar: vals });
                 } else {
-                    vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
+                    console.log("[Kilit] Bu soru kilitli, yerel cevap güncellenmedi.");
                 }
-                const oIdx = (s && s.originalIndex !== undefined) ? s.originalIndex : sIdx;
-                const idx = cevaplar.findIndex(c => c.soruIndex === oIdx);
-                if (idx > -1) cevaplar[idx] = { soruIndex: oIdx, cevaplar: vals };
-                else cevaplar.push({ soruIndex: oIdx, cevaplar: vals });
             }
 
             // Fix: Do NOT send empty array if we have no answers locally.
@@ -1873,6 +1888,9 @@
             ['p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
             document.getElementById('p_ozet').style.display = "block";
             const canEdit = atan && atan.yapma;
+            
+            // Per-question edit logic is handled in the loop below
+            document.getElementById('ozet_don_btn').style.display = "block";
 
             // --- HEADER INFO (New) ---
             let baslikHtml = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">`;
@@ -1960,8 +1978,8 @@
                 const soruMetni = (typeof s === 'object' ? s.soru : s);
 
                 h += `<tr><td>${visualIndex + 1}</td><td><span class="soru-ust">${linkleriDonustur(soruMetni)}</span>${cvs}</td>
-                ${canEdit ? `<td><button class="btn-mavi btn-sm" onclick="sIdx=${visualIndex};ekranDegis('p_soru')">Düzelt</button> 
-                <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${oIdx})">Sil</button></td>` : ''}</tr>`;
+                ${(canEdit && !s.locked) ? `<td><button class="btn-mavi btn-sm" onclick="sIdx=${visualIndex};ekranDegis('p_soru')">Düzelt</button> 
+                <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${oIdx})">Sil</button></td>` : (canEdit ? '<td><span style="color:#7B1FA2; font-size:0.8rem;">🔒 Kilitli</span></td>' : '')}</tr>`;
             });
             document.getElementById('ozet_tablo_alani').innerHTML = h + "</tbody></table>";
 
