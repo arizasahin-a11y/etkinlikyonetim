@@ -1748,7 +1748,7 @@
             const kayit = cevaplar.find(c => Number(c.soruIndex) === Number(oIdx));
             const satirlar = (kayit && kayit.cevaplar.length > 0) ? kayit.cevaplar : [""];
             const isMCQ = (sorular[sIdx] && sorular[sIdx].type === 'coktan_secmeli');
-            const isLocked = (atan && atan.cevapKilidi === true);
+            const isLocked = (sorular[sIdx] && sorular[sIdx].locked === true);
 
             const btnYeniSatir = document.querySelector('button[onclick="yeniSatirEkle(\'\')"]');
             if (btnYeniSatir) btnYeniSatir.style.display = (isMCQ || isLocked) ? 'none' : 'block';
@@ -1791,7 +1791,7 @@
         }
 
         function yeniSatirEkle(v) {
-            const isLocked = (atan && atan.cevapKilidi === true);
+            const isLocked = (sorular[sIdx] && sorular[sIdx].locked === true);
             const div = document.createElement('div'); div.className = "cevap-konteynir";
             const t = document.createElement('textarea'); t.rows = 2; t.value = v; t.placeholder = isLocked ? "" : "Cevap...";
             if (isLocked) t.disabled = true;
@@ -1806,12 +1806,12 @@
         }
 
         async function kaydet() {
-            if (atan && atan.cevapKilidi === true) {
-                console.log("[Kilit] Cevaplar kilitli, kayıt engellendi.");
-                return;
-            }
             if (document.getElementById('p_soru').style.display === "block") {
                 const s = sorular[sIdx];
+                if (s && s.locked === true) {
+                    console.log("[Kilit] Bu soru kilitli, kayıt engellendi.");
+                    return;
+                }
                 const isMCQ = (s && s.type === 'coktan_secmeli');
                 let vals = [];
                 if (isMCQ) {
@@ -1880,14 +1880,10 @@
             if (document.getElementById('p_soru').style.display === "block" && atan.yapma) kaydet();
             ['p_yonerge', 'p_soru', 'p_ozet'].forEach(p => document.getElementById(p).style.display = "none");
             document.getElementById('p_ozet').style.display = "block";
-            const isLocked = (atan && atan.cevapKilidi === true);
-            const canEdit = atan && atan.yapma && !isLocked;
+            const canEdit = atan && atan.yapma;
             
-            if (isLocked) {
-                document.getElementById('ozet_don_btn').style.display = "none";
-            } else {
-                document.getElementById('ozet_don_btn').style.display = "block";
-            }
+            // Per-question edit logic is handled in the loop below
+            document.getElementById('ozet_don_btn').style.display = "block";
 
             // --- HEADER INFO (New) ---
             let baslikHtml = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">`;
@@ -1975,8 +1971,8 @@
                 const soruMetni = (typeof s === 'object' ? s.soru : s);
 
                 h += `<tr><td>${visualIndex + 1}</td><td><span class="soru-ust">${linkleriDonustur(soruMetni)}</span>${cvs}</td>
-                ${canEdit ? `<td><button class="btn-mavi btn-sm" onclick="sIdx=${visualIndex};ekranDegis('p_soru')">Düzelt</button> 
-                <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${oIdx})">Sil</button></td>` : ''}</tr>`;
+                ${(canEdit && !s.locked) ? `<td><button class="btn-mavi btn-sm" onclick="sIdx=${visualIndex};ekranDegis('p_soru')">Düzelt</button> 
+                <button class="btn-kirmizi btn-sm" style="margin-top:5px;" onclick="cevapTemizle(${oIdx})">Sil</button></td>` : (canEdit ? '<td><span style="color:#7B1FA2; font-size:0.8rem;">🔒 Kilitli</span></td>' : '')}</tr>`;
             });
             document.getElementById('ozet_tablo_alani').innerHTML = h + "</tbody></table>";
 

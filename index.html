@@ -1101,11 +1101,13 @@
             let secenekler = ["", "", "", "", ""];
             let dogruCevap = 0;
             let soruMetni = "";
+            let questionLocked = false;
             let uid = "q_" + Date.now() + Math.floor(Math.random() * 1000);
 
             if (typeof payload === 'object') {
                 isTest = payload.type === 'coktan_secmeli';
                 soruMetni = payload.soru || "";
+                questionLocked = payload.locked === true;
                 if (isTest) {
                     secenekler = payload.secenekler || ["", "", "", "", ""];
                     dogruCevap = payload.dogruCevap || 0;
@@ -1117,7 +1119,12 @@
             }
 
             let html = `<div style="display:flex; align-items:flex-start; margin-bottom:15px; padding-bottom:15px; border-bottom:1px dashed #ddd; width:100%; flex:1; box-sizing:border-box;">
-                <span class="soru-no" style="font-weight:bold; margin-right:15px; width:60px; margin-top:12px; font-size:1.1rem; color:#333; flex-shrink:0;"></span>
+                <div style="display:flex; flex-direction:column; align-items:center; margin-right:15px; width:60px; flex-shrink:0;">
+                    <span class="soru-no" style="font-weight:bold; margin-bottom:10px; font-size:1.1rem; color:#333;"></span>
+                    <label style="cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; color:#7B1FA2; font-size:10px; font-weight:bold;" title="Öğrenci bu soruyu cevaplayamaz">
+                        <input type="checkbox" class="chk-soru-kilit" ${questionLocked ? 'checked' : ''} style="transform:scale(1.2);"> 🔒 Kilit
+                    </label>
+                </div>
                 <div class="soru-content" style="flex:1; display:flex; flex-direction:column; gap:10px;">
                     <textarea class="soru-input" style="width:100%; padding:15px; border-radius:8px; border:1px solid #ccc; resize:vertical; min-height:80px; font-size:1.05rem; box-sizing:border-box; box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);" placeholder="Soru Metni">${soruMetni}</textarea>
                     <input type="hidden" class="soru-type" value="${isTest ? 'coktan_secmeli' : 'text'}">`;
@@ -1229,6 +1236,7 @@
             document.querySelectorAll("#soruAlani .soru-item").forEach(item => {
                 const type = item.querySelector('.soru-type').value;
                 const soruMetni = item.querySelector('.soru-input').value.trim();
+                const isLocked = item.querySelector('.chk-soru-kilit').checked;
                 if (!soruMetni) return;
 
                 if (type === 'coktan_secmeli') {
@@ -1242,7 +1250,8 @@
                         type: 'coktan_secmeli',
                         soru: soruMetni,
                         secenekler: secenekler,
-                        dogruCevap: dogruCevap
+                        dogruCevap: dogruCevap,
+                        locked: isLocked
                     });
                 } else {
                     const chk = item.querySelector('.chk-cevabi-var');
@@ -1252,10 +1261,15 @@
                             type: 'text',
                             soru: soruMetni,
                             cevabiVar: true,
-                            dogruCevap: kesinCevap
+                            dogruCevap: kesinCevap,
+                            locked: isLocked
                         });
                     } else {
-                        sorularArr.push(soruMetni); // Legacy simple string format
+                        sorularArr.push({
+                            type: 'text',
+                            soru: soruMetni,
+                            locked: isLocked
+                        });
                     }
                 }
             });
@@ -1502,7 +1516,7 @@
             if (!sn || !cl || !yn) return alert("Eksik seçim!");
             const dId = "qqq" + sn.replace(/\s/g, '') + cl.replace("qwx", "");
             // Initializing new permissions
-            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, aciklamaIzni: false, soruIzni: false, cevapKilidi: false, yapma: false, degerl: false, sure: 0, bitis: null, karisikSoru: karisik, odakModu: false };
+            const obj = { id: dId, sinif: sn, calisma: cl.replace("qwx", ""), yontem: yn, gorme: false, aciklamaIzni: false, soruIzni: false, yapma: false, degerl: false, sure: 0, bitis: null, karisikSoru: karisik, odakModu: false };
             fetch("/calismaKaydet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ calismaIsmi: dId, sorular: obj }) }).then(() => {
                 document.getElementById("chkKarisikSoru").checked = false; // Reset checkbox after apply
                 setTimeout(s3AtamalariCek, 300);
@@ -1530,7 +1544,6 @@
                     <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
                         <label style="cursor:pointer;" title="Açıklama metnini ve Grup listesini göster"><input type="checkbox" ${a.aciklamaIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','aciklamaIzni',this.checked)"> Açıklama</label>
                         <label style="cursor:pointer;" title="Soruları ve öğrenci cavaplarını göster (Salt Okunur)"><input type="checkbox" ${a.soruIzni ? 'checked' : ''} onchange="s3Upd('${a.id}','soruIzni',this.checked)"> Sorular</label>
-                        <label style="cursor:pointer; color:#7B1FA2;" title="Öğrenci cevap girişi yapamaz (Kilitle)"><input type="checkbox" ${a.cevapKilidi ? 'checked' : ''} onchange="s3Upd('${a.id}','cevapKilidi',this.checked)"> 🔒 Kilit</label>
                         <label style="cursor:pointer; color:#d32f2f; font-weight:bold;" title="Öğrenci sorulara çalışırken soruların sırasını karıştır"><input type="checkbox" ${a.karisikSoru ? 'checked' : ''} onchange="s3Upd('${a.id}','karisikSoru',this.checked)"> Karışık</label>
                     </div>
                 </td>
