@@ -1773,16 +1773,22 @@
                     cont.innerHTML = html;
                 } else {
                     const radios = cont.querySelectorAll('input[type="radio"]');
-                    radios.forEach(r => { r.checked = (r.value === satirlar[0]); });
+                    radios.forEach(r => { 
+                        r.checked = (r.value === satirlar[0]); 
+                        r.disabled = isLocked;
+                    });
                 }
             } else {
                 if (full || cont.querySelectorAll('textarea').length === 0) {
                     cont.innerHTML = ""; satirlar.forEach(v => yeniSatirEkle(v));
-                    const ilk = cont.querySelector('textarea'); if (ilk) ilk.focus();
+                    const ilk = cont.querySelector('textarea'); if (ilk && !isLocked) ilk.focus();
                 } else {
                     const inps = cont.querySelectorAll('textarea');
                     if (inps.length === satirlar.length) {
-                        inps.forEach((inp, i) => { if (document.activeElement !== inp) inp.value = satirlar[i]; });
+                        inps.forEach((inp, i) => { 
+                            if (document.activeElement !== inp) inp.value = satirlar[i]; 
+                            inp.disabled = isLocked;
+                        });
                     } else {
                         cont.innerHTML = ""; satirlar.forEach(v => yeniSatirEkle(v));
                     }
@@ -1808,22 +1814,23 @@
         async function kaydet() {
             if (document.getElementById('p_soru').style.display === "block") {
                 const s = sorular[sIdx];
-                if (s && s.locked === true) {
-                    console.log("[Kilit] Bu soru kilitli, kayıt engellendi.");
-                    return;
-                }
-                const isMCQ = (s && s.type === 'coktan_secmeli');
-                let vals = [];
-                if (isMCQ) {
-                    const checkedOption = document.querySelector('#s_inputs input[type="radio"]:checked');
-                    if (checkedOption) vals = [checkedOption.value];
+                const isLocked = (s && s.locked === true);
+                if (!isLocked) {
+                    const isMCQ = (s && s.type === 'coktan_secmeli');
+                    let vals = [];
+                    if (isMCQ) {
+                        const checkedOption = document.querySelector('#s_inputs input[type="radio"]:checked');
+                        if (checkedOption) vals = [checkedOption.value];
+                    } else {
+                        vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
+                    }
+                    const oIdx = (s && s.originalIndex !== undefined) ? s.originalIndex : sIdx;
+                    const idx = cevaplar.findIndex(c => c.soruIndex === oIdx);
+                    if (idx > -1) cevaplar[idx] = { soruIndex: oIdx, cevaplar: vals };
+                    else cevaplar.push({ soruIndex: oIdx, cevaplar: vals });
                 } else {
-                    vals = Array.from(document.querySelectorAll('#s_inputs textarea')).map(t => t.value).filter(v => v.trim() !== "");
+                    console.log("[Kilit] Bu soru kilitli, yerel cevap güncellenmedi.");
                 }
-                const oIdx = (s && s.originalIndex !== undefined) ? s.originalIndex : sIdx;
-                const idx = cevaplar.findIndex(c => c.soruIndex === oIdx);
-                if (idx > -1) cevaplar[idx] = { soruIndex: oIdx, cevaplar: vals };
-                else cevaplar.push({ soruIndex: oIdx, cevaplar: vals });
             }
 
             // Fix: Do NOT send empty array if we have no answers locally.
