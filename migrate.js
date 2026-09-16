@@ -30,7 +30,7 @@ async function migrate() {
 
             for (const s of allStudents) {
                 // Map fields
-                // "Okul Numaranız": 2500, "Adınız Soyadınız": "...", "Sınıfınız": "9A"
+                // "Okul Numaranız": 2500, "Adınız Soyadınız": "...", "Sınıfınız": "10A"
                 const schoolNo = String(s["Okul Numaranız"]);
                 const name = s["Adınız Soyadınız"];
                 const className = s["Sınıfınız"];

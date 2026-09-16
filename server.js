@@ -1688,7 +1688,7 @@ async function autoMigrate() {
   // 3. SPECIAL ONE-TIME MIGRATION: Sıvı Basıncı
   // User requested to replace DB groups with local file content for this study.
   try {
-    const siviClasses = ["9A", "9B", "9C"];
+    const siviClasses = ["10A", "10B", "10C"];
     const siviStudy = "Sıvı Basıncı";
     const fs = require('fs');
 
@@ -1744,7 +1744,7 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
       logs.push(`⚠️ DB Connection FAILED: ${dbErr.message || dbErr}.Will use File System fallback.`);
     }
 
-    const siviClasses = ["9A", "9B", "9C"];
+    const siviClasses = ["10A", "10B", "10C"];
     const siviStudy = "Sıvı Basıncı";
     const fs = require('fs');
     const path = require('path');
@@ -1786,7 +1786,7 @@ app.get("/force-import-sivi-basinci", async (req, res) => {
           }
         }
 
-        // B. File System Fallback (gggSıvı Basıncı9A.json)
+        // B. File System Fallback (gggSıvı Basıncı10A.json)
         try {
           const targetFileName = `ggg${siviStudy}${cls}.json`;
           const targetPath = path.join(__dirname, targetFileName);
