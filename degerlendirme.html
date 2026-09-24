@@ -171,11 +171,12 @@
 
         .cevap-metin {
             flex: 1;
+            min-width: 0;
             font-size: 0.95rem;
             color: #333;
-            white-space: pre-wrap;
             line-height: 1.4;
             margin-top: 4px;
+            word-break: break-word;
         }
 
         .cevap-puan-btn {
@@ -297,6 +298,78 @@
             max-width: 500px;
             z-index: 200;
         }
+
+        /* MEDYA GÖMME VE LİNK STİLLERİ */
+        .embedded-wrapper {
+            width: 100%;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 5px;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        .embedded-img {
+            max-height: 200px;
+            max-width: 100%;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .embedded-img.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            max-height: 100vh;
+            object-fit: contain;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .embedded-video {
+            max-width: 100%;
+            height: auto;
+            max-height: 300px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .embedded-audio {
+            width: 100%;
+        }
+
+        .embedded-iframe {
+            width: 100%;
+            height: 350px;
+            border: none;
+        }
+
+        .embed-fallback {
+            text-align: center;
+            font-size: 13px;
+            margin-top: 5px;
+            background: #f1f1f1;
+            padding: 6px;
+            border-radius: 4px;
+        }
+
+        .embed-fallback a {
+            color: #1976D2;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .embed-fallback a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 
@@ -395,6 +468,108 @@
             document.getElementById('sonuc_puan_goster').textContent = scoreDisp;
         }
 
+        // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
+        function linkleriDonustur(text) {
+            if (!text) return "";
+            const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+            return text.replace(urlRegex, function (match) {
+                let rawUrl = match.trim();
+                let trailingPunct = "";
+                const punctMatch = rawUrl.match(/[.,!?;:)\\]>]+$/);
+                if (punctMatch) {
+                    trailingPunct = punctMatch[0];
+                    rawUrl = rawUrl.slice(0, -trailingPunct.length);
+                }
+                if (!rawUrl) return match;
+
+                let hrefUrl = rawUrl;
+                if (!/^https?:\/\//i.test(hrefUrl)) {
+                    hrefUrl = 'https://' + hrefUrl;
+                }
+
+                const cleanUrl = hrefUrl;
+                const urlNoParams = cleanUrl.split('?')[0].split('#')[0];
+                const ext = urlNoParams.split('.').pop().toLowerCase();
+
+                // 1. Google Drive & Docs & Forms
+                if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com')) {
+                    let id = null;
+                    const dMatch = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (dMatch) {
+                        id = dMatch[1];
+                    } else {
+                        const idParam = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                        if (idParam) id = idParam[1];
+                        else {
+                            const folderMatch = cleanUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+                            if (folderMatch) id = folderMatch[1];
+                        }
+                    }
+
+                    let embedUrl = null;
+                    if (cleanUrl.includes('/forms/')) {
+                        embedUrl = cleanUrl.includes('?') ? (cleanUrl + '&embedded=true') : (cleanUrl + '?embedded=true');
+                    } else if (cleanUrl.includes('/folders/')) {
+                        embedUrl = id ? `https://drive.google.com/embeddedfolderview?id=${id}#list` : null;
+                    } else if (cleanUrl.includes('/document/')) {
+                        embedUrl = id ? `https://docs.google.com/document/d/${id}/preview` : null;
+                    } else if (cleanUrl.includes('/spreadsheets/')) {
+                        embedUrl = id ? `https://docs.google.com/spreadsheets/d/${id}/preview` : null;
+                    } else if (cleanUrl.includes('/presentation/')) {
+                        embedUrl = id ? `https://docs.google.com/presentation/d/${id}/preview` : null;
+                    } else if (id) {
+                        embedUrl = `https://drive.google.com/file/d/${id}/preview`;
+                    }
+
+                    if (embedUrl) {
+                        return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allow="autoplay" loading="lazy"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">📄 Dosyayı Yeni Sekmede Aç ↗</a></div></div>` + trailingPunct;
+                    } else {
+                        return `<div class="embedded-wrapper"><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">📄 Google Drive Bağlantısını Aç ↗</a></div></div>` + trailingPunct;
+                    }
+                }
+
+                // 2. Resimler
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) {
+                    return `<img src="${cleanUrl}" class="embedded-img" onclick="this.classList.toggle('fullscreen')" title="Büyütmek için tıkla" loading="lazy">` + trailingPunct;
+                }
+
+                // 3. Ses
+                if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
+                    return `<div class="embedded-wrapper"><audio controls src="${cleanUrl}" class="embedded-audio"></audio></div>` + trailingPunct;
+                }
+
+                // 4. Video (Dosya)
+                if (['mp4', 'webm', 'mov'].includes(ext)) {
+                    return `<div class="embedded-wrapper"><video controls src="${cleanUrl}" class="embedded-video"></video></div>` + trailingPunct;
+                }
+
+                // 5. YouTube
+                if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+                    let ytId = null;
+                    if (cleanUrl.includes('youtu.be/')) {
+                        ytId = cleanUrl.split('youtu.be/')[1].split(/[?&#]/)[0];
+                    } else if (cleanUrl.includes('/shorts/')) {
+                        ytId = cleanUrl.split('/shorts/')[1].split(/[?&#]/)[0];
+                    } else if (cleanUrl.includes('watch?v=')) {
+                        ytId = cleanUrl.split('watch?v=')[1].split(/[?&#]/)[0];
+                    } else if (cleanUrl.includes('/embed/')) {
+                        ytId = cleanUrl.split('/embed/')[1].split(/[?&#]/)[0];
+                    }
+                    if (ytId) {
+                        return `<div class="embedded-wrapper"><iframe src="https://www.youtube.com/embed/${ytId}" class="embedded-iframe" allowfullscreen loading="lazy"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">▶️ Videoyu YouTube'da Aç ↗</a></div></div>` + trailingPunct;
+                    }
+                }
+
+                // 6. HER ŞEY İÇİN FALLBACK (GENEL WEB SİTESİ)
+                return `<div class="embedded-wrapper">
+                        <iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy"></iframe>
+                        <div class="embed-fallback">
+                            <a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">🌐 Bağlantıyı Yeni Sekmede Aç (Görüntülenemiyorsa Tıkla) ↗</a>
+                        </div>
+                    </div>` + trailingPunct;
+            });
+        }
+
         const App = {
             init: async () => {
                 if (State.pCalisma) {
@@ -456,7 +631,7 @@
                 const isMCQ = (typeof sObj === 'object' && sObj.type === 'coktan_secmeli');
 
                 document.getElementById('s_no').textContent = State.sIdx + 1;
-                document.getElementById('s_metin').textContent = soruMetni;
+                document.getElementById('s_metin').innerHTML = linkleriDonustur(soruMetni);
                 // Fix: Robust match for soruIndex (string vs number)
                 const cObj = (State.activeVeri.cevaplar || []).find(c => Number(c.soruIndex) === Number(State.sIdx));
                 const liste = cObj ? cObj.cevaplar : [];
@@ -500,7 +675,7 @@
 
                         h += `<div style="${optStyle}">
                             <strong style="margin-right:15px; font-size:1.1rem; color:#555;">${char})</strong>
-                            <span style="flex:1; font-size:1rem; color:#333;">${sec}</span>
+                            <span style="flex:1; font-size:1rem; color:#333;">${linkleriDonustur(sec)}</span>
                             ${isSelected ? `<span style="font-size:0.8rem; font-weight:bold; color:white; background:${Number(p) === 1 ? '#4CAF50' : '#F44336'}; padding:3px 8px; border-radius:12px; margin-left:10px;">Öğrenci Seçimi</span>` : ''}
                             ${(!isSelected && isCorrectAnswer && Number(p) === 0) ? `<span style="font-size:0.8rem; font-weight:bold; color:#4CAF50; border:1px solid #4CAF50; padding:2px 8px; border-radius:12px; margin-left:10px;">Doğru Cevap</span>` : ''}
                         </div>`;
@@ -529,7 +704,7 @@
                             btnYClass = 'btn-yanlis-aktif'; // Highlight as wrong/special
                         }
 
-                        h += `<div class="cevap-item"><div class="cevap-metin">${txt}</div>
+                        h += `<div class="cevap-item"><div class="cevap-metin">${linkleriDonustur(txt)}</div>
                         <button class="cevap-puan-btn ${btnDClass}" onclick="App.puanla(${i},1)" ${disabled}>D</button>
                         <button class="cevap-puan-btn ${btnYClass}" onclick="App.puanla(${i},0)" ${disabled} title="${p === 'G' ? 'Girmedi' : (p === 'M' ? 'Mazeretli' : 'Yanlış')}">${yText}</button></div>`;
                     });

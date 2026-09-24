@@ -984,37 +984,91 @@
 
         function linkleriDonustur(text) {
             if (!text) return "";
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            return text.replace(urlRegex, function (url) {
-                const cleanUrl = url.trim();
-                const urlNoParams = cleanUrl.split('?')[0];
+            const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+            return text.replace(urlRegex, function (match) {
+                let rawUrl = match.trim();
+                let trailingPunct = "";
+                const punctMatch = rawUrl.match(/[.,!?;:)\\]>]+$/);
+                if (punctMatch) {
+                    trailingPunct = punctMatch[0];
+                    rawUrl = rawUrl.slice(0, -trailingPunct.length);
+                }
+                if (!rawUrl) return match;
+
+                let hrefUrl = rawUrl;
+                if (!/^https?:\/\//i.test(hrefUrl)) {
+                    hrefUrl = 'https://' + hrefUrl;
+                }
+
+                const cleanUrl = hrefUrl;
+                const urlNoParams = cleanUrl.split('?')[0].split('#')[0];
                 const ext = urlNoParams.split('.').pop().toLowerCase();
 
                 if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com')) {
                     let id = null;
-                    const parts = cleanUrl.split(/\/d\//);
-                    if (parts.length > 1) { id = parts[1].split('/')[0]; }
-                    else { const match = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/); if (match) id = match[1]; }
+                    const dMatch = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (dMatch) {
+                        id = dMatch[1];
+                    } else {
+                        const idParam = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                        if (idParam) id = idParam[1];
+                        else {
+                            const folderMatch = cleanUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+                            if (folderMatch) id = folderMatch[1];
+                        }
+                    }
 
-                    if (id) {
-                        let embedUrl = `https://drive.google.com/file/d/${id}/preview`;
-                        if (cleanUrl.includes('/document/')) embedUrl = `https://docs.google.com/document/d/${id}/preview`;
-                        else if (cleanUrl.includes('/spreadsheets/')) embedUrl = `https://docs.google.com/spreadsheets/d/${id}/preview`;
-                        else if (cleanUrl.includes('/presentation/')) embedUrl = `https://docs.google.com/presentation/d/${id}/preview`;
-                        return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allow="autoplay"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank">📄 Dosyayı Yeni Sekmede Aç</a></div></div>`;
+                    let embedUrl = null;
+                    if (cleanUrl.includes('/forms/')) {
+                        embedUrl = cleanUrl.includes('?') ? (cleanUrl + '&embedded=true') : (cleanUrl + '?embedded=true');
+                    } else if (cleanUrl.includes('/folders/')) {
+                        embedUrl = id ? `https://drive.google.com/embeddedfolderview?id=${id}#list` : null;
+                    } else if (cleanUrl.includes('/document/')) {
+                        embedUrl = id ? `https://docs.google.com/document/d/${id}/preview` : null;
+                    } else if (cleanUrl.includes('/spreadsheets/')) {
+                        embedUrl = id ? `https://docs.google.com/spreadsheets/d/${id}/preview` : null;
+                    } else if (cleanUrl.includes('/presentation/')) {
+                        embedUrl = id ? `https://docs.google.com/presentation/d/${id}/preview` : null;
+                    } else if (id) {
+                        embedUrl = `https://drive.google.com/file/d/${id}/preview`;
+                    }
+
+                    if (embedUrl) {
+                        return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allow="autoplay" loading="lazy"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">📄 Dosyayı Yeni Sekmede Aç ↗</a></div></div>` + trailingPunct;
+                    } else {
+                        return `<div class="embedded-wrapper"><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">📄 Google Drive Bağlantısını Aç ↗</a></div></div>` + trailingPunct;
                     }
                 }
-                if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) { return `<img src="${cleanUrl}" class="embedded-img" onclick="this.classList.toggle('fullscreen')" title="Büyütmek için tıkla">`; }
-                if (['mp3', 'wav', 'ogg'].includes(ext)) { return `<div class="embedded-wrapper"><audio controls src="${cleanUrl}" class="embedded-audio"></audio></div>`; }
-                if (['mp4', 'webm', 'mov'].includes(ext)) { return `<div class="embedded-wrapper"><video controls src="${cleanUrl}" class="embedded-video"></video></div>`; }
-                if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
-                    let embedUrl = cleanUrl;
-                    if (cleanUrl.includes('watch?v=')) embedUrl = cleanUrl.replace('watch?v=', 'embed/');
-                    else if (cleanUrl.includes('youtu.be/')) embedUrl = cleanUrl.replace('youtu.be/', 'youtube.com/embed/');
-                    if (embedUrl.includes('&')) embedUrl = embedUrl.split('&')[0];
-                    return `<div class="embedded-wrapper"><iframe src="${embedUrl}" class="embedded-iframe" allowfullscreen></iframe></div>`;
+
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) {
+                    return `<img src="${cleanUrl}" class="embedded-img" onclick="this.classList.toggle('fullscreen')" title="Büyütmek için tıkla" loading="lazy">` + trailingPunct;
                 }
-                return `<div class="embedded-wrapper"><iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank">🌐 Bağlantıyı Yeni Sekmede Aç</a></div></div>`;
+
+                if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
+                    return `<div class="embedded-wrapper"><audio controls src="${cleanUrl}" class="embedded-audio"></audio></div>` + trailingPunct;
+                }
+
+                if (['mp4', 'webm', 'mov'].includes(ext)) {
+                    return `<div class="embedded-wrapper"><video controls src="${cleanUrl}" class="embedded-video"></video></div>` + trailingPunct;
+                }
+
+                if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+                    let ytId = null;
+                    if (cleanUrl.includes('youtu.be/')) {
+                        ytId = cleanUrl.split('youtu.be/')[1].split(/[?&#]/)[0];
+                    } else if (cleanUrl.includes('/shorts/')) {
+                        ytId = cleanUrl.split('/shorts/')[1].split(/[?&#]/)[0];
+                    } else if (cleanUrl.includes('watch?v=')) {
+                        ytId = cleanUrl.split('watch?v=')[1].split(/[?&#]/)[0];
+                    } else if (cleanUrl.includes('/embed/')) {
+                        ytId = cleanUrl.split('/embed/')[1].split(/[?&#]/)[0];
+                    }
+                    if (ytId) {
+                        return `<div class="embedded-wrapper"><iframe src="https://www.youtube.com/embed/${ytId}" class="embedded-iframe" allowfullscreen loading="lazy"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">▶️ Videoyu YouTube'da Aç ↗</a></div></div>` + trailingPunct;
+                    }
+                }
+
+                return `<div class="embedded-wrapper"><iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">🌐 Bağlantıyı Yeni Sekmede Aç (Görüntülenemiyorsa Tıkla) ↗</a></div></div>` + trailingPunct;
             });
         }
 
