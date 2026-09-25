@@ -504,6 +504,103 @@
             color: #ffffff !important;
         }
 
+        /* GÖMÜLÜ PORTAL VE EBA STİLLERİ */
+        .embedded-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 6px 6px 0 0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .embedded-topbar-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .embedded-topbar-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .embedded-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #ffffff;
+            color: #0f172a;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .embedded-btn:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+
+        .embedded-iframe.eba-iframe {
+            width: 100%;
+            min-height: 500px;
+            height: 520px;
+            border: none;
+            border-radius: 0 0 6px 6px;
+            display: block;
+        }
+
+        .portal-action-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+            align-items: center;
+        }
+
+        .portal-open-window-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #0b57d0 0%, #0842a0 100%);
+            color: #ffffff !important;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(11, 87, 208, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .portal-open-window-btn:hover {
+            background: linear-gradient(135deg, #0842a0 0%, #063075 100%);
+            box-shadow: 0 4px 8px rgba(11, 87, 208, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .portal-security-notice {
+            font-size: 0.76rem;
+            color: #475569;
+            margin-top: 6px;
+            line-height: 1.4;
+            background: #fff8e1;
+            border-left: 3px solid #f59e0b;
+            padding: 6px 10px;
+            border-radius: 0 4px 4px 0;
+        }
+
         /* AKORDİYON STİLLERİ */
         .accordion-item {
             border: 1px solid #ddd;
@@ -977,14 +1074,57 @@
                     }
                 }
 
-                // 6. Gömülebilir Eğitim Simülasyonları (PhET, GeoGebra, Scratch)
+                // 6. Gömülebilir Eğitim Portalları ve Simülasyonları (EBA, PhET, GeoGebra, Scratch)
+                if (cleanUrl.includes('eba.gov.tr')) {
+                    return `<div class="embedded-wrapper portal-embed-wrapper">
+                        <div class="embedded-topbar">
+                            <span class="embedded-topbar-title">📚 EBA (Eğitim Bilişim Ağı) İçeriği</span>
+                            <div class="embedded-topbar-btns">
+                                <button type="button" class="embedded-btn" onclick="window.open('${cleanUrl}', 'ebaWin', 'width=1150,height=800,scrollbars=yes,resizable=yes'); return false;" title="Ayrı pencerede aç">🗗 Ayrı Pencere</button>
+                                <a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="embedded-btn" title="Yeni sekmede aç">Yeni Sekme ↗</a>
+                            </div>
+                        </div>
+                        <iframe src="${cleanUrl}" class="embedded-iframe eba-iframe" loading="lazy" allowfullscreen></iframe>
+                    </div>` + trailingPunct;
+                }
+
                 if (cleanUrl.includes('phet.colorado.edu') || cleanUrl.includes('geogebra.org') || cleanUrl.includes('scratch.mit.edu')) {
                     return `<div class="embedded-wrapper"><iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy" allowfullscreen></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">🌐 Uygulamayı Yeni Sekmede Aç ↗</a></div></div>` + trailingPunct;
                 }
 
-                // 7. GENEL WEB SİTELERİ (e-Devlet, MEBBİS, MEB, EBA vb.)
-                // Güvenlik gereği (X-Frame-Options: SAMEORIGIN/DENY) bu siteler iframe içinde açılamaz ('bağlanmayı reddetti' hatası verir).
-                // Bunun yerine şık, güvenli ve doğrudan yeni sekmede açılan Link Kartı gösterilir.
+                // 7. e-DEVLET VE MEBBİS ÖZEL PORTALLARI
+                // Güvenlik gereği (X-Frame-Options: SAMEORIGIN/ALLOW-FROM) bu siteler sayfa içi iframe gömmesini engeller.
+                // Kullanıcının içeriğe kesintisiz ulaşabilmesi için özel pencere butonu ve bilgi alanı sunulur.
+                const lowUrl = cleanUrl.toLowerCase();
+                if (lowUrl.includes('turkiye.gov.tr') || lowUrl.includes('mebbis.meb.gov.tr')) {
+                    const isEdevlet = lowUrl.includes('turkiye.gov.tr');
+                    const pTitle = isEdevlet ? 'e-Devlet Kapısı Resmi Portalı' : 'MEBBİS - MEB Bilişim Sistemleri';
+                    const pIcon = isEdevlet ? '🏛️' : '🎓';
+                    const pDomain = isEdevlet ? 'turkiye.gov.tr' : 'mebbis.meb.gov.tr';
+                    return `<div class="embedded-link-card">
+                        <div class="link-card-header">
+                            <span class="link-card-icon">${pIcon}</span>
+                            <div class="link-card-meta">
+                                <strong class="link-card-title">${pTitle}</strong>
+                                <span class="link-card-domain">${pDomain}</span>
+                            </div>
+                        </div>
+                        <div class="link-card-url-text">${cleanUrl}</div>
+                        <div class="portal-action-box">
+                            <button type="button" class="portal-open-window-btn" onclick="window.open('${cleanUrl}', 'kurumPortalWin', 'width=1150,height=800,menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes'); return false;">
+                                <span>🗗 İçeriği Özel Pencerede Aç</span>
+                            </button>
+                            <a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="embedded-btn" style="padding: 7px 12px; font-size: 0.85rem;">
+                                <span>Yeni Sekmede Aç ↗</span>
+                            </a>
+                        </div>
+                        <div class="portal-security-notice">
+                            🔒 <strong>Güvenlik Bilgisi:</strong> e-Devlet ve MEBBİS, kimlik güvenliği politikası (X-Frame-Options) gereği sayfa içine gömülmeyi engeller ("Bağlanmayı reddetti" hatası verir). İçeriği doğrudan ve sorunsuz görüntülemek için <strong>"İçeriği Özel Pencerede Aç"</strong> butonuna basınız.
+                        </div>
+                    </div>` + trailingPunct;
+                }
+
+                // 8. DİĞER GENEL WEB SİTELERİ
                 let icon = "🌐";
                 let siteTitle = "Web Bağlantısı";
                 let btnText = "Bağlantıyı Yeni Sekmede Aç";
@@ -996,20 +1136,7 @@
                     domain = cleanUrl.split('/')[2] || "web";
                 }
 
-                const lowUrl = cleanUrl.toLowerCase();
-                if (lowUrl.includes('turkiye.gov.tr')) {
-                    icon = "🏛️";
-                    siteTitle = "e-Devlet Kapısı";
-                    btnText = "e-Devlet'e Yeni Sekmede Git";
-                } else if (lowUrl.includes('mebbis.meb.gov.tr')) {
-                    icon = "🎓";
-                    siteTitle = "MEBBİS - MEB Bilişim Sistemleri";
-                    btnText = "MEBBİS'i Yeni Sekmede Aç";
-                } else if (lowUrl.includes('eba.gov.tr')) {
-                    icon = "📚";
-                    siteTitle = "EBA - Eğitim Bilişim Ağı";
-                    btnText = "EBA'yı Yeni Sekmede Aç";
-                } else if (lowUrl.includes('meb.gov.tr')) {
+                if (lowUrl.includes('meb.gov.tr')) {
                     icon = "🎓";
                     siteTitle = "Milli Eğitim Bakanlığı (MEB)";
                     btnText = "MEB Bağlantısını Aç";
