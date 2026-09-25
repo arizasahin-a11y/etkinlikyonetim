@@ -553,6 +553,94 @@
             text-decoration: none;
             font-weight: bold;
         }
+
+        /* WEB BAĞLANTI KARTI (E-DEVLET, MEBBİS VB.) */
+        .embedded-link-card {
+            width: 100%;
+            margin: 8px 0;
+            border: 1px solid #d0e2ff;
+            border-radius: 8px;
+            padding: 12px 14px;
+            background: linear-gradient(135deg, #f8faff 0%, #f0f6ff 100%);
+            box-sizing: border-box;
+            box-shadow: 0 1px 4px rgba(11, 87, 208, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .embedded-link-card:hover {
+            border-color: #8ab4f8;
+            box-shadow: 0 2px 8px rgba(11, 87, 208, 0.12);
+        }
+
+        .link-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .link-card-icon {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .link-card-meta {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .link-card-title {
+            font-weight: 700;
+            color: #1a73e8;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .link-card-domain {
+            font-size: 0.78rem;
+            color: #5f6368;
+        }
+
+        .link-card-url-text {
+            font-size: 0.82rem;
+            color: #444;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #e1e8f5;
+            word-break: break-all;
+            margin: 2px 0 6px 0;
+            font-family: monospace;
+        }
+
+        .link-card-action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #1a73e8;
+            color: #ffffff !important;
+            padding: 7px 14px;
+            border-radius: 6px;
+            text-decoration: none !important;
+            font-weight: 600;
+            font-size: 0.88rem;
+            transition: background 0.2s, transform 0.1s;
+            cursor: pointer;
+            align-self: flex-start;
+        }
+
+        .link-card-action-btn:hover {
+            background: #1557b0;
+            transform: translateY(-1px);
+            color: #ffffff !important;
+        }
     </style>
 </head>
 
@@ -1068,7 +1156,77 @@
                     }
                 }
 
-                return `<div class="embedded-wrapper"><iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy"></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">🌐 Bağlantıyı Yeni Sekmede Aç (Görüntülenemiyorsa Tıkla) ↗</a></div></div>` + trailingPunct;
+                // 6. Gömülebilir Eğitim Simülasyonları (PhET, GeoGebra, Scratch)
+                if (cleanUrl.includes('phet.colorado.edu') || cleanUrl.includes('geogebra.org') || cleanUrl.includes('scratch.mit.edu')) {
+                    return `<div class="embedded-wrapper"><iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy" allowfullscreen></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">🌐 Uygulamayı Yeni Sekmede Aç ↗</a></div></div>` + trailingPunct;
+                }
+
+                // 7. GENEL WEB SİTELERİ (e-Devlet, MEBBİS, MEB, EBA vb.)
+                // Güvenlik gereği (X-Frame-Options: SAMEORIGIN/DENY) bu siteler iframe içinde açılamaz ('bağlanmayı reddetti' hatası verir).
+                // Bunun yerine şık, güvenli ve doğrudan yeni sekmede açılan Link Kartı gösterilir.
+                let icon = "🌐";
+                let siteTitle = "Web Bağlantısı";
+                let btnText = "Bağlantıyı Yeni Sekmede Aç";
+                let domain = "";
+                try {
+                    const uObj = new URL(cleanUrl);
+                    domain = uObj.hostname.replace(/^www\./, '');
+                } catch(e) {
+                    domain = cleanUrl.split('/')[2] || "web";
+                }
+
+                const lowUrl = cleanUrl.toLowerCase();
+                if (lowUrl.includes('turkiye.gov.tr')) {
+                    icon = "🏛️";
+                    siteTitle = "e-Devlet Kapısı";
+                    btnText = "e-Devlet'e Yeni Sekmede Git";
+                } else if (lowUrl.includes('mebbis.meb.gov.tr')) {
+                    icon = "🎓";
+                    siteTitle = "MEBBİS - MEB Bilişim Sistemleri";
+                    btnText = "MEBBİS'i Yeni Sekmede Aç";
+                } else if (lowUrl.includes('eba.gov.tr')) {
+                    icon = "📚";
+                    siteTitle = "EBA - Eğitim Bilişim Ağı";
+                    btnText = "EBA'yı Yeni Sekmede Aç";
+                } else if (lowUrl.includes('meb.gov.tr')) {
+                    icon = "🎓";
+                    siteTitle = "Milli Eğitim Bakanlığı (MEB)";
+                    btnText = "MEB Bağlantısını Aç";
+                } else if (lowUrl.includes('osym.gov.tr')) {
+                    icon = "📝";
+                    siteTitle = "ÖSYM";
+                    btnText = "ÖSYM Sayfasını Aç";
+                } else if (lowUrl.includes('github.com')) {
+                    icon = "💻";
+                    siteTitle = "GitHub";
+                    btnText = "GitHub'da Aç";
+                } else if (lowUrl.includes('canva.com')) {
+                    icon = "🎨";
+                    siteTitle = "Canva Tasarım";
+                    btnText = "Canva'da Aç";
+                } else if (lowUrl.includes('wikipedia.org')) {
+                    icon = "📖";
+                    siteTitle = "Vikipedi";
+                    btnText = "Vikipedi'de Aç";
+                } else {
+                    siteTitle = domain;
+                    btnText = "Bağlantıyı Yeni Sekmede Aç";
+                }
+
+                return `<div class="embedded-link-card">
+                    <div class="link-card-header">
+                        <span class="link-card-icon">${icon}</span>
+                        <div class="link-card-meta">
+                            <strong class="link-card-title">${siteTitle}</strong>
+                            <span class="link-card-domain">${domain}</span>
+                        </div>
+                    </div>
+                    <div class="link-card-url-text">${cleanUrl}</div>
+                    <a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="link-card-action-btn">
+                        <span>${icon} ${btnText}</span>
+                        <span>↗</span>
+                    </a>
+                </div>` + trailingPunct;
             });
         }
 
