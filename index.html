@@ -642,6 +642,31 @@
             color: #ffffff !important;
         }
 
+        .aktif-web-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #0b57d0;
+            background: #f0f7ff;
+            border: 1px solid #cce3ff;
+            padding: 3px 10px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9em;
+            word-break: break-all;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+            margin: 2px 2px;
+        }
+
+        .aktif-web-link:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+
         /* GÖMÜLÜ PORTAL VE EBA STİLLERİ */
         .embedded-topbar {
             display: flex;
@@ -1271,89 +1296,18 @@
                     return `<div class="embedded-wrapper"><iframe src="${cleanUrl}" class="embedded-iframe" loading="lazy" allowfullscreen></iframe><div class="embed-fallback"><a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">🌐 Uygulamayı Yeni Sekmede Aç ↗</a></div></div>` + trailingPunct;
                 }
 
-                // 7. e-DEVLET VE MEBBİS ÖZEL PORTALLARI
-                // Güvenlik gereği (X-Frame-Options: SAMEORIGIN/ALLOW-FROM) bu siteler sayfa içi iframe gömmesini engeller.
-                // Kullanıcının içeriğe kesintisiz ulaşabilmesi için özel pencere butonu ve bilgi alanı sunulur.
+                // 7. e-DEVLET, MEBBİS VE DİĞER GENEL WEB BAĞLANTILARI
+                // Bu siteler için ön izleme penceresi gösterilmez, doğrudan temiz ve aktif bir tıklanabilir bağlantı verilir.
+                let icon = "🔗";
                 const lowUrl = cleanUrl.toLowerCase();
-                if (lowUrl.includes('turkiye.gov.tr') || lowUrl.includes('mebbis.meb.gov.tr')) {
-                    const isEdevlet = lowUrl.includes('turkiye.gov.tr');
-                    const pTitle = isEdevlet ? 'e-Devlet Kapısı Resmi Portalı' : 'MEBBİS - MEB Bilişim Sistemleri';
-                    const pIcon = isEdevlet ? '🏛️' : '🎓';
-                    const pDomain = isEdevlet ? 'turkiye.gov.tr' : 'mebbis.meb.gov.tr';
-                    return `<div class="embedded-link-card">
-                        <div class="link-card-header">
-                            <span class="link-card-icon">${pIcon}</span>
-                            <div class="link-card-meta">
-                                <strong class="link-card-title">${pTitle}</strong>
-                                <span class="link-card-domain">${pDomain}</span>
-                            </div>
-                        </div>
-                        <div class="link-card-url-text">${cleanUrl}</div>
-                        <div class="portal-action-box">
-                            <button type="button" class="portal-open-window-btn" onclick="window.open('${cleanUrl}', 'kurumPortalWin', 'width=1150,height=800,menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes'); return false;">
-                                <span>🗗 İçeriği Özel Pencerede Aç</span>
-                            </button>
-                            <a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="embedded-btn" style="padding: 7px 12px; font-size: 0.85rem;">
-                                <span>Yeni Sekmede Aç ↗</span>
-                            </a>
-                        </div>
-                        <div class="portal-security-notice">
-                            🔒 <strong>Güvenlik Bilgisi:</strong> e-Devlet ve MEBBİS, kimlik güvenliği politikası (X-Frame-Options) gereği sayfa içine gömülmeyi engeller ("Bağlanmayı reddetti" hatası verir). İçeriği doğrudan ve sorunsuz görüntülemek için <strong>"İçeriği Özel Pencerede Aç"</strong> butonuna basınız.
-                        </div>
-                    </div>` + trailingPunct;
-                }
+                if (lowUrl.includes('turkiye.gov.tr')) icon = "🏛️";
+                else if (lowUrl.includes('mebbis.meb.gov.tr') || lowUrl.includes('meb.gov.tr')) icon = "🎓";
+                else if (lowUrl.includes('osym.gov.tr')) icon = "📝";
+                else if (lowUrl.includes('github.com')) icon = "💻";
+                else if (lowUrl.includes('canva.com')) icon = "🎨";
+                else if (lowUrl.includes('wikipedia.org')) icon = "📖";
 
-                // 8. DİĞER GENEL WEB SİTELERİ
-                let icon = "🌐";
-                let siteTitle = "Web Bağlantısı";
-                let btnText = "Bağlantıyı Yeni Sekmede Aç";
-                let domain = "";
-                try {
-                    const uObj = new URL(cleanUrl);
-                    domain = uObj.hostname.replace(/^www\./, '');
-                } catch(e) {
-                    domain = cleanUrl.split('/')[2] || "web";
-                }
-
-                if (lowUrl.includes('meb.gov.tr')) {
-                    icon = "🎓";
-                    siteTitle = "Milli Eğitim Bakanlığı (MEB)";
-                    btnText = "MEB Bağlantısını Aç";
-                } else if (lowUrl.includes('osym.gov.tr')) {
-                    icon = "📝";
-                    siteTitle = "ÖSYM";
-                    btnText = "ÖSYM Sayfasını Aç";
-                } else if (lowUrl.includes('github.com')) {
-                    icon = "💻";
-                    siteTitle = "GitHub";
-                    btnText = "GitHub'da Aç";
-                } else if (lowUrl.includes('canva.com')) {
-                    icon = "🎨";
-                    siteTitle = "Canva Tasarım";
-                    btnText = "Canva'da Aç";
-                } else if (lowUrl.includes('wikipedia.org')) {
-                    icon = "📖";
-                    siteTitle = "Vikipedi";
-                    btnText = "Vikipedi'de Aç";
-                } else {
-                    siteTitle = domain;
-                    btnText = "Bağlantıyı Yeni Sekmede Aç";
-                }
-
-                return `<div class="embedded-link-card">
-                    <div class="link-card-header">
-                        <span class="link-card-icon">${icon}</span>
-                        <div class="link-card-meta">
-                            <strong class="link-card-title">${siteTitle}</strong>
-                            <span class="link-card-domain">${domain}</span>
-                        </div>
-                    </div>
-                    <div class="link-card-url-text">${cleanUrl}</div>
-                    <a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="link-card-action-btn">
-                        <span>${icon} ${btnText}</span>
-                        <span>↗</span>
-                    </a>
-                </div>` + trailingPunct;
+                return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="aktif-web-link">${icon} ${cleanUrl} ↗</a>` + trailingPunct;
             });
         }
 
