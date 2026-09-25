@@ -1010,7 +1010,7 @@
         // --- GELİŞMİŞ VE GÜVENLİ LİNK DÖNÜŞTÜRÜCÜ ---
         function linkleriDonustur(text) {
             if (!text) return "";
-            const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+            const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+|[a-zA-Z0-9.-]*eba\.gov\.tr[^\s<]*|[a-zA-Z0-9.-]*(?:youtube\.com|youtu\.be)[^\s<]*)/gi;
             return text.replace(urlRegex, function (match) {
                 let rawUrl = match.trim();
                 let trailingPunct = "";
@@ -1024,6 +1024,10 @@
                 let hrefUrl = rawUrl;
                 if (!/^https?:\/\//i.test(hrefUrl)) {
                     hrefUrl = 'https://' + hrefUrl;
+                }
+                hrefUrl = hrefUrl.replace(/^http:\/\//i, 'https://');
+                if (hrefUrl.toLowerCase() === 'https://eba.gov.tr' || hrefUrl.toLowerCase() === 'https://eba.gov.tr/') {
+                    hrefUrl = 'https://www.eba.gov.tr';
                 }
 
                 const cleanUrl = hrefUrl;
@@ -1100,8 +1104,8 @@
                 }
 
                 // 6. Gömülebilir Eğitim Portalları ve Simülasyonları (EBA, PhET, GeoGebra, Scratch)
-                if (cleanUrl.includes('eba.gov.tr')) {
-                    return `<div class="embedded-wrapper portal-embed-wrapper">
+                if (cleanUrl.toLowerCase().includes('eba.gov.tr')) {
+                    return `<div class="embedded-wrapper portal-embed-wrapper eba-wrapper">
                         <div class="embedded-topbar">
                             <span class="embedded-topbar-title">📚 EBA (Eğitim Bilişim Ağı) İçeriği</span>
                             <div class="embedded-topbar-btns">
@@ -1109,7 +1113,13 @@
                                 <a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="embedded-btn" title="Yeni sekmede aç">Yeni Sekme ↗</a>
                             </div>
                         </div>
-                        <iframe src="${cleanUrl}" class="embedded-iframe eba-iframe" loading="lazy" allowfullscreen></iframe>
+                        <iframe src="${cleanUrl}" class="embedded-iframe eba-iframe" loading="lazy" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                        <div class="embed-fallback">
+                            <span>EBA sayfası açılmıyorsa: </span>
+                            <a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">🌐 EBA İçeriğini Yeni Sekmede Aç ↗</a>
+                            <span> veya </span>
+                            <button type="button" class="embedded-btn" onclick="window.open('${cleanUrl}', 'ebaWin', 'width=1150,height=800,scrollbars=yes,resizable=yes'); return false;">🗗 Ayrı Pencerede Aç</button>
+                        </div>
                     </div>` + trailingPunct;
                 }
 
@@ -1135,13 +1145,14 @@
         // --- ÖĞRENCİ CEVAP ALANINDAKİ LİNKLERİ ANINDA AKTİF ET VE GÖSTER ---
         function guncelleCevapLinkOnizleme(val, container) {
             if (!container) return;
-            const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/i;
+            const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+|[a-zA-Z0-9.-]*eba\.gov\.tr[^\s<]*|[a-zA-Z0-9.-]*(?:youtube\.com|youtu\.be)[^\s<]*)/i;
             if (val && urlPattern.test(val)) {
-                const matches = val.match(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi) || [];
+                const matches = val.match(/(https?:\/\/[^\s<]+|www\.[^\s<]+|[a-zA-Z0-9.-]*eba\.gov\.tr[^\s<]*|[a-zA-Z0-9.-]*(?:youtube\.com|youtu\.be)[^\s<]*)/gi) || [];
                 const linkButtonsHtml = matches.map(m => {
                     let raw = m.trim().replace(/[.,!?;:)\\]>]+$/, '');
                     let href = raw;
                     if (!/^https?:\/\//i.test(href)) href = 'https://' + href;
+                    href = href.replace(/^http:\/\//i, 'https://');
                     return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="cevap-aktif-link-btn" title="Bağlantıyı yeni sekmede aç">🔗 ${raw} ↗</a>`;
                 }).join(' ');
 
