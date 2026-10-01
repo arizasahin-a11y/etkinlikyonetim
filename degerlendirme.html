@@ -147,8 +147,10 @@
 
         .soru-icerik {
             font-size: 1.05rem;
-            line-height: 1.4;
+            line-height: 1.55;
             font-weight: 600;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
         .cevap-bolumu {
@@ -174,9 +176,10 @@
             min-width: 0;
             font-size: 0.95rem;
             color: #333;
-            line-height: 1.4;
+            line-height: 1.5;
             margin-top: 4px;
             word-break: break-word;
+            white-space: pre-wrap;
         }
 
         .cevap-puan-btn {
@@ -918,7 +921,7 @@
 
                         h += `<div style="${optStyle}">
                             <strong style="margin-right:15px; font-size:1.1rem; color:#555;">${char})</strong>
-                            <span style="flex:1; font-size:1rem; color:#333;">${linkleriDonustur(sec)}</span>
+                            <span style="flex:1; font-size:1rem; color:#333; white-space:pre-wrap; word-break:break-word;">${linkleriDonustur(sec)}</span>
                             ${isSelected ? `<span style="font-size:0.8rem; font-weight:bold; color:white; background:${Number(p) === 1 ? '#4CAF50' : '#F44336'}; padding:3px 8px; border-radius:12px; margin-left:10px;">Öğrenci Seçimi</span>` : ''}
                             ${(!isSelected && isCorrectAnswer && Number(p) === 0) ? `<span style="font-size:0.8rem; font-weight:bold; color:#4CAF50; border:1px solid #4CAF50; padding:2px 8px; border-radius:12px; margin-left:10px;">Doğru Cevap</span>` : ''}
                         </div>`;
